@@ -43,6 +43,10 @@ def evaluate(events, overrides):
         "fraud_sequences_barred": caught,
         "fraud_sequences_barred_pct": pct(caught, sequences),
         "fraud_approved": sum(t["status"].get("approved", 0) for t in typologies),
+        "cost_cents": metrics["cost"]["total_cents"],
+        "cost_per_1000_cents": metrics["cost"]["per_1000_cents"],
+        "cost_components_cents": metrics["cost"]["components_cents"],
+        "p_at_k": metrics["p_at_k"]["rules"],
         "seconds": round(elapsed, 3),
     }
 
@@ -52,18 +56,26 @@ def objective(row):
     return (r["legit_rejected"], -r["fraud_sequences_barred"], r["legit_2fa"], r["fraud_approved"])
 
 
+def cost_objective(row):
+    m = row["metrics"]
+    return (m["cost_cents"], m["legit_rejected"], -m["fraud_sequences_barred"])
+
+
+OBJECTIVES = {"lexicographic": objective, "cost": cost_objective}
+
+
 def frontier(rows):
-    """Combinations no other one beats on both legit friction (rejected + 2FA) and sequences barred."""
+    """Combinations no other one beats on legit friction (rejected + 2FA), sequences barred and cost."""
     def point(row):
         m = row["metrics"]
-        return m["legit_rejected"] + m["legit_2fa"], m["fraud_sequences_barred"]
+        return m["legit_rejected"] + m["legit_2fa"], m["fraud_sequences_barred"], m["cost_cents"]
 
     result = []
     for row in rows:
-        friction, capture = point(row)
+        friction, capture, cost = point(row)
         dominated = any(
-            f <= friction and c >= capture and (f < friction or c > capture)
-            for f, c in map(point, rows)
+            f <= friction and c >= capture and k <= cost and (f < friction or c > capture or k < cost)
+            for f, c, k in map(point, rows)
         )
         if not dominated:
             result.append(row)
@@ -74,27 +86,34 @@ def label(overrides):
     return ", ".join(f"{k}={v}" for k, v in overrides.items())
 
 
-def table(rows, winner):
-    lines = ["| # | parameters | legit rejected | legit 2FA | sequences barred | fraud approved | s |",
-             "|---|---|---|---|---|---|---|"]
+def table(rows, winners):
+    lines = ["| # | parameters | legit rejected | legit 2FA | sequences barred | fraud approved | cost R$ | cost R$/1000 Pix | s |",
+             "|---|---|---|---|---|---|---|---|---|"]
     for rank, row in enumerate(rows, 1):
         m = row["metrics"]
-        mark = " **(winner)**" if row is winner else ""
+        mark = "".join(f" **({name} winner)**" for name, w in winners.items() if row is w)
         lines.append(
             f"| {rank} | {label(row['overrides'])}{mark} | {m['legit_rejected']} ({m['legit_rejected_pct']:.2f}%) "
             f"| {m['legit_2fa']} ({m['legit_2fa_pct']:.2f}%) "
-            f"| {m['fraud_sequences_barred']}/{m['fraud_sequences']} | {m['fraud_approved']} | {m['seconds']} |")
+            f"| {m['fraud_sequences_barred']}/{m['fraud_sequences']} | {m['fraud_approved']} "
+            f"| {m['cost_cents'] / 100:,.2f} | {m['cost_per_1000_cents'] / 100:,.2f} | {m['seconds']} |")
     return lines
 
 
-def render(rows, winner, front, spec, total_seconds):
+def render(rows, winners, front, spec, total_seconds, objective_name, defaults):
     lines = ["# Calibration grid", "",
-             f"Events: {json.dumps(spec['events'])}. Objective (lexicographic): fewer legit rejected, "
-             "more fraud sequences barred, fewer legit 2FA, fewer fraud Pix approved.", "",
+             f"Events: {json.dumps(spec['events'])}. Objective ({objective_name}); rows are sorted by it. "
+             "Lexicographic: fewer legit rejected, more fraud sequences barred, fewer legit 2FA, fewer fraud Pix approved. "
+             "Cost: lowest expected cost in scripts/cost-model.json, ties by legit rejected, then sequences barred.", "",
+             f"Current defaults: cost R$ {defaults['cost_cents'] / 100:,.2f} "
+             f"(R$ {defaults['cost_per_1000_cents'] / 100:,.2f} per 1,000 Pix), legit rejected {defaults['legit_rejected']}, "
+             f"legit 2FA {defaults['legit_2fa']}, sequences barred "
+             f"{defaults['fraud_sequences_barred']}/{defaults['fraud_sequences']}.", "",
              f"{len(rows)} combinations in {total_seconds:.1f} s.", "", "## All combinations", ""]
-    lines += table(rows, winner)
-    lines += ["", "## Friction x capture frontier (non-dominated)", ""]
-    lines += table(front, winner)
+    lines += table(rows, winners)
+    lines += ["", "## Friction x capture x cost frontier (non-dominated)", ""]
+    lines += table(front, winners)
+    winner = winners[objective_name]
     lines += ["", "## Suggested values (not applied)", "", "```", *[f"{k}={v}" for k, v in winner["overrides"].items()],
               "```", ""]
     return "\n".join(lines)
@@ -112,19 +131,23 @@ def run_grid(spec, events_path):
     return rows
 
 
-def calibrate(grid_path):
+def calibrate(grid_path, objective_name):
     started = time.perf_counter()
     with open(grid_path, encoding="utf-8") as handle:
         spec = json.load(handle)
     os.makedirs(OUT_DIR, exist_ok=True)
-    rows = sorted(run_grid(spec, os.path.join(OUT_DIR, "events-calibration.jsonl")), key=objective)
-    winner = rows[0]
+    rows = run_grid(spec, os.path.join(OUT_DIR, "events-calibration.jsonl"))
+    defaults = evaluate(load_events(os.path.join(OUT_DIR, "events-calibration.jsonl")), {})
+    winners = {name: min(rows, key=key) for name, key in OBJECTIVES.items()}
+    winner = winners[objective_name]
+    rows = sorted(rows, key=OBJECTIVES[objective_name])
     front = frontier(rows)
     total = time.perf_counter() - started
     with open(os.path.join(OUT_DIR, "calibration.md"), "w", encoding="utf-8") as handle:
-        handle.write(render(rows, winner, front, spec, total))
+        handle.write(render(rows, winners, front, spec, total, objective_name, defaults))
     with open(os.path.join(OUT_DIR, "calibration.json"), "w", encoding="utf-8") as handle:
-        json.dump({"events": spec["events"], "winner": winner, "frontier": front, "rows": rows,
+        json.dump({"events": spec["events"], "objective": objective_name, "winner": winner,
+                   "winners": winners, "defaults": defaults, "frontier": front, "rows": rows,
                    "total_seconds": round(total, 2)}, handle, indent=2)
     print(f"winner: {label(winner['overrides'])}")
     print("suggested (not applied): " + " ".join(f"{k}={v}" for k, v in winner["overrides"].items()))
@@ -158,10 +181,11 @@ def check(gate_path):
 def main():
     parser = argparse.ArgumentParser(description="Rule parameter grid over the batch backtest")
     parser.add_argument("--grid", default=os.path.join(HERE, "calibration-grid.json"))
+    parser.add_argument("--objective", choices=sorted(OBJECTIVES), default="lexicographic")
     parser.add_argument("--check", action="store_true", help="enforce scripts/calibration-gate.json")
     parser.add_argument("--gate", default=os.path.join(HERE, "calibration-gate.json"))
     args = parser.parse_args()
-    return check(args.gate) if args.check else calibrate(args.grid)
+    return check(args.gate) if args.check else calibrate(args.grid, args.objective)
 
 
 if __name__ == "__main__":

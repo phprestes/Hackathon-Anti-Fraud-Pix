@@ -1,0 +1,18 @@
+{
+  "fraud_loss_factor": {
+    "value": 1.0,
+    "why": "Fraude aprovada perde o valor do Pix (perda direta, sem estorno garantido)."
+  },
+  "two_factor_escape_rate": {
+    "value": 0.1,
+    "why": "Parte dos golpes de engenharia social passa pelo 2FA porque a vitima confirma; a fraude com 2FA custa valor x taxa."
+  },
+  "friction_cost_2fa_cents": {
+    "value": 200,
+    "why": "Legitimo com 2FA: R$ 2 de atrito e abandono."
+  },
+  "friction_cost_reject_cents": {
+    "value": 5000,
+    "why": "Legitimo reprovado: R$ 50 de cliente bom bloqueado, atendimento e churn."
+  }
+}

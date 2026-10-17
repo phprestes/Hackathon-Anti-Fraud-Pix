@@ -112,3 +112,6 @@ clean: ## Remove containers, volume, .venv e caches
 
 analyze: install ## Gera docs/05-motor/analises.md (log-normalidade, dispersao, PSI, sensibilidade; sem API e sem banco)
 	$(BIN)/python scripts/analyze.py
+
+calibrate-cost: install ## Grid de parametros pelo custo assimetrico (scripts/cost-model.json); grava scripts/out/calibration.md/.json (sem banco)
+	$(BIN)/python scripts/calibrate.py --objective cost

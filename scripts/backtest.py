@@ -60,6 +60,8 @@ def metrics_from(summary, elapsed, total):
             for name, data in summary["typologies"].items()
         },
         "rules_on_legit": dict(summary["rules"]),
+        "cost": summary["cost"],
+        "p_at_k": summary["p_at_k"],
         "total_seconds": round(elapsed, 3),
         "pix_per_second": round(total / elapsed, 1) if elapsed else None,
     }

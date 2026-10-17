@@ -2,6 +2,8 @@
 import math
 from collections import Counter, defaultdict
 
+from costs import KS, expected_cost, has_lightgbm, precision_at_k
+
 TYPOLOGIES = ["account_takeover", "mule", "splitting", "night_kidnapping", "device_farm"]
 
 
@@ -52,6 +54,9 @@ def summarize(events):
         "requests": len(latencies),
         "errors": sum(1 for e in events if "http_status" in e and not 200 <= e["http_status"] < 300),
         "versions": sorted(v for v in versions if v),
+        "cost": expected_cost(answered),
+        "p_at_k": {"rules": precision_at_k(answered),
+                   "rules_lightgbm": precision_at_k(answered, with_lightgbm=True) if has_lightgbm(answered) else None},
     }
 
 
@@ -78,6 +83,7 @@ def render_report(summary):
             cells = [_pct(data["typologies"].get(t, [0, 0])[1], data["typologies"].get(t, [0, 0])[0])
                      for t in summary["typologies"]]
             lines.append(f"| {name} | {_pct(data['legit_flagged'], data['legit'])} | " + " | ".join(cells) + " |")
+    lines += render_cost(summary["cost"]) + render_p_at_k(summary["p_at_k"])
     lines += ["", "## Top rules firing on legitimate Pix", ""]
     lines += [f"- {rule}: {count}" for rule, count in summary["rules"].most_common(10)] or ["- none"]
     lines += ["", "## Latency and errors", ""]
@@ -90,3 +96,30 @@ def render_report(summary):
         lines += [f"- requests: {summary['requests']}", f"- non-2xx errors: {summary['errors']}"]
     lines += [f"- rule_set_version: {', '.join(summary['versions']) or 'n/a'}", ""]
     return "\n".join(lines)
+
+
+def _reais(cents):
+    return f"R$ {cents / 100:,.2f}"
+
+
+def render_cost(cost):
+    lines = ["", "## Custo esperado", "",
+             "Modelo em scripts/cost-model.json (centavos). Fraude aprovada custa o valor; fraude com 2FA, valor x taxa de escape; "
+             "legitimo com 2FA ou reprovado, atrito fixo.", "",
+             "| componente | total | por 1.000 Pix |", "|---|---|---|"]
+    for name, cents in cost["components_cents"].items():
+        lines.append(f"| {name} | {_reais(cents)} | {_reais(cost['components_per_1000_cents'][name])} |")
+    lines.append(f"| **total** | {_reais(cost['total_cents'])} | {_reais(cost['per_1000_cents'])} |")
+    return lines
+
+
+def render_p_at_k(p_at_k):
+    lines = ["", "## P@k (mesa de k analistas)", "",
+             "Por dia local, top-k por score (rejected 1.0, 2FA 0.5, ou o maior score do LightGBM em shadow); "
+             "precisao = fraudes no top-k; media diaria.", "",
+             "| ranking | " + " | ".join(f"P@{k}" for k in KS) + " |", "|---|" + "---|" * len(KS)]
+    for name, label in (("rules", "regras sozinhas"), ("rules_lightgbm", "regras + LightGBM")):
+        values = p_at_k[name]
+        cells = [_pct(values[k], 1) for k in KS] if values else ["n/a"] * len(KS)
+        lines.append(f"| {label} | " + " | ".join(cells) + " |")
+    return lines
