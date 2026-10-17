@@ -5,7 +5,8 @@ from sqlalchemy import func
 from sqlalchemy.orm import aliased
 
 from database import Context
-from models import AnalysisStatus, PixAnalysis, PixAnalysisReason, PixTransaction
+from models import AccountRiskScore, AnalysisStatus, PixAnalysis, PixAnalysisReason, PixTransaction
+from rules.history_port import AccountRiskReading
 from rules.pix_snapshot import PixSnapshot
 
 
@@ -270,6 +271,23 @@ class PixTransactionRepository:
             )
             .scalar()
         )
+
+    def latest_account_risk_score(self, document: str, model: str, since: datetime, until: datetime) -> AccountRiskReading | None:
+        row = (
+            self.session.query(AccountRiskScore.score, AccountRiskScore.computed_at, AccountRiskScore.features)
+            .filter(
+                AccountRiskScore.document_number == document,
+                AccountRiskScore.model == model,
+                AccountRiskScore.computed_at >= since,
+                AccountRiskScore.computed_at <= until,
+            )
+            .order_by(AccountRiskScore.computed_at.desc(), AccountRiskScore.id.desc())
+            .first()
+        )
+        if row is None:
+            return None
+        contributions = tuple((name, float(value)) for name, value in (row.features.get("contributions") or {}).items())
+        return AccountRiskReading(float(row.score), row.computed_at, contributions)
 
     def get_status(self, enumerator: str) -> AnalysisStatus:
         return self.session.query(AnalysisStatus).filter(AnalysisStatus.enumerator == enumerator).one()

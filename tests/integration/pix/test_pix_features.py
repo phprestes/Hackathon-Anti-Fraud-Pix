@@ -30,6 +30,8 @@ EXPECTED_FEATURE_NAMES = [
     "km_since_last_geolocation",
     "speed_kmh_since_last_geolocation",
     "poisson_tail_log10",
+    "destination_graph_risk",
+    "destination_graph_risk_age_minutes",
 ]
 
 

@@ -115,3 +115,7 @@ class InMemoryHistory:
     def count_destination_rejected_by_others_since(self, destination_document, document, since, until, exclude_pix_id):
         window = self._by_destination[destination_document].window(since, until, exclude_pix_id)
         return sum(1 for r in window if r.source != document and r.rejected)
+
+    def latest_account_risk_score(self, document, model, since, until):
+        # The cold-path worker needs a database; the batch backtest runs without graph scores.
+        return None

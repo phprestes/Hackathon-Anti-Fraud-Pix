@@ -56,3 +56,27 @@ CREATE TABLE pix_analysis_reason(
     reason                          TEXT NOT NULL,
     created_at                      TIMESTAMP NOT NULL DEFAULT(NOW())
 );
+
+CREATE TABLE account_risk_score(
+    id                              SERIAL PRIMARY KEY,
+    document_number                 VARCHAR(18) NOT NULL,
+    model                           VARCHAR(30) NOT NULL,
+    score                           NUMERIC(6,5) NOT NULL CHECK (score >= 0 AND score <= 1),
+    features                        JSONB NOT NULL,
+    computed_at                     TIMESTAMPTZ NOT NULL,
+    created_at                      TIMESTAMP NOT NULL DEFAULT(NOW())
+);
+
+CREATE INDEX account_risk_score_lookup_idx ON account_risk_score (document_number, model, computed_at DESC);
+
+CREATE TABLE payer_sequence_score(
+    id                              SERIAL PRIMARY KEY,
+    document_number                 VARCHAR(18) NOT NULL,
+    model                           VARCHAR(30) NOT NULL,
+    score                           NUMERIC(6,5) NOT NULL CHECK (score >= 0 AND score <= 1),
+    features                        JSONB NOT NULL,
+    computed_at                     TIMESTAMPTZ NOT NULL,
+    created_at                      TIMESTAMP NOT NULL DEFAULT(NOW())
+);
+
+CREATE INDEX payer_sequence_score_lookup_idx ON payer_sequence_score (document_number, model, computed_at DESC);

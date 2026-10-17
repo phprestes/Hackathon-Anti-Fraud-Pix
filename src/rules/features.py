@@ -44,6 +44,8 @@ FEATURE_NAMES = [
     "km_since_last_geolocation",
     "speed_kmh_since_last_geolocation",
     "poisson_tail_log10",
+    "destination_graph_risk",
+    "destination_graph_risk_age_minutes",
 ]
 
 # Floor so a zero tail does not become -inf.
@@ -97,6 +99,8 @@ def build_features(pix: PixSnapshot, context: RuleContext) -> dict[str, float]:
         "km_since_last_geolocation": travel[0] if travel is not None else -1,
         "speed_kmh_since_last_geolocation": travel[1] if travel is not None else -1,
         "poisson_tail_log10": math.log10(max(poisson[1], MIN_TAIL)) if poisson is not None else 0.0,
+        "destination_graph_risk": _or_sentinel(context.destination_graph_risk),
+        "destination_graph_risk_age_minutes": _or_sentinel(context.destination_graph_risk_age_minutes),
     }
     return {name: _number(values[name]) for name in FEATURE_NAMES}
 
@@ -105,3 +109,7 @@ def _number(value) -> float:
     if isinstance(value, bool):
         return int(value)
     return round(value, 6) if isinstance(value, float) else value
+
+
+def _or_sentinel(value: float | None) -> float:
+    return -1 if value is None else value

@@ -1,5 +1,13 @@
 from datetime import datetime
+from dataclasses import dataclass
 from typing import Protocol
+
+
+@dataclass(frozen=True)
+class AccountRiskReading:
+    score: float
+    computed_at: datetime
+    contributions: tuple[tuple[str, float], ...] = ()
 
 
 class HistoryPort(Protocol):
@@ -63,4 +71,10 @@ class HistoryPort(Protocol):
     def count_destination_rejected_by_others_since(
         self, destination_document: str, document: str, since: datetime, until: datetime, exclude_pix_id: str
     ) -> int:
+        ...
+
+    def latest_account_risk_score(
+        self, document: str, model: str, since: datetime, until: datetime
+    ) -> "AccountRiskReading | None":
+        """Newest score whose computed_at is in [since, until]; None when the cold path has not scored it."""
         ...

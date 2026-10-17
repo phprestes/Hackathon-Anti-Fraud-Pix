@@ -62,6 +62,26 @@ services:
       db:
         condition: service_healthy
 
+  worker:
+    # Cold path: same image as the api, other command. No port, no healthcheck.
+    build:
+      context: .
+      target: api
+    environment:
+      DATABASE_URL: postgresql+psycopg2://bootcamp:bootcamp@db:5432/bootcamp
+      APP_ENV: ${APP_ENV:-local}
+      SERVICE_NAME: ${SERVICE_NAME:-bootcamp-worker}
+      INTERNAL_TOKEN: ${INTERNAL_TOKEN:-default_token}
+      WORKER_ENABLED: ${WORKER_ENABLED:-true}
+      WORKER_INTERVAL_SECONDS: ${WORKER_INTERVAL_SECONDS:-30}
+      WORKER_LOOKBACK_HOURS: ${WORKER_LOOKBACK_HOURS:-72}
+    volumes:
+      - ./src:/app
+    command: python -m worker
+    depends_on:
+      db:
+        condition: service_healthy
+
   db:
     build: ./database/.
     environment:

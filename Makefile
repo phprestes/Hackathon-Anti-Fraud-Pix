@@ -6,14 +6,14 @@ COMPOSE := docker compose
 PYTHON_311 := $(shell command -v python3.11 2>/dev/null)
 
 .DEFAULT_GOAL := help
-.PHONY: help all up down stop reset rebuild ps logs shell install test test-cov lint check simulate events backtest parity calibrate calibrate-check analyze clean
+.PHONY: help all up down stop reset rebuild ps logs shell install test test-cov lint check simulate events backtest parity calibrate calibrate-check clean
 
 help: ## Lista os comandos
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  \033[36m%-10s\033[0m %s\n", $$1, $$2}'
 
 all: up test ## Sobe tudo e roda os testes (do clone ao verde)
 
-up: ## Sobe api e db e espera ficarem healthy
+up: ## Sobe api, db e worker (religa o worker parado pelo make test)
 	$(COMPOSE) up -d --build --wait
 
 down: ## Para e remove os containers (mantém o volume)
@@ -33,8 +33,8 @@ rebuild: ## Reconstrói a imagem da api sem cache (use após mudar requirements.
 ps: ## Mostra o estado dos containers
 	$(COMPOSE) ps
 
-logs: ## Acompanha o log da api
-	$(COMPOSE) logs -f api
+logs: ## Acompanha o log da api e do worker
+	$(COMPOSE) logs -f api worker
 
 shell: ## Abre um shell no container da api
 	$(COMPOSE) exec api sh
@@ -51,10 +51,12 @@ endif
 
 install: $(BIN)/pytest ## Cria o .venv (Python 3.11) com as dependências de teste
 
-test: install ## Roda os testes (precisa do make up antes)
+test: install ## Roda os testes com o worker parado (os testes chamam 1 ciclo); religue com make up
+	$(COMPOSE) stop worker
 	$(BIN)/pytest -v
 
 test-cov: install ## Roda os testes com cobertura
+	$(COMPOSE) stop worker
 	$(BIN)/pytest --cov
 
 lint: install ## Roda o flake8
@@ -71,8 +73,9 @@ events: install ## Gera scripts/out/events.jsonl (seed 42, 60 pagadores, 7 dias)
 backtest: events ## Roda o backtest em memória sobre scripts/out/events.jsonl (sem HTTP, sem banco)
 	$(BIN)/python scripts/backtest.py scripts/out/events.jsonl
 
-parity: events ## Zera o banco e compara API (SQL) x backtest (memória) Pix a Pix
+parity: events ## Zera o banco, para o worker e compara API (SQL) x backtest (memória) Pix a Pix
 	$(MAKE) reset
+	$(COMPOSE) stop worker
 	$(BIN)/python scripts/parity.py scripts/out/events.jsonl
 
 calibrate: install ## Grid de parametros sobre o backtest; grava scripts/out/calibration.md/.json (sem banco)

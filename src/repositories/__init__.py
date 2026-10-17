@@ -1,1 +1,2 @@
 from repositories.pix_transaction_repository import PixTransactionRepository
+from repositories.graph_risk_repository import GraphRiskRepository

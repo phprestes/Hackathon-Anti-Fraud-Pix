@@ -2,3 +2,5 @@ from models.analysis_status import AnalysisStatus
 from models.pix_transaction import PixTransaction
 from models.pix_analysis import PixAnalysis
 from models.pix_analysis_reason import PixAnalysisReason
+from models.account_risk_score import AccountRiskScore
+from models.payer_sequence_score import PayerSequenceScore

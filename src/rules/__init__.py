@@ -5,6 +5,7 @@ from rules.base_rule import BaseRule
 from rules.amount_source_daily_sum_rule import AmountSourceDailySumRule
 from rules.counterparty_fan_in_rule import CounterpartyFanInRule
 from rules.counterparty_flagged_rule import CounterpartyFlaggedRule
+from rules.counterparty_graph_risk_rule import CounterpartyGraphRiskRule
 from rules.counterparty_first_time_high_rule import CounterpartyFirstTimeHighRule
 from rules.counterparty_new_account_rule import CounterpartyNewAccountRule
 from rules.model_shadow_rule import load_model_rules
@@ -62,6 +63,7 @@ def build_rules(overrides: dict[str, int] | None = None) -> list[BaseRule]:
         CounterpartyFanInRule(p.RULE_DESTINATION_MAX_SOURCES_1H),
         CounterpartyFirstTimeHighRule(p.RULE_FIRST_TIME_MIN_AMOUNT_CENTS),
         CounterpartyFlaggedRule(p.RULE_FLAGGED_WINDOW_DAYS),
+        CounterpartyGraphRiskRule(p.RULE_GRAPH_RISK_2FA_PERMILLE, p.RULE_GRAPH_RISK_REJECT_PERMILLE),
         TypologyAccountTakeoverRule(
             p.RULE_GEO_MIN_DISTANCE_KM,
             p.RULE_GEO_MAX_SPEED_KMH,

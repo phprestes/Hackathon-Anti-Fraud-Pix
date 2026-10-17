@@ -10,7 +10,6 @@ import numpy as np
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 sys.path.insert(0, os.path.join(ROOT, "src"))
 
-from rules.features import FEATURE_NAMES  # noqa: E402
 from rules.models import gbdt, iforest, logreg  # noqa: E402
 
 OUT = os.path.join(ROOT, "scripts", "out")
@@ -28,6 +27,7 @@ def main():
     with open(os.path.join(OUT, "models.pkl"), "rb") as handle:
         libs = pickle.load(handle)
     models = {name: load_model(name) for name in libs}
+    feature_names = models["logreg"]["features"]
     scaler, lr, platt = libs["logreg"]
     forest = libs["iforest"]
     worst = {"logreg": 0.0, "lightgbm": 0.0, "iforest score": 0.0, "iforest path length": 0.0}
@@ -35,7 +35,7 @@ def main():
     for name in SETS:
         with open(os.path.join(OUT, name), encoding="utf-8") as handle:
             features = [json.loads(line)["features"] for line in handle if line.strip()]
-        X = np.array([[f[n] for n in FEATURE_NAMES] for f in features], dtype=float)
+        X = np.array([[f[n] for n in feature_names] for f in features], dtype=float)
         ref_lr = platt.predict_proba(lr.decision_function(scaler.transform(X)).reshape(-1, 1))[:, 1]
         ref_gb = libs["lightgbm"].predict_proba(X)[:, 1]
         ref_if = -forest.score_samples(X)

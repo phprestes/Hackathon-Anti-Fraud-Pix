@@ -20,3 +20,6 @@ class RuleContext:
     destination_used_before: bool
     source_small_attempts_last_24h: int
     destination_rejected_by_others_last_window: int
+    destination_graph_risk: float | None = None
+    destination_graph_risk_age_minutes: float | None = None
+    destination_graph_risk_contributions: tuple[tuple[str, float], ...] = ()

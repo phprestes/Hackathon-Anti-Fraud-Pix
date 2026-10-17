@@ -2,7 +2,9 @@ from dataclasses import dataclass, field
 from datetime import timedelta
 
 from constants import (
+    GRAPH_RISK_MODEL,
     RULE_FLAGGED_WINDOW_DAYS,
+    RULE_GRAPH_RISK_MAX_AGE_MINUTES,
     RULE_POISSON_LOOKBACK_DAYS,
     RULE_POISSON_WINDOW_MINUTES,
     RULE_PROFILE_LOOKBACK_DAYS,
@@ -31,6 +33,9 @@ def build_context(snapshot: PixSnapshot, history: HistoryPort) -> RuleContext:
     source, pix_id = snapshot.source_document, snapshot.pix_id
     destination = snapshot.destination_document
     poisson_start = t - timedelta(minutes=RULE_POISSON_WINDOW_MINUTES)
+    graph_risk = history.latest_account_risk_score(
+        destination, GRAPH_RISK_MODEL, t - timedelta(minutes=RULE_GRAPH_RISK_MAX_AGE_MINUTES), t
+    )
     return RuleContext(
         source_attempts_last_velocity_window=history.count_source_attempts_since(
             source, t - timedelta(minutes=RULE_VELOCITY_WINDOW_MINUTES), t, pix_id
@@ -64,6 +69,9 @@ def build_context(snapshot: PixSnapshot, history: HistoryPort) -> RuleContext:
         destination_rejected_by_others_last_window=history.count_destination_rejected_by_others_since(
             destination, source, t - timedelta(days=RULE_FLAGGED_WINDOW_DAYS), t, pix_id
         ),
+        destination_graph_risk=graph_risk.score if graph_risk else None,
+        destination_graph_risk_age_minutes=(t - graph_risk.computed_at).total_seconds() / 60 if graph_risk else None,
+        destination_graph_risk_contributions=graph_risk.contributions if graph_risk else (),
     )
 
 
