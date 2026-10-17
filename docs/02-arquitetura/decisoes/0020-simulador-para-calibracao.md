@@ -21,6 +21,9 @@ A banca pergunta o porquê de cada parâmetro e quanta fricção o motor gera. N
 - Manda tudo pela API (como a banca faria) e imprime: % de `approved`/`two_factor_required`/`rejected` entre legítimos (fricção) e entre fraudes (captura), matriz por tipologia e P50/P95 de latência.
 - O resultado entra em `docs/05-motor/calibracao.md` e justifica os padrões de `src/constants.py`.
 
+- **O simulador é um backtest com dados fabricados.** Cada Pix nasce com um rótulo (`legit`, `mule`, `account_takeover`…) que fica só no script; a API decide sem vê-lo, e o simulador compara a decisão com o rótulo para medir fricção e captura. Trocar o gerador por um histórico real rotulado (desfecho do MED, contestações) transforma o mesmo processo em backtest real.
+- **O backtest roda pela API**, não offline: mede exatamente o motor entregue (schema, idempotência, consultas SQL, latência) e não exige uma segunda implementação dos agregados.
+
 ## Alternativas descartadas
 
 - **PixSim ou PaySim.**
@@ -29,6 +32,10 @@ A banca pergunta o porquê de cada parâmetro e quanta fricção o motor gera. N
 - **Calibrar no olho.**
   - **Preço:** o "porquê" do parâmetro vira opinião.
   - **Ganharia se** houvesse dado real.
+
+- **Backtest offline em lote (motor sem HTTP ou agregados em SQL de janela sobre a base inteira).**
+  - **Preço:** ou ganha pouco (o gargalo são as consultas, não o HTTP), ou exige reimplementar os agregados fora do repository, e a calibração passa a medir uma cópia do motor.
+  - **Ganharia se** houvesse milhões de Pix reais para reprocessar, com uma camada de features compartilhada entre serviço e backtest.
 
 ## Consequências
 
