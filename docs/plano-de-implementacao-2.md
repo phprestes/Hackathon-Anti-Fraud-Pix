@@ -11,7 +11,7 @@ sources: [Pesquisa QITech (M2, M3, GNN, HMM, análises 1–7), Plano de implemen
 >
 > **Responde a:** o que entra depois do motor de regras? quais modelos, síncronos e assíncronos? em que ordem? o que muda na arquitetura?
 
-**Estado:** aprovado pelo time para execução. O [plano 1](plano-de-implementacao.md) foi executado (F0–F5) em cerca de 3 horas, bem abaixo do time-box. Este plano traz de volta itens que o plano 1 tinha deixado como "NÃO (roadmap)".
+**Estado:** executado (G0–G8). Resultados no [README](../README.md), nas ADRs 0022–0027 e no [CHANGELOG](../CHANGELOG.md). Ficaram fora, como planejado: RNN, LLM, Benford, streaming e modelo decidindo.
 
 ## O que muda em relação ao plano 1
 
