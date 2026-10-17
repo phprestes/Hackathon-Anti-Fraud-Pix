@@ -83,6 +83,7 @@ Documentação em pt-BR; código, rotas, campos e códigos de regra em inglês. 
 - [Plano de implementação](docs/plano-de-implementacao.md): triagem da pesquisa, sugestões N1–N6, fases F0–F6 com time-box, riscos
 - [Plano de implementação 2](docs/plano-de-implementacao-2.md): backtest em lote, modelos síncronos em shadow, worker assíncrono (grafo, GraphSAGE, HMM), pipeline de calibração e CI
 - [Plano de implementação 3](docs/plano-de-implementacao-3.md): validação externa no PixSim, custo/P@k, peer group, rótulos atrasados, stacking
+- [Plano de implementação 4](docs/plano-de-implementacao-4.md): PixSim como referência; retroalimentação pelo MED no backtest
 - [Skills](.agents/README.md): nova-regra, novo-erro, nova-decisao, registrar-mudanca, revisar-mudanca
 
 ## Optional

@@ -54,6 +54,7 @@ sources: [Desafio Antifraude Pix, bootcamp-base-api, Projeto fase 1]
 | [plano-de-implementacao.md](plano-de-implementacao.md) | O que da pesquisa entra até o prazo, em que ordem, e o que cortar se atrasar? |
 | [plano-de-implementacao-2.md](plano-de-implementacao-2.md) | Segunda rodada: backtest em lote, modelos em shadow (LogReg, LightGBM, Isolation Forest), cold path com grafo, GraphSAGE e HMM, calibração automática e CI |
 | [plano-de-implementacao-3.md](plano-de-implementacao-3.md) | Validação externa no PixSim, custo assimétrico e P@k, peer group, rótulos atrasados e stacking |
+| [plano-de-implementacao-4.md](plano-de-implementacao-4.md) | PixSim como referência das métricas e retroalimentação pelo MED no backtest |
 | [../CHANGELOG.md](../CHANGELOG.md) | O que mudou, quando, por quê e quem (pessoa ou agente)? |
 | **Referência** | |
 | [referencia/enunciado/](referencia/enunciado/) | PDFs originais do desafio e dos slides |
