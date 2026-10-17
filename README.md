@@ -4,13 +4,18 @@
 
 Motor antifraude de Pix do Hackathon QI Tech 2026: uma API que recebe um Pix e responde `approved`, `two_factor_required` ou `rejected`, sempre com o motivo. Feito a partir do [`bootcamp-base-api`](docs/referencia/base-service-readme.md). Stack: Python 3.11, FastAPI, PostgreSQL 16, Docker. Enunciado completo em [docs/01-contexto/enunciado.md](docs/01-contexto/enunciado.md).
 
-> **Estado:** motor completo: 17 regras, 116 testes black box, calibrado com simulador (cerca de 4% de 2FA em legítimos, nenhuma sequência de fraude simulada passa sem barreira, P95 de 55 ms). Próximos passos no [plano 2](docs/plano-de-implementacao-2.md); histórico no [CHANGELOG](CHANGELOG.md).
+> **Em números:** 18 regras que decidem, 5 modelos em shadow, 130 testes black box, CI verde. No simulador: cerca de 4% de 2FA em legítimos, 0,04% reprovados e nenhuma sequência de fraude simulada passa sem barreira. P95 de 55 ms pela API; o backtest em lote processa 8 mil Pix/s. Histórico no [CHANGELOG](CHANGELOG.md).
 
 ## Como o motor de decisão funciona
 
-Cada `POST /pix/transaction` atravessa as camadas do Base Service. O controller confere se esse `id` de Pix já foi analisado (idempotência), carrega do banco o histórico relevante do pagador, do aparelho e do destino, e passa o Pix e esse contexto por **todas** as regras. Cada regra é uma classe pequena em `src/rules/` que olha um sinal e diz se dispara. Pix, análise e motivos são gravados no mesmo commit, e o `GET /pix/transaction/{id}` devolve a análise gravada.
+Cada `POST /pix/transaction` atravessa as camadas do Base Service. O controller confere se esse `id` de Pix já foi analisado (idempotência) e passa o Pix ao motor (`src/rules/engine.py`). O motor carrega do banco o histórico relevante do pagador, do aparelho e do destino, roda **todas** as regras sobre esse contexto e decide pela mais severa. Pix, análise e motivos são gravados no mesmo commit, e o `GET /pix/transaction/{id}` devolve a análise gravada.
 
-Detalhe em [motor de regras](docs/05-motor/motor-de-regras.md). O porquê de cada escolha, com as alternativas descartadas, está nas [decisões](docs/02-arquitetura/decisoes/README.md).
+Dois caminhos, como em produção:
+
+- **Hot path (síncrono, dentro do POST):** 18 regras explícitas, que decidem, e 5 modelos em **shadow**, que calculam, gravam e nunca mudam a decisão.
+- **Cold path (assíncrono):** um container `worker` que, a cada 30 s, calcula a reputação de cada conta de destino a partir do grafo pagador → destino, mais um GraphSAGE e um HMM de sequência. O hot path só lê o score pronto.
+
+Detalhe em [motor de regras](docs/05-motor/motor-de-regras.md) e nos [diagramas C4](docs/02-arquitetura/c4.md). O porquê de cada escolha, com as alternativas descartadas, está nas [decisões](docs/02-arquitetura/decisoes/README.md).
 
 ## Regras
 
@@ -32,6 +37,7 @@ Fonte da verdade, com o porquê completo de cada parâmetro: [catálogo de regra
 | `COUNTERPARTY_FAN_IN` | Pagadores distintos para o destino em 1 h | reprova acima de 10 | Conta de passagem (funil) |
 | `COUNTERPARTY_FIRST_TIME_HIGH` | Primeiro Pix do pagador para esse destino, valor alto | > R$ 3.000 | Falso parente e falso boleto vão para destino novo; o aluguel não |
 | `COUNTERPARTY_FLAGGED` | Destino recebeu Pix reprovado de outro pagador em 7 dias | 7 dias | Reputação derivada do próprio histórico, sem lista externa |
+| `COUNTERPARTY_GRAPH_RISK` | Score de reputação do destino calculado pelo worker no grafo (funil, dispersão, 2 saltos, idade), com até 120 min | 2FA ≥ 0,6; reprova ≥ 0,9 | Conta laranja é um padrão de rede: muitos pagadores entrando e repasse para várias contas logo em seguida |
 | `TYPOLOGY_ACCOUNT_TAKEOVER` | Histórico + aparelho novo + (viagem impossível ou z > 3,0) | z > 3,0 | Os sinais juntos descrevem tomada de conta: risco claro |
 | `TYPOLOGY_MULE` | Destino < 30 dias recebendo de 5+ pagadores em 1 h | 5 pagadores | Barra a conta laranja antes do fan-in genérico |
 | `TYPOLOGY_SPLITTING` | 6+ Pix pequenos (≤ R$ 2.000) para 4+ destinos **novos** em 24 h acima do corte | ★ R$ 15 mil | Fracionamento espalha para contas novas; contar só destinos novos zerou os legítimos reprovados |
@@ -40,7 +46,7 @@ Fonte da verdade, com o porquê completo de cada parâmetro: [catálogo de regra
 
 ## Como as regras viram decisão
 
-Todas as 17 regras rodam, sem parar na primeira. Cada uma devolve nada, `two_factor_required` ou `rejected`, e a decisão final é a mais severa: `rejected` > `two_factor_required` > `approved`. Sem disparo, `approved`. A ordem das regras não muda a decisão, só a ordem dos motivos.
+Todas as 18 regras rodam, sem parar na primeira. Cada uma devolve nada, `two_factor_required` ou `rejected`, e a decisão final é a mais severa: `rejected` > `two_factor_required` > `approved`. Sem disparo, `approved`. A ordem das regras não muda a decisão, só a ordem dos motivos.
 
 - **2FA** quando um sinal isolado gera dúvida, mas acontece com cliente bom: limites, aparelho novo, valor fora do perfil, conta de destino nova, primeiro Pix alto para alguém, destino sinalizado. O cliente legítimo resolve com um toque.
 - **Reprovação** quando o risco é claro: um sinal extremo (conta de destino com menos de 3 dias e mais de R$ 1.000, 10 Pix em 10 min, aparelho com mais de 3 contas, mais de 10 pagadores para o mesmo destino em 1 h) ou uma **tipologia** (conta tomada, mula, fracionamento). Dois 2FA não somam uma reprovação: só uma tipologia explícita combina sinais.
@@ -48,12 +54,26 @@ Todas as 17 regras rodam, sem parar na primeira. Cada uma devolve nada, `two_fac
 
 Exemplos em [como as regras viram decisão](docs/05-motor/decisao.md).
 
+## Além das regras: modelos em shadow
+
+Sem rótulo real, nenhum modelo decide. Todos rodam em shadow: aparecem em `metadata.shadow` com o score e o que **decidiriam**, e o simulador mede como seria. Os rótulos de treino vêm do simulador, então isto prova que o caminho completo é viável, não que funciona contra fraude real ([ADR 0017](docs/02-arquitetura/decisoes/0017-ml-fora-do-prazo-e-do-hot-path.md)).
+
+| Modelo | Onde roda | Como | Resultado (sintético) |
+|---|---|---|---|
+| Regressão logística + Platt | hot path | Treino em `scripts/` (sklearn só em dev), pesos em JSON, inferência em Python puro | AUC 0,98 |
+| LightGBM | hot path | Árvores exportadas para JSON, avaliadas em Python puro (diferença de 6e-17 contra a biblioteca) | AUC 0,99. Regras + LightGBM barrariam 89% das fraudes, contra 81% só com as regras |
+| Isolation Forest | hot path | Não supervisionado (só legítimos), árvores em JSON | AUC 0,87 |
+| GraphSAGE | worker | 2 camadas, até 10 vizinhos, numpy | AUC 1,0, otimista: o grafo sintético é fácil |
+| HMM de sequência | worker | 3 estados, Baum-Welch, numpy | AUC 0,51 no que o hot path vê: a sequência de Pix sozinha diz pouco |
+
+Os três modelos do hot path custam 0,15 ms por Pix juntos. A imagem da `api` não ganhou nenhuma biblioteca de ML. Detalhes em [`scripts/model-results.md`](scripts/model-results.md) e nas ADRs [0022](docs/02-arquitetura/decisoes/0022-shadow-mode.md) a [0026](docs/02-arquitetura/decisoes/0026-graphsage-e-hmm-no-worker.md).
+
 ## Como rodar e testar
 
 Pré-requisitos: Docker com `docker compose`, Git e Python 3.11 (ou `uv`).
 
 ```bash
-make all      # sobe api e db, espera ficarem healthy, cria o .venv (Python 3.11) e roda o pytest
+make all      # sobe api, db e worker, espera ficarem healthy, cria o .venv (Python 3.11) e roda o pytest
 ```
 
 Sem `make`:
@@ -75,7 +95,18 @@ curl -X POST http://localhost:3000/pix/transaction \
 curl http://localhost:3000/pix/transaction/pix-000123 -H "INTERNAL-TOKEN: default_token"
 ```
 
-Outros comandos (`make up`, `make test`, `make lint`, `make reset`…) em [rodando localmente](docs/06-operacao/rodando-localmente.md).
+Ferramentas de risco (rodam fora da API):
+
+| Comando | Faz |
+|---|---|
+| `make simulate` | Manda tráfego sintético (legítimos + 5 tipologias de fraude) pela API e mede fricção, captura e latência |
+| `make backtest` | O mesmo motor sobre um arquivo de eventos, sem HTTP e sem banco |
+| `make parity` | Confere que API e backtest decidem igual, Pix a Pix |
+| `make calibrate` / `make calibrate-check` | Grid de parâmetros / trava de regressão de fricção e captura (roda no CI) |
+| `make train-models`, `make train-graphsage`, `make train-hmm` | Retreina os modelos em shadow |
+| `make analyze` | Análises estatísticas ([docs/05-motor/analises.md](docs/05-motor/analises.md)) |
+
+`make test` para o worker para que os testes controlem cada ciclo; `make up` religa. Outros comandos em [rodando localmente](docs/06-operacao/rodando-localmente.md).
 
 ## Documentação
 
@@ -95,8 +126,9 @@ Agentes de código seguem o [`AGENTS.md`](AGENTS.md) e as skills em [`.agents/`]
 ## Estrutura
 
 ```
-src/        api em camadas do Base Service (+ rules/ para o motor)
+src/        api em camadas do Base Service (+ rules/ para o motor, worker/ para o cold path)
 tests/      testes black box por HTTP
+scripts/    simulador, backtest, paridade, calibração, treino e análises
 database/   imagem do Postgres e schema (database.sql)
 docs/       documentação navegável, ADRs e o enunciado
 .agents/    skills para agentes de IA (ponto de entrada: AGENTS.md)

@@ -42,6 +42,7 @@ A dependência anda num sentido só: `resources → controllers → (repositorie
 | `errors/` | código, mensagem e status de cada recusa | ter regra |
 | `middlewares/` | agir em toda requisição | conhecer uma rota |
 | `connectors/` | (sem uso neste projeto, [ADR 0002](decisoes/0002-monolito-sincrono-sem-dependencia-externa.md)) | — |
+| `worker/` | cold path: jobs periódicos que leem o histórico e gravam scores (grafo, GraphSAGE, HMM), cada um com o próprio commit | ser chamado pela api; decidir um Pix |
 | `utils/` | logger, request id, validação de schema, documento, estatística pura (`statistics.py`) | virar depósito |
 
 Exemplo: `if pix.amount > self.max_night_amount_cents: return RuleResult(...)` mora em `src/rules/limit_night_amount_rule.py`. A consulta "soma dos Pix desse documento nas últimas 24h" mora no `pix_transaction_repository.py`. Quem junta as duas coisas é o controller.

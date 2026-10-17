@@ -21,13 +21,19 @@ Docker com `docker compose`, Git e Python 3.11 (ou `uv`, que o `make install` us
 |---|---|---|
 | `make` | lista os alvos | sempre que esquecer |
 | `make all` | `up` + `test`: do clone ao verde | primeira vez; antes de entregar |
-| `make up` | sobe `api` e `db` e espera `healthy` | começo do trabalho |
-| `make test` | `pytest -v` no `.venv` | a cada mudança |
+| `make up` | sobe `api`, `db` e `worker` e espera `healthy` | começo do trabalho |
+| `make test` | para o `worker` e roda `pytest -v` (os testes disparam um ciclo do worker quando precisam) | a cada mudança |
 | `make lint` | `flake8 src tests` | antes de commitar |
 | `make check` | `lint` + `test` | antes de dizer que terminou |
 | `make reset` | apaga o volume e recria o banco | depois de mudar `database/database.sql` |
 | `make rebuild` | reconstrói a imagem sem cache | depois de mudar `requirements.txt` |
 | `make logs` | segue o log da `api` | para achar um `x-request-id` |
+| `make simulate` | tráfego sintético pela API (~3 min); suja o banco | medir fricção e latência |
+| `make events` / `make backtest` | gera eventos / roda o motor em lote, sem HTTP e sem banco | experimentos rápidos |
+| `make parity` | zera o banco e compara API × backtest Pix a Pix | depois de mexer em agregados |
+| `make calibrate` / `make calibrate-check` | grid de parâmetros / trava de regressão | antes de mudar parâmetro de regra |
+| `make datasets`, `make train-models`, `make train-graphsage`, `make train-hmm`, `make model-parity` | dados de treino, treino e fidelidade dos modelos em shadow | retreinar |
+| `make analyze` | análises estatísticas em `docs/05-motor/analises.md` | revisar hipóteses das regras |
 | `make clean` | remove containers, volume, `.venv` e caches | recomeçar do zero |
 
 Sem `make`: `docker compose up -d --wait`, depois `python3.11 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt && .venv/bin/pytest -v`.
