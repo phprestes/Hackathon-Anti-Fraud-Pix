@@ -197,6 +197,19 @@ Base: nosso simulador (seed 42); comparado: PixSim. PSI acima de 0,25 é deriva 
 - **Engenharia social** (63% dos eventos) é barrada em 30% dos Pix e em 31,6% dos eventos: o golpe é a própria vítima pagando, com valores dentro do perfil dela.
 - **Anéis.** Todos os 75 anéis de mulas têm ao menos um Pix barrado em algum papel (vítima ou dispersão); a parte da dispersão só ajuda se a mula for cliente do banco.
 
+## Peer group
+
+`PROFILE_PEER_AMOUNT` (decide 2FA) compara o valor de um pagador **sem perfil próprio** (menos de 5 Pix em 30 dias) com os Pix não reprovados de outros pagadores do mesmo grupo (PF/PJ × idade da conta: < 30 dias, 30–365, > 365; até 500 valores, mínimo 50), z robusto de log(valor) acima de 3,5. Medida com `RULE_PEER_MIN_SAMPLE` inviável (antes) contra o padrão (depois), no mundo B do PixSim (seed 20261017, visão vítima) e no nosso simulador (seed 42).
+
+| Conjunto | Fricção legítimo (2FA / reprovado) | Vítima aprovada / 2FA / reprovada | Custo ponderado por 1.000 Pix | Disparos da regra |
+|---|---|---|---|---|
+| PixSim B, antes | 3,74% / 0,03% | 886 / 536 / 16 | R$ 157,60 | 0 |
+| PixSim B, depois | 3,74% / 0,03% | 886 / 536 / 16 | R$ 157,60 | 1 (dispersão) |
+| Nosso simulador, antes | 3,45% / 0,00% | 15 / 86 / 100 | R$ 3.299,23 | 0 |
+| Nosso simulador, depois | 3,45% / 0,00% | 15 / 86 / 100 | R$ 3.299,23 | 0 |
+
+A captura por tipologia não muda em nenhum dos dois. **Decisão: medida e descartada** ([ADR 0028](../02-arquitetura/decisoes/0028-peer-group-medido-e-descartado.md)). A regra não piora o custo, mas o efeito medido é nulo: só 12 dos 1.438 Pix de vítima do mundo B (0,8%) vêm de pagador sem perfil, e o z mediano deles é 1,7, abaixo do corte de 3,5. Seria uma rede de segurança para pagador novo, não um ganho de captura demonstrado, e o custo de latência não se paga. Latência: o backtest em memória não muda (1.960 contra 1.957 Pix/s no mundo B; 2.642 contra 2.559 no nosso simulador). Pela API, com 300 mil Pix em 30 dias, a consulta de pares leva 8,7 ms num grupo cheio (índice `pix_transaction_date_idx`, varredura reversa que para no LIMIT; sem o índice, 371 ms) e cerca de 94 ms num grupo vazio, que obriga a percorrer a janela inteira; o Pix de pagador novo custou em média 59 ms contra 50 ms do pagador com histórico, e 144 ms para conta jovem (grupo vazio).
+
 ## Modelos em shadow: teste fora da distribuição
 
 Os três modelos (regressão logística, LightGBM, Isolation Forest) foram treinados no nosso simulador. No PixSim o AUC contra legítimos cai de 1,000 para 0,707 (LightGBM), de 0,997 para 0,756 (logística) e de 0,892 para 0,797 (Isolation Forest); o recall no limiar do próprio modelo cai de 99% para 28% no LightGBM, com 7% de fricção em legítimos. Isso é esperado de um modelo que aprendeu os sinais do nosso gerador (conta destino nova, geolocalização) e não os do PixSim. O resumo do artigo cita um *synthetic scorer* de 0,82 AUC; a referência vale só como ordem de grandeza, sem equivalência: aquele scorer foi treinado e testado dentro do próprio PixSim, com outras features. O AUC por decisão das regras (0,663) fica abaixo do melhor modelo isolado (Isolation Forest, 0,797), o que sugere ganho de ordenação no PixSim com um modelo treinado nele.

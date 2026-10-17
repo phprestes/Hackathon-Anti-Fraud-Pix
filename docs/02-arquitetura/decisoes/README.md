@@ -44,5 +44,6 @@ Uma decisão por arquivo, sempre no mesmo formato: **Contexto → Decisão → A
 | [0025](0025-cold-path-worker.md) | Cold path em container `worker`: reputação por grafo pré-calculada, lida pelo hot path | Ecossistema | aceita |
 | [0026](0026-graphsage-e-hmm-no-worker.md) | GraphSAGE e HMM em numpy, só no worker, lidos em shadow | Motor | aceita |
 | [0027](0027-pipeline-de-calibracao-e-ci.md) | Pipeline de calibração (grid sobre o backtest) e CI com trava de regressão | Processo | aceita |
+| [0028](0028-peer-group-medido-e-descartado.md) | Peer group medido no PixSim e descartado (efeito nulo, +94 ms no pior caso) | Motor | aceita (regra fora) |
 
 Decisão nova: siga a [skill nova-decisao](../../../.agents/skills/nova-decisao/SKILL.md). Ela adiciona a linha aqui, no [`llms.txt`](../../../llms.txt) e no [CHANGELOG](../../../CHANGELOG.md).

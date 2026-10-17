@@ -51,6 +51,7 @@ Documentação em pt-BR; código, rotas, campos e códigos de regra em inglês. 
 - [ADR 0025](docs/02-arquitetura/decisoes/0025-cold-path-worker.md): worker assíncrono com features de grafo em SQL, account_risk_score, COUNTERPARTY_GRAPH_RISK
 - [ADR 0026](docs/02-arquitetura/decisoes/0026-graphsage-e-hmm-no-worker.md): GraphSAGE e HMM em numpy no worker, shadow
 - [ADR 0027](docs/02-arquitetura/decisoes/0027-pipeline-de-calibracao-e-ci.md): make calibrate, make calibrate-check e GitHub Actions
+- [ADR 0028](docs/02-arquitetura/decisoes/0028-peer-group-medido-e-descartado.md): peer group medido no PixSim e descartado
 
 ## API
 
