@@ -5,12 +5,12 @@ import math
 import os
 import random
 import sys
-import time
 import uuid
-from collections import Counter, defaultdict
+from collections import Counter
 from datetime import datetime, timedelta, timezone
 
-import requests
+from report import TYPOLOGIES, render_report, summarize
+from api_client import send_events
 
 TZ = timezone(timedelta(hours=-3))
 START = datetime(2026, 9, 1, tzinfo=TZ)
@@ -19,7 +19,6 @@ CAPITALS = [
     (-19.92, -43.94), (-30.03, -51.23), (-12.97, -38.50),
 ]
 ISPBS = ["60701190", "00000000", "60746948", "90400888", "18236120", "00416968"]
-TYPOLOGIES = ["account_takeover", "mule", "splitting", "night_kidnapping", "device_farm"]
 FRAUD_SHARE = 0.025
 TOP_LEVEL_KEYS = {"id", "amount", "transaction_date", "source_account", "destination_account", "source"}
 SOURCE_ACCOUNT_KEYS = {"branch", "account_number", "opening_date", "owner"}
@@ -131,11 +130,11 @@ class EventFactory:
         self.counter = 0
         self.events = []
 
-    def add(self, label, group, when, amount, payer, destination, device_id, geolocation):
+    def add(self, label, sequence, when, amount, payer, destination, device_id, geolocation):
         self.counter += 1
         payload = build_payload(f"sim-{self.run_tag}-{self.counter:07d}", when, amount,
                                 payer, destination, device_id, geolocation)
-        self.events.append({"label": label, "group": group, "payload": payload})
+        self.events.append({"label": label, "sequence": sequence, "payload": payload})
 
 
 def fresh_destination(rng, age_days, when):
@@ -287,84 +286,12 @@ def validate_contract(payload):
         raise ValueError("geolocation must have latitude and longitude")
 
 
-def percentile(values, pct):
-    ordered = sorted(values)
-    rank = max(1, math.ceil(pct / 100 * len(ordered)))
-    return ordered[rank - 1]
-
-
-def send_events(events, base_url, token):
-    session = requests.Session()
-    headers = {"INTERNAL-TOKEN": token}
-    for event in events:
-        started = time.perf_counter()
-        try:
-            response = session.post(f"{base_url}/pix/transaction", json=event["payload"],
-                                    headers=headers, timeout=30)
-            status_code = response.status_code
-            body = response.json() if response.ok else None
-        except (requests.RequestException, ValueError):
-            status_code, body = 0, None
-        event["latency_ms"] = (time.perf_counter() - started) * 1000
-        event["http_status"] = status_code
-        event["response"] = body
-
-
-def _pct(part, total):
-    return f"{100 * part / total:.1f}%" if total else "n/a"
-
-
-def summarize(events):
-    answered = [e for e in events if e.get("response")]
-    legit = [e for e in answered if e["label"] == "legit"]
-    legit_status = Counter(e["response"]["status"] for e in legit)
-    rules = Counter(r["rule"] for e in legit for r in e["response"]["metadata"].get("reasons", []))
-    typologies = {}
-    for name in TYPOLOGIES:
-        items = [e for e in answered if e["label"] == name]
-        groups = defaultdict(list)
-        for e in items:
-            groups[e["group"]].append(e["response"]["status"] != "approved")
-        typologies[name] = {
-            "count": len(items),
-            "status": Counter(e["response"]["status"] for e in items),
-            "sequences": len(groups),
-            "caught_sequences": sum(1 for flags in groups.values() if any(flags)),
-        }
-    latencies = [e["latency_ms"] for e in events if "latency_ms" in e]
-    versions = {e["response"]["metadata"].get("rule_set_version") for e in answered}
-    return {
-        "legit_total": len(legit), "legit_status": legit_status, "rules": rules,
-        "typologies": typologies, "latencies": latencies,
-        "requests": len(latencies),
-        "errors": sum(1 for e in events if not 200 <= e.get("http_status", 0) < 300),
-        "versions": sorted(v for v in versions if v),
-    }
-
-
-def render_report(summary):
-    lines = ["# Simulation results", "", "## Legitimate friction", ""]
-    total = summary["legit_total"]
-    for status in ("approved", "two_factor_required", "rejected"):
-        count = summary["legit_status"].get(status, 0)
-        lines.append(f"- {status}: {count} ({_pct(count, total)})")
-    lines += ["", "## Fraud by typology", "",
-              "| typology | Pix | approved (escaped) | 2FA | rejected | sequences with >=1 barred |",
-              "|---|---|---|---|---|---|"]
-    for name, data in summary["typologies"].items():
-        n, st = data["count"], data["status"]
-        lines.append(
-            f"| {name} | {n} | {_pct(st.get('approved', 0), n)} | {_pct(st.get('two_factor_required', 0), n)} "
-            f"| {_pct(st.get('rejected', 0), n)} | {data['caught_sequences']}/{data['sequences']} |")
-    lines += ["", "## Top rules firing on legitimate Pix", ""]
-    lines += [f"- {rule}: {count}" for rule, count in summary["rules"].most_common(10)] or ["- none"]
-    lines += ["", "## Latency and errors", ""]
-    if summary["latencies"]:
-        p50, p95, p99 = (percentile(summary["latencies"], p) for p in (50, 95, 99))
-        lines.append(f"- P50 {p50:.1f} ms, P95 {p95:.1f} ms, P99 {p99:.1f} ms")
-    lines += [f"- requests: {summary['requests']}", f"- non-2xx errors: {summary['errors']}",
-              f"- rule_set_version: {', '.join(summary['versions']) or 'n/a'}", ""]
-    return "\n".join(lines)
+def write_events(events, path):
+    os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as handle:
+        for event in events:
+            line = {"label": event["label"], "sequence": event["sequence"], "payload": event["payload"]}
+            handle.write(json.dumps(line, separators=(",", ":")) + "\n")
 
 
 def render_dry_run(events):
@@ -393,13 +320,23 @@ def parse_args():
     parser.add_argument("--days", type=int, default=14)
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--out", help="optional Markdown file for the results")
+    parser.add_argument("--generate-only", action="store_true", help="write the events file and do not send")
+    parser.add_argument("--events", help="JSONL file written by --generate-only")
     return parser.parse_args()
 
 
 def main():
     args = parse_args()
-    run_tag = "dry" if args.dry_run else uuid.uuid4().hex[:8]
+    if args.generate_only and not args.events:
+        print("--generate-only needs --events <file>", file=sys.stderr)
+        return 2
+    # Fixed tag keeps the events file reproducible; ids only need to be unique per database.
+    run_tag = "dry" if args.dry_run else "evt" if args.generate_only else uuid.uuid4().hex[:8]
     events = generate_events(args.seed, args.payers, args.days, run_tag)
+    if args.generate_only:
+        write_events(events, args.events)
+        print(f"wrote {len(events)} events to {args.events}", file=sys.stderr)
+        return 0
     if args.dry_run:
         print(render_dry_run(events))
         return 0

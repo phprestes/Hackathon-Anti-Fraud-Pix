@@ -76,3 +76,6 @@ coverage.xml
 # --- Tipagem estática --------------------------------------
 .mypy_cache/
 .ruff_cache/
+
+# --- Saídas dos scripts ------------------------------------
+scripts/out/

@@ -1,42 +1,7 @@
-from constants import (
-    RULE_ATO_Z_TENTHS,
-    RULE_AMOUNT_DAILY_SUM_CENTS,
-    RULE_AMOUNT_DAILY_SUM_PJ_CENTS,
-    RULE_DESTINATION_CRITICAL_AGE_DAYS,
-    RULE_DESTINATION_MAX_SOURCES_1H,
-    RULE_DESTINATION_MIN_AGE_DAYS,
-    RULE_DESTINATION_NEW_MAX_AMOUNT_CENTS,
-    RULE_DEVICE_MAX_SOURCES_24H,
-    RULE_FLAGGED_WINDOW_DAYS,
-    RULE_FIRST_TIME_MIN_AMOUNT_CENTS,
-    RULE_GEO_MAX_SPEED_KMH,
-    RULE_GEO_MIN_DISTANCE_KM,
-    RULE_LIMIT_NIGHT_AMOUNT_CENTS,
-    RULE_LIMIT_SINGLE_AMOUNT_CENTS,
-    RULE_LIMIT_SINGLE_AMOUNT_PJ_CENTS,
-    RULE_MULE_MIN_SOURCES_1H,
-    RULE_NEW_DEVICE_MIN_AMOUNT_CENTS,
-    RULE_NIGHT_END_HOUR,
-    RULE_NIGHT_START_HOUR,
-    RULE_POISSON_LOOKBACK_DAYS,
-    RULE_POISSON_MIN_EXPOSURE_HOURS,
-    RULE_POISSON_PRIOR_RATE_HOURS,
-    RULE_POISSON_PRIOR_SHAPE,
-    RULE_POISSON_TAIL_PPM,
-    RULE_POISSON_WINDOW_MINUTES,
-    RULE_PROFILE_MIN_HISTORY,
-    RULE_PROFILE_MIN_SCALE_PERCENT,
-    RULE_PROFILE_Z_2FA_TENTHS,
-    RULE_SOURCE_MIN_AGE_DAYS,
-    RULE_SPLITTING_MAX_AMOUNT_CENTS,
-    RULE_SPLITTING_MIN_COUNT,
-    RULE_SPLITTING_MIN_DESTINATIONS,
-    RULE_SPLITTING_MIN_SUM_CENTS,
-    RULE_SOURCE_NEW_MAX_AMOUNT_CENTS,
-    RULE_VELOCITY_2FA_COUNT,
-    RULE_VELOCITY_REJECT_COUNT,
-    RULE_VELOCITY_WINDOW_MINUTES,
-)
+from types import SimpleNamespace
+
+import constants
+from rules.base_rule import BaseRule
 from rules.amount_source_daily_sum_rule import AmountSourceDailySumRule
 from rules.counterparty_fan_in_rule import CounterpartyFanInRule
 from rules.counterparty_flagged_rule import CounterpartyFlaggedRule
@@ -55,48 +20,62 @@ from rules.velocity_device_sources_rule import VelocityDeviceSourcesRule
 from rules.velocity_poisson_gamma_rule import VelocityPoissonGammaRule
 from rules.velocity_source_count_rule import VelocitySourceCountRule
 
-# Order here breaks ties between reasons of equal severity.
-ACTIVE_RULES = [
-    LimitNightAmountRule(RULE_NIGHT_START_HOUR, RULE_NIGHT_END_HOUR, RULE_LIMIT_NIGHT_AMOUNT_CENTS),
-    LimitSingleAmountRule(RULE_LIMIT_SINGLE_AMOUNT_CENTS, RULE_LIMIT_SINGLE_AMOUNT_PJ_CENTS),
-    VelocitySourceCountRule(RULE_VELOCITY_WINDOW_MINUTES, RULE_VELOCITY_2FA_COUNT, RULE_VELOCITY_REJECT_COUNT),
-    VelocityDeviceSourcesRule(RULE_DEVICE_MAX_SOURCES_24H),
-    AmountSourceDailySumRule(RULE_AMOUNT_DAILY_SUM_CENTS, RULE_AMOUNT_DAILY_SUM_PJ_CENTS),
-    ProfileNewDeviceRule(RULE_NEW_DEVICE_MIN_AMOUNT_CENTS),
-    ProfileNewSourceAccountRule(RULE_SOURCE_MIN_AGE_DAYS, RULE_SOURCE_NEW_MAX_AMOUNT_CENTS),
-    ProfileAmountRobustZRule(
-        RULE_PROFILE_MIN_HISTORY, RULE_PROFILE_MIN_SCALE_PERCENT / 100, RULE_PROFILE_Z_2FA_TENTHS / 10
-    ),
-    ProfileGeoVelocityRule(RULE_GEO_MIN_DISTANCE_KM, RULE_GEO_MAX_SPEED_KMH),
-    VelocityPoissonGammaRule(
-        RULE_POISSON_WINDOW_MINUTES,
-        RULE_POISSON_LOOKBACK_DAYS,
-        RULE_POISSON_PRIOR_SHAPE,
-        RULE_POISSON_PRIOR_RATE_HOURS,
-        RULE_POISSON_TAIL_PPM / 1_000_000,
-        RULE_POISSON_MIN_EXPOSURE_HOURS,
-    ),
-    CounterpartyNewAccountRule(
-        RULE_DESTINATION_MIN_AGE_DAYS,
-        RULE_DESTINATION_CRITICAL_AGE_DAYS,
-        RULE_DESTINATION_NEW_MAX_AMOUNT_CENTS,
-    ),
-    CounterpartyFanInRule(RULE_DESTINATION_MAX_SOURCES_1H),
-    CounterpartyFirstTimeHighRule(RULE_FIRST_TIME_MIN_AMOUNT_CENTS),
-    CounterpartyFlaggedRule(RULE_FLAGGED_WINDOW_DAYS),
-    TypologyAccountTakeoverRule(
-        RULE_GEO_MIN_DISTANCE_KM,
-        RULE_GEO_MAX_SPEED_KMH,
-        RULE_PROFILE_MIN_HISTORY,
-        RULE_PROFILE_MIN_SCALE_PERCENT / 100,
-        RULE_ATO_Z_TENTHS / 10,
-    ),
-    TypologyMuleRule(RULE_DESTINATION_MIN_AGE_DAYS, RULE_MULE_MIN_SOURCES_1H),
-    TypologySplittingRule(
-        RULE_SPLITTING_MAX_AMOUNT_CENTS,
-        RULE_SPLITTING_MIN_COUNT,
-        RULE_SPLITTING_MIN_DESTINATIONS,
-        RULE_SPLITTING_MIN_SUM_CENTS,
-        RULE_SPLITTING_MIN_SUM_CENTS * 5,
-    ),
-]
+PARAMETERS = {
+    name: getattr(constants, name) for name in dir(constants) if name.startswith("RULE_") and name != "RULE_SET_VERSION"
+}
+
+
+def build_rules(overrides: dict[str, int] | None = None) -> list[BaseRule]:
+    # Order here breaks ties between reasons of equal severity.
+    overrides = overrides or {}
+    unknown = sorted(set(overrides) - set(PARAMETERS))
+    if unknown:
+        raise ValueError(f"unknown rule parameters: {', '.join(unknown)}")
+    p = SimpleNamespace(**{**PARAMETERS, **overrides})
+    return [
+        LimitNightAmountRule(p.RULE_NIGHT_START_HOUR, p.RULE_NIGHT_END_HOUR, p.RULE_LIMIT_NIGHT_AMOUNT_CENTS),
+        LimitSingleAmountRule(p.RULE_LIMIT_SINGLE_AMOUNT_CENTS, p.RULE_LIMIT_SINGLE_AMOUNT_PJ_CENTS),
+        VelocitySourceCountRule(p.RULE_VELOCITY_WINDOW_MINUTES, p.RULE_VELOCITY_2FA_COUNT, p.RULE_VELOCITY_REJECT_COUNT),
+        VelocityDeviceSourcesRule(p.RULE_DEVICE_MAX_SOURCES_24H),
+        AmountSourceDailySumRule(p.RULE_AMOUNT_DAILY_SUM_CENTS, p.RULE_AMOUNT_DAILY_SUM_PJ_CENTS),
+        ProfileNewDeviceRule(p.RULE_NEW_DEVICE_MIN_AMOUNT_CENTS),
+        ProfileNewSourceAccountRule(p.RULE_SOURCE_MIN_AGE_DAYS, p.RULE_SOURCE_NEW_MAX_AMOUNT_CENTS),
+        ProfileAmountRobustZRule(
+            p.RULE_PROFILE_MIN_HISTORY, p.RULE_PROFILE_MIN_SCALE_PERCENT / 100, p.RULE_PROFILE_Z_2FA_TENTHS / 10
+        ),
+        ProfileGeoVelocityRule(p.RULE_GEO_MIN_DISTANCE_KM, p.RULE_GEO_MAX_SPEED_KMH),
+        VelocityPoissonGammaRule(
+            p.RULE_POISSON_WINDOW_MINUTES,
+            p.RULE_POISSON_LOOKBACK_DAYS,
+            p.RULE_POISSON_PRIOR_SHAPE,
+            p.RULE_POISSON_PRIOR_RATE_HOURS,
+            p.RULE_POISSON_TAIL_PPM / 1_000_000,
+            p.RULE_POISSON_MIN_EXPOSURE_HOURS,
+        ),
+        CounterpartyNewAccountRule(
+            p.RULE_DESTINATION_MIN_AGE_DAYS,
+            p.RULE_DESTINATION_CRITICAL_AGE_DAYS,
+            p.RULE_DESTINATION_NEW_MAX_AMOUNT_CENTS,
+        ),
+        CounterpartyFanInRule(p.RULE_DESTINATION_MAX_SOURCES_1H),
+        CounterpartyFirstTimeHighRule(p.RULE_FIRST_TIME_MIN_AMOUNT_CENTS),
+        CounterpartyFlaggedRule(p.RULE_FLAGGED_WINDOW_DAYS),
+        TypologyAccountTakeoverRule(
+            p.RULE_GEO_MIN_DISTANCE_KM,
+            p.RULE_GEO_MAX_SPEED_KMH,
+            p.RULE_PROFILE_MIN_HISTORY,
+            p.RULE_PROFILE_MIN_SCALE_PERCENT / 100,
+            p.RULE_ATO_Z_TENTHS / 10,
+        ),
+        TypologyMuleRule(p.RULE_DESTINATION_MIN_AGE_DAYS, p.RULE_MULE_MIN_SOURCES_1H),
+        TypologySplittingRule(
+            p.RULE_SPLITTING_MAX_AMOUNT_CENTS,
+            p.RULE_SPLITTING_MIN_COUNT,
+            p.RULE_SPLITTING_MIN_DESTINATIONS,
+            p.RULE_SPLITTING_MIN_SUM_CENTS,
+            p.RULE_SPLITTING_MIN_SUM_CENTS * 5,
+        ),
+    ]
+
+
+ACTIVE_RULES = build_rules()

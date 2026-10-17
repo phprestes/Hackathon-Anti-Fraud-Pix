@@ -6,7 +6,7 @@ COMPOSE := docker compose
 PYTHON_311 := $(shell command -v python3.11 2>/dev/null)
 
 .DEFAULT_GOAL := help
-.PHONY: help all up down stop reset rebuild ps logs shell install test test-cov lint check simulate clean
+.PHONY: help all up down stop reset rebuild ps logs shell install test test-cov lint check simulate events backtest parity clean
 
 help: ## Lista os comandos
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  \033[36m%-10s\033[0m %s\n", $$1, $$2}'
@@ -64,6 +64,16 @@ check: lint test ## Lint e testes
 
 simulate: install ## Roda o simulador de calibração contra a api (depois, make reset limpa o banco)
 	$(BIN)/python scripts/simulate.py
+
+events: install ## Gera scripts/out/events.jsonl (seed 42, 60 pagadores, 7 dias)
+	$(BIN)/python scripts/simulate.py --generate-only --events scripts/out/events.jsonl --seed 42 --payers 60 --days 7
+
+backtest: events ## Roda o backtest em memória sobre scripts/out/events.jsonl (sem HTTP, sem banco)
+	$(BIN)/python scripts/backtest.py scripts/out/events.jsonl
+
+parity: events ## Zera o banco e compara API (SQL) x backtest (memória) Pix a Pix
+	$(MAKE) reset
+	$(BIN)/python scripts/parity.py scripts/out/events.jsonl
 
 clean: ## Remove containers, volume, .venv e caches
 	$(COMPOSE) down -v

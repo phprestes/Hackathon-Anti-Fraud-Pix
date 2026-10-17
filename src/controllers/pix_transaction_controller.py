@@ -1,5 +1,4 @@
 import json
-from datetime import datetime
 
 from sqlalchemy.exc import IntegrityError
 
@@ -16,29 +15,6 @@ def _canonical(payload: dict) -> str:
     return json.dumps(payload, sort_keys=True, separators=(",", ":"))
 
 
-def _build_snapshot(payload: dict) -> PixSnapshot:
-    source = payload["source_account"]
-    destination = payload["destination_account"]
-    origin = payload["source"]
-    geolocation = origin.get("geolocation") or {}
-
-    return PixSnapshot(
-        pix_id=payload["id"],
-        amount=payload["amount"],
-        transaction_date=datetime.fromisoformat(payload["transaction_date"]),
-        source_document=source["owner"]["document_number"],
-        source_opening_date=datetime.fromisoformat(source["opening_date"]),
-        destination_document=destination["owner"]["document_number"],
-        destination_participant=destination["participant"],
-        destination_opening_date=datetime.fromisoformat(destination["opening_date"]),
-        device_id=origin["device_id"],
-        channel=origin["channel"],
-        ip=origin["ip"],
-        latitude=geolocation.get("latitude"),
-        longitude=geolocation.get("longitude"),
-    )
-
-
 class PixTransactionController(BaseController):
     def __init__(self) -> None:
         super().__init__(__name__)
@@ -51,7 +27,7 @@ class PixTransactionController(BaseController):
             return existing, True
 
         try:
-            snapshot = _build_snapshot(payload)
+            snapshot = PixSnapshot.from_payload(payload)
         except ValueError as error:
             raise InvalidSchema(f"Invalid date: {error}")
 

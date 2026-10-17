@@ -38,5 +38,7 @@ Uma decisão por arquivo, sempre no mesmo formato: **Contexto → Decisão → A
 | [0019](0019-reputacao-de-contraparte-derivada.md) | Reputação de contraparte derivada do próprio histórico | Motor | aceita |
 | [0020](0020-simulador-para-calibracao.md) | Simulador de tráfego para calibrar parâmetros e medir P95 | Processo | aceita |
 | [0021](0021-o-que-cada-janela-conta-e-versao-das-regras.md) | O que cada janela conta, redutores de fricção e `rule_set_version` | Motor | aceita |
+| [0022](0022-shadow-mode.md) | Shadow mode: regras e modelos que calculam sem decidir | Motor | aceita |
+| [0023](0023-motor-extraido-e-history-port.md) | Motor extraído, `HistoryPort` com adaptadores SQL e memória, vetor de features e paridade | Motor | aceita |
 
 Decisão nova: siga a [skill nova-decisao](../../../.agents/skills/nova-decisao/SKILL.md). Ela adiciona a linha aqui, no [`llms.txt`](../../../llms.txt) e no [CHANGELOG](../../../CHANGELOG.md).
