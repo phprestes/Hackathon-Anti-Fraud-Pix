@@ -9,7 +9,7 @@ sources: [Desafio Antifraude Pix (seção 4 "Banco próprio com o histórico de 
 
 > [Índice](../../README.md) › [Decisões](README.md) › 0009
 
-**Status:** proposta
+**Status:** aceita
 
 ## Contexto
 

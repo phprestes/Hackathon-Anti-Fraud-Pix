@@ -9,7 +9,7 @@ sources: [Desafio Antifraude Pix (seção 3.2 "id: ID único do Pix"), Projeto f
 
 > [Índice](../../README.md) › [Decisões](README.md) › 0012
 
-**Status:** proposta
+**Status:** aceita
 
 ## Contexto
 

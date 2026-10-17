@@ -9,7 +9,7 @@ sources: [Desafio Antifraude Pix (seção 2.3 e "Toda decisão sai com um motivo
 
 > [Índice](../../README.md) › [Decisões](README.md) › 0006
 
-**Status:** proposta
+**Status:** aceita
 
 ## Contexto
 

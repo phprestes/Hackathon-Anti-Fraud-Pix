@@ -9,7 +9,7 @@ sources: [Pesquisa QITech (análise 7, PixSim), Desafio Antifraude Pix ("Expliqu
 
 > [Índice](../../README.md) › [Decisões](README.md) › 0020
 
-**Status:** proposta
+**Status:** aceita
 
 ## Contexto
 

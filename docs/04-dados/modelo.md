@@ -11,7 +11,7 @@ sources: [Desafio Antifraude Pix (seções 3 e 4, critério 3), bootcamp-base-ap
 >
 > **Responde a:** quais tabelas existem? por que cada coluna? quais índices servem às regras?
 
-**Estado:** proposta. O `database/database.sql` atual ainda é o do Base Service; esta DDL entra junto com a rota do Pix.
+**Estado:** implementado em `database/database.sql` (F0).
 
 ## Diagrama
 
@@ -64,6 +64,7 @@ CREATE TABLE pix_transaction(
 CREATE INDEX pix_transaction_source_date_idx      ON pix_transaction (source_document_number, transaction_date);
 CREATE INDEX pix_transaction_device_date_idx      ON pix_transaction (device_id, transaction_date);
 CREATE INDEX pix_transaction_destination_date_idx ON pix_transaction (destination_document_number, transaction_date);
+CREATE INDEX pix_transaction_pair_idx             ON pix_transaction (source_document_number, destination_document_number);
 
 CREATE TABLE pix_analysis(
     id                              SERIAL PRIMARY KEY,
@@ -71,6 +72,7 @@ CREATE TABLE pix_analysis(
     pix_transaction_id              INTEGER NOT NULL UNIQUE REFERENCES pix_transaction(id),
     status_id                       INTEGER NOT NULL REFERENCES analysis_status(id),
     metadata                        JSONB NOT NULL,
+    rule_set_version                VARCHAR(20) NOT NULL,
     created_at                      TIMESTAMP NOT NULL DEFAULT(NOW())
 );
 
@@ -97,6 +99,8 @@ CREATE TABLE pix_analysis_reason(
 | `pix_analysis` separada de `pix_transaction` | O fato (o Pix) e a opinião (a análise) têm ciclos diferentes; reanálise futura não reescreve o fato |
 | `pix_analysis_reason` em tabela | Calibrar uma regra é contar os disparos dela com SQL, sem abrir JSON |
 | Índices `(documento/aparelho, transaction_date)` | Cada regra de janela é um range scan no índice |
+| Índice `(pagador, destino)` | Recorrência do par ("já mandou para esse destino?") sem varrer o histórico do pagador |
+| `rule_set_version` na análise | Saber com qual versão das regras cada análise foi decidida ([ADR 0021](../02-arquitetura/decisoes/0021-o-que-cada-janela-conta-e-versao-das-regras.md)) |
 
 ## Invariantes
 

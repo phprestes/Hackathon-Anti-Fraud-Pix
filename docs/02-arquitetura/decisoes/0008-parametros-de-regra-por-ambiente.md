@@ -9,7 +9,7 @@ sources: [bootcamp-base-api (constants.py), Desafio Antifraude Pix ("Expliquem o
 
 > [Índice](../../README.md) › [Decisões](README.md) › 0008
 
-**Status:** proposta
+**Status:** aceita
 
 ## Contexto
 

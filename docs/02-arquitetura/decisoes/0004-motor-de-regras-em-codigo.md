@@ -9,7 +9,7 @@ sources: [Desafio Antifraude Pix (seção 2.2), slides do hackathon ("Motor de r
 
 > [Índice](../../README.md) › [Decisões](README.md) › 0004
 
-**Status:** proposta
+**Status:** aceita
 
 ## Contexto
 

@@ -9,7 +9,7 @@ sources: [Plano de implementação (N4, N5, N6), Desafio Antifraude Pix (seção
 
 > [Índice](../../README.md) › [Decisões](README.md) › 0021
 
-**Status:** proposta
+**Status:** aceita
 
 ## Contexto
 

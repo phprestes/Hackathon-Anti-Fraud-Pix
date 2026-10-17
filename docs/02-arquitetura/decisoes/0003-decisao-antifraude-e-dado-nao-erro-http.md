@@ -9,7 +9,7 @@ sources: [Desafio Antifraude Pix (seções 3.3 e 3.4)]
 
 > [Índice](../../README.md) › [Decisões](README.md) › 0003
 
-**Status:** proposta
+**Status:** aceita
 
 ## Contexto
 

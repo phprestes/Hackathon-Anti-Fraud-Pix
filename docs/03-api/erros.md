@@ -34,11 +34,11 @@ O corpo de todo erro é `{title, description, translation, code}`. Os códigos s
 | `QIT000405` | 405 | `MethodNotAllowed` | Método não aceito |
 | `QIT000500` | 500 | `InternalError` | Exceção não tratada |
 
-## Domínio do Pix (planejados)
+## Domínio do Pix
 
 | Código | HTTP | Classe | Quando | Estado |
 |---|---|---|---|---|
-| `QIT002001` | 404 | `NotFoundPixTransaction` | `GET /pix/transaction/{id}` com `id` nunca recebido | a implementar |
-| `QIT002002` | 409 | `PixIdConflict` | `id` já analisado, com corpo diferente ([ADR 0012](../02-arquitetura/decisoes/0012-idempotencia-pelo-id-do-pix.md)) | a implementar |
+| `QIT002001` | 404 | `NotFoundPixTransaction` | `GET /pix/transaction/{id}` com `id` nunca recebido | implementado |
+| `QIT002002` | 409 | `PixIdConflict` | `id` já analisado, com corpo diferente ([ADR 0012](../02-arquitetura/decisoes/0012-idempotencia-pelo-id-do-pix.md)) | implementado |
 
 **Próximo código livre: `QIT002003`.** Atualize esta linha a cada erro novo.

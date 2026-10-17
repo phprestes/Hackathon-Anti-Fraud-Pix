@@ -9,7 +9,7 @@ sources: [Desafio Antifraude Pix (seção 3.2 "amount: valor em centavos"), Auto
 
 > [Índice](../../README.md) › [Decisões](README.md) › 0010
 
-**Status:** proposta
+**Status:** aceita
 
 ## Contexto
 

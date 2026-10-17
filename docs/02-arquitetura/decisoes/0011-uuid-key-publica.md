@@ -9,7 +9,7 @@ sources: [Desafio Antifraude Pix (seções 3.3 e 3.4), Autoestudo Aula 2 (R5), b
 
 > [Índice](../../README.md) › [Decisões](README.md) › 0011
 
-**Status:** proposta
+**Status:** aceita
 
 ## Contexto
 

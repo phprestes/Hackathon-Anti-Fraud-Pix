@@ -9,7 +9,7 @@ sources: [Desafio Antifraude Pix (seção 3.2 "transaction_date: data e hora, co
 
 > [Índice](../../README.md) › [Decisões](README.md) › 0007
 
-**Status:** proposta
+**Status:** aceita
 
 ## Contexto
 

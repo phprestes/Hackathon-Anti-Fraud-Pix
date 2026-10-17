@@ -9,7 +9,7 @@ sources: [Desafio Antifraude Pix (seção 2.1 "Tempo", seção 4 "Outras APIs")]
 
 > [Índice](../../README.md) › [Decisões](README.md) › 0002
 
-**Status:** proposta
+**Status:** aceita
 
 ## Contexto
 

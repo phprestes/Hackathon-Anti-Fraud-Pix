@@ -19,10 +19,10 @@ Toda rota, exceto `/` e `/health_check`, exige o header `INTERNAL-TOKEN` (403 `Q
 |---|---|---|---|---|---|
 | `GET /` | identifica o serviço | 200 | — | sim | herdada |
 | `GET /health_check` | diz se a API está de pé | 204 | — | sim | herdada |
-| `POST /pix/transaction` | analisa e grava um Pix | 201 `{key, status, metadata}`; 200 se o `id` já foi analisado com o mesmo corpo | 400 `QIT000001`; 409 `QIT002002` | pelo `id` do Pix ([ADR 0012](../02-arquitetura/decisoes/0012-idempotencia-pelo-id-do-pix.md)) | a implementar |
-| `GET /pix/transaction/{id}` | devolve a análise gravada | 200 `{key, status, metadata}` | 404 `QIT002001` | sim | a implementar |
+| `POST /pix/transaction` | analisa e grava um Pix | 201 `{key, status, metadata}`; 200 se o `id` já foi analisado com o mesmo corpo | 400 `QIT000001`; 409 `QIT002002` | pelo `id` do Pix ([ADR 0012](../02-arquitetura/decisoes/0012-idempotencia-pelo-id-do-pix.md)) | implementada |
+| `GET /pix/transaction/{id}` | devolve a análise gravada | 200 `{key, status, metadata}` | 404 `QIT002001` | sim | implementada |
 
-As rotas `/sample_entity*` do Base Service ainda existem e saem quando a rota do Pix entrar ([ADR 0001](../02-arquitetura/decisoes/0001-partir-do-base-service.md)).
+As rotas `/sample_entity*` do Base Service foram removidas quando a rota do Pix entrou ([ADR 0001](../02-arquitetura/decisoes/0001-partir-do-base-service.md)).
 
 ## `POST /pix/transaction`
 
@@ -35,6 +35,8 @@ As três decisões saem com o mesmo status HTTP; o que muda é o campo `status` 
   "key": "b3f1c2e0-7d4a-4c1e-9a52-1f0e6c9d2a77",
   "status": "two_factor_required",
   "metadata": {
+    "rule_set_version": "2026.10.17-f2",
+    "signals": {"COUNTERPARTY_NEW_ACCOUNT": {"destination_age_days": 7}},
     "reasons": [
       {
         "rule": "COUNTERPARTY_NEW_ACCOUNT",
@@ -46,7 +48,7 @@ As três decisões saem com o mesmo status HTTP; o que muda é o campo `status` 
 }
 ```
 
-### Formato do `metadata` (proposta)
+### Formato do `metadata`
 
 | Campo | Tipo | Conteúdo |
 |---|---|---|
@@ -54,6 +56,8 @@ As três decisões saem com o mesmo status HTTP; o que muda é o campo `status` 
 | `reasons[].rule` | string | Código estável da regra ([catálogo](../05-motor/regras.md)) |
 | `reasons[].decision` | string | `two_factor_required` ou `rejected` |
 | `reasons[].reason` | string | Frase em português para quem atende o cliente |
+| `signals` | objeto | Por código de regra disparada, os números que ela usou (idade da conta, contagem na janela, z, km/h…) |
+| `rule_set_version` | string | Versão do conjunto de regras que decidiu ([ADR 0021](../02-arquitetura/decisoes/0021-o-que-cada-janela-conta-e-versao-das-regras.md)) |
 
 O enunciado deixa o `metadata` livre; campos novos entram aqui primeiro.
 
