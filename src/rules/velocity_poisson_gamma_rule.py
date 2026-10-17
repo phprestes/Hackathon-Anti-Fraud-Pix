@@ -1,6 +1,6 @@
 from rules.base_rule import BaseRule, RuleResult
 from rules.decision import TWO_FACTOR_REQUIRED
-from utils.statistics import negative_binomial_tail
+from rules.signals import poisson_tail
 
 
 class VelocityPoissonGammaRule(BaseRule):
@@ -24,21 +24,19 @@ class VelocityPoissonGammaRule(BaseRule):
         self.min_exposure_hours = min_exposure_hours
 
     def evaluate(self, pix, context) -> RuleResult | None:
-        first_seen = context.source_first_seen
-        if first_seen is None:
+        evaluated = poisson_tail(
+            pix,
+            context,
+            self.window_minutes,
+            self.lookback_days,
+            self.prior_shape,
+            self.prior_rate_hours,
+            self.min_exposure_hours,
+        )
+        if evaluated is None:
             return None
 
-        window_hours = self.window_minutes / 60
-        observed_hours = (pix.transaction_date - first_seen).total_seconds() / 3600 - window_hours
-        exposure = max(0.0, min(self.lookback_days * 24, observed_hours))
-        # New payers stay with VELOCITY_SOURCE_COUNT: a near-empty history makes the prior decide.
-        if exposure < self.min_exposure_hours:
-            return None
-
-        k = context.source_attempts_poisson_window + 1
-        shape = self.prior_shape + context.source_attempts_poisson_lookback
-        rate = self.prior_rate_hours + exposure
-        tail = negative_binomial_tail(k, shape, rate, window_hours)
+        k, tail, exposure = evaluated
         if tail >= self.tail_threshold:
             return None
 

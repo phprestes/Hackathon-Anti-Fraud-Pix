@@ -16,6 +16,8 @@ class RuleResult:
 class BaseRule(ABC):
     code: str
     family: str
+    # Shadow rules are evaluated and recorded but never decide.
+    shadow: bool = False
 
     @abstractmethod
     def evaluate(self, pix: PixSnapshot, context: RuleContext) -> RuleResult | None:
