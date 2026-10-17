@@ -32,11 +32,23 @@ def summarize(events):
             "sequences": len(groups),
             "caught_sequences": sum(1 for flags in groups.values() if any(flags)),
         }
+    shadow = {}
+    for e in answered:
+        for entry in e["response"]["metadata"].get("shadow", []):
+            model = shadow.setdefault(entry["rule"], {"legit": 0, "legit_flagged": 0, "typologies": {}})
+            flagged = entry["would_decide"] != "approved"
+            if e["label"] == "legit":
+                model["legit"] += 1
+                model["legit_flagged"] += flagged
+            else:
+                counts = model["typologies"].setdefault(e["label"], [0, 0])
+                counts[0] += 1
+                counts[1] += flagged
     latencies = [e["latency_ms"] for e in events if "latency_ms" in e]
     versions = {e["response"]["metadata"].get("rule_set_version") for e in answered}
     return {
         "legit_total": len(legit), "legit_status": legit_status, "rules": rules,
-        "typologies": typologies, "latencies": latencies,
+        "typologies": typologies, "shadow": shadow, "latencies": latencies,
         "requests": len(latencies),
         "errors": sum(1 for e in events if "http_status" in e and not 200 <= e["http_status"] < 300),
         "versions": sorted(v for v in versions if v),
@@ -57,6 +69,15 @@ def render_report(summary):
         lines.append(
             f"| {name} | {n} | {_pct(st.get('approved', 0), n)} | {_pct(st.get('two_factor_required', 0), n)} "
             f"| {_pct(st.get('rejected', 0), n)} | {data['caught_sequences']}/{data['sequences']} |")
+    if summary.get("shadow"):
+        lines += ["", "## Shadow models", "",
+                  "Share of each typology's Pix the model would have barred, and friction on legitimate Pix.", "",
+                  "| model | friction on legitimate | " + " | ".join(summary["typologies"]) + " |",
+                  "|---|---|" + "---|" * len(summary["typologies"])]
+        for name, data in sorted(summary["shadow"].items()):
+            cells = [_pct(data["typologies"].get(t, [0, 0])[1], data["typologies"].get(t, [0, 0])[0])
+                     for t in summary["typologies"]]
+            lines.append(f"| {name} | {_pct(data['legit_flagged'], data['legit'])} | " + " | ".join(cells) + " |")
     lines += ["", "## Top rules firing on legitimate Pix", ""]
     lines += [f"- {rule}: {count}" for rule, count in summary["rules"].most_common(10)] or ["- none"]
     lines += ["", "## Latency and errors", ""]

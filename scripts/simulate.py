@@ -186,12 +186,14 @@ def random_moment(rng, days, margin_hours=3):
     return START + timedelta(hours=rng.uniform(0, span))
 
 
-def inject_account_takeover(rng, factory, payers, days, tag):
+def inject_account_takeover(rng, factory, payers, days, tag, perturbed=False):
     payer = rng.choice(payers)
     when = random_moment(rng, days)
     device = f"dvc-{rng.getrandbits(32):08x}"
     other = rng.choice([c for c in CAPITALS if c != payer["capital"]])
-    geolocation = geo_near(rng, other)
+    # perturbed: half of the takeovers keep the victim's usual location
+    keeps_location = perturbed and rng.random() < 0.5
+    geolocation = geo_near(rng, payer["capital"] if keeps_location else other)
     destination = fresh_destination(rng, rng.randint(1, 20), when)
     for _ in range(rng.randint(2, 4)):
         amount = payer["median"] * rng.uniform(5, 20)
@@ -199,27 +201,29 @@ def inject_account_takeover(rng, factory, payers, days, tag):
         when += timedelta(minutes=rng.uniform(0.5, 3))
 
 
-def inject_mule(rng, factory, payers, days, tag):
+def inject_mule(rng, factory, payers, days, tag, perturbed=False):
     when = random_moment(rng, days)
     destination = fresh_destination(rng, rng.randint(0, 2), when)
-    victims = rng.sample(payers, rng.randint(8, 15))
+    victim_range, spread_minutes = ((4, 6), 180) if perturbed else ((8, 15), 40)
+    victims = rng.sample(payers, rng.randint(*victim_range))
     for victim in victims:
-        moment = when + timedelta(minutes=rng.uniform(0, 40))
+        moment = when + timedelta(minutes=rng.uniform(0, spread_minutes))
         factory.add("mule", tag, moment, rng.randint(200, 3000) * 100, victim, destination,
                     rng.choice(victim["devices"]), geo_near(rng, victim["capital"]))
 
 
-def inject_splitting(rng, factory, payers, days, tag):
+def inject_splitting(rng, factory, payers, days, tag, perturbed=False):
     payer = rng.choice(payers)
     when = random_moment(rng, days)
     for _ in range(rng.randint(6, 12)):
         moment = when + timedelta(minutes=rng.uniform(0, 120))
         destination = fresh_destination(rng, rng.randint(30, 700), moment)
-        factory.add("splitting", tag, moment, rng.randint(900, 1900) * 100, payer, destination,
+        amount = rng.randint(300, 900) if perturbed else rng.randint(900, 1900)
+        factory.add("splitting", tag, moment, amount * 100, payer, destination,
                     payer["devices"][0], geo_near(rng, payer["capital"]))
 
 
-def inject_night_kidnapping(rng, factory, payers, days, tag):
+def inject_night_kidnapping(rng, factory, payers, days, tag, perturbed=False):
     payer = rng.choice(payers)
     day = START + timedelta(days=rng.randint(0, days - 2))
     when = day + timedelta(hours=22 + rng.uniform(0, 6))
@@ -228,11 +232,12 @@ def inject_night_kidnapping(rng, factory, payers, days, tag):
                 payer["devices"][0], geo_near(rng, payer["capital"]))
 
 
-def inject_device_farm(rng, factory, payers, days, tag):
+def inject_device_farm(rng, factory, payers, days, tag, perturbed=False):
     when = random_moment(rng, days)
     device = f"dvc-{rng.getrandbits(32):08x}"
-    for payer in rng.sample(payers, rng.randint(4, 6)):
-        moment = when + timedelta(minutes=rng.uniform(0, 60))
+    payer_range, spread_minutes = ((3, 4), 360) if perturbed else ((4, 6), 60)
+    for payer in rng.sample(payers, rng.randint(*payer_range)):
+        moment = when + timedelta(minutes=rng.uniform(0, spread_minutes))
         destination = rng.choice(payer["recurring"])
         factory.add("device_farm", tag, moment, rng.randint(100, 1500) * 100, payer, destination,
                     device, geo_near(rng, payer["capital"]))
@@ -247,7 +252,7 @@ INJECTORS = {
 }
 
 
-def inject_frauds(rng, factory, payers, days):
+def inject_frauds(rng, factory, payers, days, perturbed=False):
     legit = len(factory.events)
     target = legit * FRAUD_SHARE / (1 - FRAUD_SHARE)
     injected, scenario = 0, 0
@@ -255,17 +260,17 @@ def inject_frauds(rng, factory, payers, days):
     while injected < target or scenario < len(TYPOLOGIES):
         typology = TYPOLOGIES[scenario % len(TYPOLOGIES)]
         before = len(factory.events)
-        INJECTORS[typology](rng, factory, payers, days, f"{typology}-{scenario}")
+        INJECTORS[typology](rng, factory, payers, days, f"{typology}-{scenario}", perturbed)
         injected += len(factory.events) - before
         scenario += 1
 
 
-def generate_events(seed, payers, days, run_tag):
+def generate_events(seed, payers, days, run_tag, fraud_variant="default"):
     rng = random.Random(seed)
     population = generate_population(rng, payers)
     factory = EventFactory(rng, run_tag)
     generate_legit_events(rng, factory, population, days)
-    inject_frauds(rng, factory, population, max(days, 3))
+    inject_frauds(rng, factory, population, max(days, 3), fraud_variant == "perturbed")
     return sorted(factory.events, key=lambda e: datetime.fromisoformat(e["payload"]["transaction_date"]))
 
 
@@ -321,6 +326,8 @@ def parse_args():
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--out", help="optional Markdown file for the results")
     parser.add_argument("--generate-only", action="store_true", help="write the events file and do not send")
+    parser.add_argument("--fraud-variant", choices=["default", "perturbed"], default="default",
+                        help="perturbed shifts the typology ranges to test model generalisation")
     parser.add_argument("--events", help="JSONL file written by --generate-only")
     return parser.parse_args()
 
@@ -332,7 +339,7 @@ def main():
         return 2
     # Fixed tag keeps the events file reproducible; ids only need to be unique per database.
     run_tag = "dry" if args.dry_run else "evt" if args.generate_only else uuid.uuid4().hex[:8]
-    events = generate_events(args.seed, args.payers, args.days, run_tag)
+    events = generate_events(args.seed, args.payers, args.days, run_tag, args.fraud_variant)
     if args.generate_only:
         write_events(events, args.events)
         print(f"wrote {len(events)} events to {args.events}", file=sys.stderr)

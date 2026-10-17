@@ -81,8 +81,21 @@ calibrate: install ## Grid de parametros sobre o backtest; grava scripts/out/cal
 calibrate-check: install ## Trava de regressao: backtest com os padroes contra scripts/calibration-gate.json
 	$(BIN)/python scripts/calibrate.py --check
 
+DATASET_ARGS := --payers 300 --days 14
 
+datasets: install ## Gera os eventos e as features de treino (seed 42), teste (seed 7) e teste perturbado (seed 7)
+	$(BIN)/python scripts/simulate.py --generate-only --events scripts/out/train-events.jsonl --seed 42 $(DATASET_ARGS)
+	$(BIN)/python scripts/simulate.py --generate-only --events scripts/out/test-events.jsonl --seed 7 $(DATASET_ARGS)
+	$(BIN)/python scripts/simulate.py --generate-only --events scripts/out/test-perturbed-events.jsonl --seed 7 --fraud-variant perturbed $(DATASET_ARGS)
+	$(BIN)/python scripts/export_features.py scripts/out/train-events.jsonl scripts/out/train-features.jsonl
+	$(BIN)/python scripts/export_features.py scripts/out/test-events.jsonl scripts/out/test-features.jsonl
+	$(BIN)/python scripts/export_features.py scripts/out/test-perturbed-events.jsonl scripts/out/test-perturbed-features.jsonl
 
+train-models: datasets ## Treina LogReg, LightGBM e Isolation Forest e escreve src/rules/model/*.json e scripts/model-results.md
+	$(BIN)/python scripts/train_models.py
+
+model-parity: install ## Compara os avaliadores em Python puro com sklearn/lightgbm no conjunto de teste
+	$(BIN)/python scripts/check_model_parity.py
 
 clean: ## Remove containers, volume, .venv e caches
 	$(COMPOSE) down -v

@@ -47,6 +47,7 @@ Documentação em pt-BR; código, rotas, campos e códigos de regra em inglês. 
 - [ADR 0021](docs/02-arquitetura/decisoes/0021-o-que-cada-janela-conta-e-versao-das-regras.md): o que cada janela conta, redutores de fricção, rule_set_version
 - [ADR 0022](docs/02-arquitetura/decisoes/0022-shadow-mode.md): shadow mode, calcula sem decidir
 - [ADR 0023](docs/02-arquitetura/decisoes/0023-motor-extraido-e-history-port.md): engine.py, HistoryPort (SQL e memória), features e paridade
+- [ADR 0024](docs/02-arquitetura/decisoes/0024-modelos-servidos-em-python-puro.md): LogReg, LightGBM e Isolation Forest exportados para JSON, inferência em Python puro, shadow
 
 ## API
 

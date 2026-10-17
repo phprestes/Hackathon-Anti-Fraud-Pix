@@ -7,6 +7,7 @@ from rules.counterparty_fan_in_rule import CounterpartyFanInRule
 from rules.counterparty_flagged_rule import CounterpartyFlaggedRule
 from rules.counterparty_first_time_high_rule import CounterpartyFirstTimeHighRule
 from rules.counterparty_new_account_rule import CounterpartyNewAccountRule
+from rules.model_shadow_rule import load_model_rules
 from rules.limit_night_amount_rule import LimitNightAmountRule
 from rules.limit_single_amount_rule import LimitSingleAmountRule
 from rules.profile_amount_robust_z_rule import ProfileAmountRobustZRule
@@ -20,8 +21,9 @@ from rules.velocity_device_sources_rule import VelocityDeviceSourcesRule
 from rules.velocity_poisson_gamma_rule import VelocityPoissonGammaRule
 from rules.velocity_source_count_rule import VelocitySourceCountRule
 
+NON_NUMERIC = {"RULE_SET_VERSION", "RULE_MODEL_DIR"}
 PARAMETERS = {
-    name: getattr(constants, name) for name in dir(constants) if name.startswith("RULE_") and name != "RULE_SET_VERSION"
+    name: getattr(constants, name) for name in dir(constants) if name.startswith("RULE_") and name not in NON_NUMERIC
 }
 
 
@@ -32,7 +34,7 @@ def build_rules(overrides: dict[str, int] | None = None) -> list[BaseRule]:
     if unknown:
         raise ValueError(f"unknown rule parameters: {', '.join(unknown)}")
     p = SimpleNamespace(**{**PARAMETERS, **overrides})
-    return [
+    rules = [
         LimitNightAmountRule(p.RULE_NIGHT_START_HOUR, p.RULE_NIGHT_END_HOUR, p.RULE_LIMIT_NIGHT_AMOUNT_CENTS),
         LimitSingleAmountRule(p.RULE_LIMIT_SINGLE_AMOUNT_CENTS, p.RULE_LIMIT_SINGLE_AMOUNT_PJ_CENTS),
         VelocitySourceCountRule(p.RULE_VELOCITY_WINDOW_MINUTES, p.RULE_VELOCITY_2FA_COUNT, p.RULE_VELOCITY_REJECT_COUNT),
@@ -76,6 +78,7 @@ def build_rules(overrides: dict[str, int] | None = None) -> list[BaseRule]:
             p.RULE_SPLITTING_MIN_SUM_CENTS * 5,
         ),
     ]
+    return rules + load_model_rules(constants.RULE_MODEL_DIR)
 
 
 ACTIVE_RULES = build_rules()

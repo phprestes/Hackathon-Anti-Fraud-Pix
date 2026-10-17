@@ -33,11 +33,13 @@ EXPECTED_FEATURE_NAMES = [
 ]
 
 
-def test_post_pix_any_payload_returns_shadow_list_empty():
-    """G1: sem regra shadow ativa, metadata.shadow existe e é lista vazia."""
+def test_post_pix_any_payload_returns_shadow_list_without_changing_reasons():
+    """G1/G4: metadata.shadow é sempre uma lista (os modelos G4 a preenchem) e fora de reasons."""
     _, body = RequestGenerator.POST_pix(PayloadGenerator.pix())
 
-    assert body["metadata"]["shadow"] == []
+    assert isinstance(body["metadata"]["shadow"], list)
+    assert all(entry["rule"].startswith("MODEL_") for entry in body["metadata"]["shadow"])
+    assert body["metadata"]["reasons"] == []
 
 
 def test_post_pix_any_payload_returns_exact_feature_vector():
