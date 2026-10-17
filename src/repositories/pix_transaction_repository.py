@@ -5,7 +5,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import aliased
 
 from database import Context
-from models import AccountRiskScore, AnalysisStatus, PixAnalysis, PixAnalysisReason, PixTransaction
+from models import AccountRiskScore, AnalysisStatus, PayerSequenceScore, PixAnalysis, PixAnalysisReason, PixTransaction
 from rules.history_port import AccountRiskReading
 from rules.pix_snapshot import PixSnapshot
 
@@ -273,15 +273,21 @@ class PixTransactionRepository:
         )
 
     def latest_account_risk_score(self, document: str, model: str, since: datetime, until: datetime) -> AccountRiskReading | None:
+        return self._latest_score(AccountRiskScore, document, model, since, until)
+
+    def latest_payer_sequence_score(self, document: str, model: str, since: datetime, until: datetime) -> AccountRiskReading | None:
+        return self._latest_score(PayerSequenceScore, document, model, since, until)
+
+    def _latest_score(self, table, document: str, model: str, since: datetime, until: datetime) -> AccountRiskReading | None:
         row = (
-            self.session.query(AccountRiskScore.score, AccountRiskScore.computed_at, AccountRiskScore.features)
+            self.session.query(table.score, table.computed_at, table.features)
             .filter(
-                AccountRiskScore.document_number == document,
-                AccountRiskScore.model == model,
-                AccountRiskScore.computed_at >= since,
-                AccountRiskScore.computed_at <= until,
+                table.document_number == document,
+                table.model == model,
+                table.computed_at >= since,
+                table.computed_at <= until,
             )
-            .order_by(AccountRiskScore.computed_at.desc(), AccountRiskScore.id.desc())
+            .order_by(table.computed_at.desc(), table.id.desc())
             .first()
         )
         if row is None:

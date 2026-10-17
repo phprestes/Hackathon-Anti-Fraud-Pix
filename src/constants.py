@@ -39,6 +39,8 @@ BYPASS_ENDPOINTS = [
 RULE_SET_VERSION = "2026.10.18-graph"
 
 RULE_MODEL_DIR = os.environ.get("RULE_MODEL_DIR", os.path.join(SERVICE_ROOT, "rules", "model"))
+# Models trained offline for the cold path (GraphSAGE, HMM); the hot path only reads their thresholds.
+WORKER_MODEL_DIR = os.environ.get("WORKER_MODEL_DIR", os.path.join(SERVICE_ROOT, "worker", "model"))
 
 RULE_DESTINATION_MIN_AGE_DAYS = int(os.environ.get("RULE_DESTINATION_MIN_AGE_DAYS", "30"))
 RULE_DESTINATION_CRITICAL_AGE_DAYS = int(os.environ.get("RULE_DESTINATION_CRITICAL_AGE_DAYS", "3"))
@@ -85,9 +87,12 @@ RULE_GRAPH_RISK_REJECT_PERMILLE = int(os.environ.get("RULE_GRAPH_RISK_REJECT_PER
 WORKER_ENABLED = os.environ.get("WORKER_ENABLED", "true").lower() not in ("false", "0", "no")
 WORKER_INTERVAL_SECONDS = int(os.environ.get("WORKER_INTERVAL_SECONDS", "30"))
 WORKER_LOOKBACK_HOURS = int(os.environ.get("WORKER_LOOKBACK_HOURS", "72"))
+WORKER_SEQUENCE_HISTORY_DAYS = int(os.environ.get("WORKER_SEQUENCE_HISTORY_DAYS", "30"))
 
 # Fixed weights of the untrained graph score: logit = BIAS + sum(weight * term). Terms in worker/scoring.py.
 GRAPH_RISK_MODEL = "graph_sql"
+GRAPHSAGE_MODEL = "graphsage"
+HMM_MODEL = "hmm"
 GRAPH_RISK_BIAS = -4.0
 GRAPH_RISK_W_PAYERS = 1.2
 GRAPH_RISK_W_DISPERSION = 1.5

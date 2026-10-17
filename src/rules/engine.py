@@ -3,6 +3,8 @@ from datetime import timedelta
 
 from constants import (
     GRAPH_RISK_MODEL,
+    GRAPHSAGE_MODEL,
+    HMM_MODEL,
     RULE_FLAGGED_WINDOW_DAYS,
     RULE_GRAPH_RISK_MAX_AGE_MINUTES,
     RULE_POISSON_LOOKBACK_DAYS,
@@ -36,6 +38,9 @@ def build_context(snapshot: PixSnapshot, history: HistoryPort) -> RuleContext:
     graph_risk = history.latest_account_risk_score(
         destination, GRAPH_RISK_MODEL, t - timedelta(minutes=RULE_GRAPH_RISK_MAX_AGE_MINUTES), t
     )
+    max_age = timedelta(minutes=RULE_GRAPH_RISK_MAX_AGE_MINUTES)
+    graphsage = history.latest_account_risk_score(destination, GRAPHSAGE_MODEL, t - max_age, t)
+    sequence = history.latest_payer_sequence_score(source, HMM_MODEL, t - max_age, t)
     return RuleContext(
         source_attempts_last_velocity_window=history.count_source_attempts_since(
             source, t - timedelta(minutes=RULE_VELOCITY_WINDOW_MINUTES), t, pix_id
@@ -72,6 +77,8 @@ def build_context(snapshot: PixSnapshot, history: HistoryPort) -> RuleContext:
         destination_graph_risk=graph_risk.score if graph_risk else None,
         destination_graph_risk_age_minutes=(t - graph_risk.computed_at).total_seconds() / 60 if graph_risk else None,
         destination_graph_risk_contributions=graph_risk.contributions if graph_risk else (),
+        destination_graphsage_score=graphsage.score if graphsage else None,
+        source_sequence_score=sequence.score if sequence else None,
     )
 
 

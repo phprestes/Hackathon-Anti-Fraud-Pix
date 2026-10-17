@@ -23,3 +23,5 @@ class RuleContext:
     destination_graph_risk: float | None = None
     destination_graph_risk_age_minutes: float | None = None
     destination_graph_risk_contributions: tuple[tuple[str, float], ...] = ()
+    destination_graphsage_score: float | None = None
+    source_sequence_score: float | None = None

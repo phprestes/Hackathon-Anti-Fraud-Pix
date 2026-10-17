@@ -32,6 +32,8 @@ EXPECTED_FEATURE_NAMES = [
     "poisson_tail_log10",
     "destination_graph_risk",
     "destination_graph_risk_age_minutes",
+    "destination_graphsage_score",
+    "source_sequence_score",
 ]
 
 

@@ -6,18 +6,23 @@ from constants import WORKER_ENABLED, WORKER_INTERVAL_SECONDS
 from database import clear_context, open_context
 from utils.logger import get_logger, setup_logging
 from worker.graph_risk_job import GraphRiskJob
+from worker.graphsage_job import GraphSageJob
+from worker.sequence_job import SequenceJob
 
 logger = get_logger("worker")
 stop = threading.Event()
 
 
-def run_cycle(previous: tuple | None) -> tuple | None:
+JOBS = [GraphRiskJob, GraphSageJob, SequenceJob]
+
+
+def run_job(job_class: type, previous: tuple | None) -> tuple | None:
     context = open_context()
     try:
-        return GraphRiskJob().run_cycle(previous)
+        return job_class().run_cycle(previous)
     except Exception:
         # The tests wipe the schema under the worker; log and try again next cycle.
-        logger.exception("cycle failed")
+        logger.exception("%s failed", job_class.__name__)
         context.db_session.rollback()
         return previous
     finally:
@@ -25,13 +30,18 @@ def run_cycle(previous: tuple | None) -> tuple | None:
         clear_context()
 
 
+def run_cycle(previous: dict) -> dict:
+    return {job.__name__: run_job(job, previous.get(job.__name__)) for job in JOBS}
+
+
 def run_once() -> None:
-    context = open_context()
-    try:
-        GraphRiskJob().run_cycle()
-    finally:
-        context.db_session.close()
-        clear_context()
+    for job in JOBS:
+        context = open_context()
+        try:
+            job().run_cycle()
+        finally:
+            context.db_session.close()
+            clear_context()
 
 
 def main() -> int:
@@ -48,7 +58,7 @@ def main() -> int:
         signal.signal(sig, lambda *_: stop.set())
     if not WORKER_ENABLED:
         logger.info("WORKER_ENABLED=false: idle")
-    marker = None
+    marker: dict = {}
     while not stop.is_set():
         if WORKER_ENABLED:
             marker = run_cycle(marker)

@@ -42,6 +42,7 @@ Uma decisão por arquivo, sempre no mesmo formato: **Contexto → Decisão → A
 | [0023](0023-motor-extraido-e-history-port.md) | Motor extraído, `HistoryPort` com adaptadores SQL e memória, vetor de features e paridade | Motor | aceita |
 | [0024](0024-modelos-servidos-em-python-puro.md) | Modelos treinados fora da API, servidos em Python puro a partir de JSON, em shadow | Motor | aceita |
 | [0025](0025-cold-path-worker.md) | Cold path em container `worker`: reputação por grafo pré-calculada, lida pelo hot path | Ecossistema | aceita |
+| [0026](0026-graphsage-e-hmm-no-worker.md) | GraphSAGE e HMM em numpy, só no worker, lidos em shadow | Motor | aceita |
 | [0027](0027-pipeline-de-calibracao-e-ci.md) | Pipeline de calibração (grid sobre o backtest) e CI com trava de regressão | Processo | aceita |
 
 Decisão nova: siga a [skill nova-decisao](../../../.agents/skills/nova-decisao/SKILL.md). Ela adiciona a linha aqui, no [`llms.txt`](../../../llms.txt) e no [CHANGELOG](../../../CHANGELOG.md).

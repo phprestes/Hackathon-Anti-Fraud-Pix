@@ -46,6 +46,8 @@ FEATURE_NAMES = [
     "poisson_tail_log10",
     "destination_graph_risk",
     "destination_graph_risk_age_minutes",
+    "destination_graphsage_score",
+    "source_sequence_score",
 ]
 
 # Floor so a zero tail does not become -inf.
@@ -101,6 +103,8 @@ def build_features(pix: PixSnapshot, context: RuleContext) -> dict[str, float]:
         "poisson_tail_log10": math.log10(max(poisson[1], MIN_TAIL)) if poisson is not None else 0.0,
         "destination_graph_risk": _or_sentinel(context.destination_graph_risk),
         "destination_graph_risk_age_minutes": _or_sentinel(context.destination_graph_risk_age_minutes),
+        "destination_graphsage_score": _or_sentinel(context.destination_graphsage_score),
+        "source_sequence_score": _or_sentinel(context.source_sequence_score),
     }
     return {name: _number(values[name]) for name in FEATURE_NAMES}
 

@@ -1,0 +1,5 @@
+# Cold-path worker: the API requirements plus numpy for GraphSAGE and the HMM.
+
+-r requirements.txt
+
+numpy==1.26.4

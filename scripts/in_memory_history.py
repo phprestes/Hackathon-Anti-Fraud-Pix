@@ -119,3 +119,6 @@ class InMemoryHistory:
     def latest_account_risk_score(self, document, model, since, until):
         # The cold-path worker needs a database; the batch backtest runs without graph scores.
         return None
+
+    def latest_payer_sequence_score(self, document, model, since, until):
+        return None

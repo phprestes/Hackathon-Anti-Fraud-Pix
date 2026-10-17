@@ -78,3 +78,9 @@ class HistoryPort(Protocol):
     ) -> "AccountRiskReading | None":
         """Newest score whose computed_at is in [since, until]; None when the cold path has not scored it."""
         ...
+
+    def latest_payer_sequence_score(
+        self, document: str, model: str, since: datetime, until: datetime
+    ) -> "AccountRiskReading | None":
+        """Same contract as latest_account_risk_score, over payer_sequence_score."""
+        ...

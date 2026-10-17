@@ -6,7 +6,7 @@ COMPOSE := docker compose
 PYTHON_311 := $(shell command -v python3.11 2>/dev/null)
 
 .DEFAULT_GOAL := help
-.PHONY: help all up down stop reset rebuild ps logs shell install test test-cov lint check simulate events backtest parity calibrate calibrate-check clean
+.PHONY: help all up down stop reset rebuild ps logs shell install test test-cov lint check simulate events backtest parity calibrate calibrate-check train-graphsage train-hmm clean
 
 help: ## Lista os comandos
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  \033[36m%-10s\033[0m %s\n", $$1, $$2}'
@@ -96,6 +96,12 @@ datasets: install ## Gera os eventos e as features de treino (seed 42), teste (s
 
 train-models: datasets ## Treina LogReg, LightGBM e Isolation Forest e escreve src/rules/model/*.json e scripts/model-results.md
 	$(BIN)/python scripts/train_models.py
+
+train-graphsage: datasets ## Treina o GraphSAGE (numpy, ~5 min) e escreve src/worker/model/graphsage.json e a secao em scripts/model-results.md
+	$(BIN)/python scripts/train_graphsage.py scripts/out/train-events.jsonl
+
+train-hmm: datasets ## Treina o HMM de sequencia (numpy) e escreve src/worker/model/hmm.json e a secao em scripts/model-results.md
+	$(BIN)/python scripts/train_hmm.py scripts/out/train-events.jsonl
 
 model-parity: install ## Compara os avaliadores em Python puro com sklearn/lightgbm no conjunto de teste
 	$(BIN)/python scripts/check_model_parity.py

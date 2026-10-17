@@ -1,2 +1,4 @@
 from repositories.pix_transaction_repository import PixTransactionRepository
 from repositories.graph_risk_repository import GraphRiskRepository
+from repositories.graphsage_repository import GraphSageRepository
+from repositories.sequence_repository import SequenceRepository

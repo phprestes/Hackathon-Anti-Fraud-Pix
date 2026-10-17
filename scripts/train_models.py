@@ -15,7 +15,9 @@ from sklearn.preprocessing import StandardScaler
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 sys.path.insert(0, os.path.join(ROOT, "src"))
+sys.path.insert(0, os.path.join(ROOT, "scripts"))
 
+from cold_path import marked_blocks  # noqa: E402
 from rules.features import FEATURE_NAMES  # noqa: E402
 
 OUT = os.path.join(ROOT, "scripts", "out")
@@ -219,8 +221,13 @@ def main():
         rows, Xt, yt = load_rows(name)
         scores = {m: predictors[m](Xt) for m in MODELS}
         lines += render_set(title, evaluate_set(rows, yt, scores, thresholds, {"logreg", "lightgbm"}))
+    # The cold-path sections (GraphSAGE, HMM, worker cycle) are written by their own scripts; keep them.
+    kept = []
+    if os.path.exists(RESULTS):
+        with open(RESULTS, encoding="utf-8") as handle:
+            kept = marked_blocks(handle.read())
     with open(RESULTS, "w", encoding="utf-8") as handle:
-        handle.write("\n".join(lines))
+        handle.write("\n".join(lines + [b + "\n" for b in kept]))
     print("\n".join(lines))
     print(f"total {time.perf_counter() - started:.1f} s", file=sys.stderr)
     return 0

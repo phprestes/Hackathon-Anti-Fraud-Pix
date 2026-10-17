@@ -24,3 +24,12 @@ USER user
 # informacao de menos pra quem procura uma versao com falha conhecida.
 CMD uvicorn app:app --host 0.0.0.0 --port 3000 --no-server-header
 
+
+# Cold path: the api image plus numpy, kept out of the hot path.
+FROM base AS worker
+COPY requirements-worker.txt /requirements-worker.txt
+RUN pip install -r /requirements-worker.txt
+RUN chown -R user /app
+USER user
+
+CMD ["python", "-m", "worker"]
