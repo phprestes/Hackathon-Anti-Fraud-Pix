@@ -1,9 +1,14 @@
+from datetime import datetime, timedelta
 from uuid import uuid4
 
 from tests.utils.random_generator import RandomGenerator
 
 DEFAULT_AT = "2026-10-17T14:00:00-03:00"
 OLD_OPENING_DATE = "2024-03-02T10:00:00-03:00"
+
+
+def shifted(base: str = DEFAULT_AT, **delta) -> str:
+    return (datetime.fromisoformat(base) + timedelta(**delta)).isoformat()
 
 
 class PayloadGenerator:

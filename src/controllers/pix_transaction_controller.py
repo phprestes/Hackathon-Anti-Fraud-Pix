@@ -1,17 +1,44 @@
 import json
+from datetime import datetime, timedelta
 
 from sqlalchemy.exc import IntegrityError
 
-from constants import RULE_SET_VERSION
+from constants import RULE_SET_VERSION, RULE_VELOCITY_WINDOW_MINUTES
 from controllers.base_controller import BaseController
 from dtos import PixAnalysisDTO
 from errors import InvalidSchema, NotFoundPixTransaction, PixIdConflict
-from models import AnalysisStatus
 from repositories import PixTransactionRepository
+from rules import ACTIVE_RULES
+from rules.decision import APPROVED, SEVERITY
+from rules.pix_snapshot import PixSnapshot
+from rules.rule_context import RuleContext
 
 
 def _canonical(payload: dict) -> str:
     return json.dumps(payload, sort_keys=True, separators=(",", ":"))
+
+
+def _build_snapshot(payload: dict) -> PixSnapshot:
+    source = payload["source_account"]
+    destination = payload["destination_account"]
+    origin = payload["source"]
+    geolocation = origin.get("geolocation") or {}
+
+    return PixSnapshot(
+        pix_id=payload["id"],
+        amount=payload["amount"],
+        transaction_date=datetime.fromisoformat(payload["transaction_date"]),
+        source_document=source["owner"]["document_number"],
+        source_opening_date=datetime.fromisoformat(source["opening_date"]),
+        destination_document=destination["owner"]["document_number"],
+        destination_participant=destination["participant"],
+        destination_opening_date=datetime.fromisoformat(destination["opening_date"]),
+        device_id=origin["device_id"],
+        channel=origin["channel"],
+        ip=origin["ip"],
+        latitude=geolocation.get("latitude"),
+        longitude=geolocation.get("longitude"),
+    )
 
 
 class PixTransactionController(BaseController):
@@ -25,15 +52,31 @@ class PixTransactionController(BaseController):
         if existing is not None:
             return existing, True
 
-        metadata = {"reasons": [], "rule_set_version": RULE_SET_VERSION}
+        try:
+            snapshot = _build_snapshot(payload)
+        except ValueError as error:
+            raise InvalidSchema(f"Invalid date: {error}")
+
+        context = self._build_context(snapshot)
+        results = [result for rule in ACTIVE_RULES if (result := rule.evaluate(snapshot, context)) is not None]
+        results.sort(key=lambda result: -SEVERITY[result.decision])
+        decision = self._decide(results)
+
+        metadata = {
+            "reasons": [{"rule": r.code, "decision": r.decision, "reason": r.reason} for r in results],
+            "signals": {r.code: r.signals for r in results},
+            "rule_set_version": RULE_SET_VERSION,
+        }
+        reasons = [{"rule_code": r.code, "decision": r.decision, "reason": r.reason} for r in results]
 
         try:
             pix_analysis = self.pix_transaction_repository.create(
                 payload=payload,
-                status_enumerator=AnalysisStatus.APPROVED,
+                snapshot=snapshot,
+                status_enumerator=decision,
                 metadata=metadata,
                 rule_set_version=RULE_SET_VERSION,
-                reasons=[],
+                reasons=reasons,
             )
             pix_analysis_dto = PixAnalysisDTO.obj_to_dict(pix_analysis)
             self.session.commit()
@@ -44,9 +87,6 @@ class PixTransactionController(BaseController):
             if existing is None:
                 raise
             return existing, True
-        except ValueError as error:
-            self.session.rollback()
-            raise InvalidSchema(f"Invalid date: {error}")
 
         return pix_analysis_dto, False
 
@@ -57,6 +97,28 @@ class PixTransactionController(BaseController):
             raise NotFoundPixTransaction(pix_id)
 
         return PixAnalysisDTO.obj_to_dict(pix_analysis)
+
+    def _build_context(self, snapshot: PixSnapshot) -> RuleContext:
+        t = snapshot.transaction_date
+        attempts = self.pix_transaction_repository.count_source_attempts_since(
+            snapshot.source_document,
+            t - timedelta(minutes=RULE_VELOCITY_WINDOW_MINUTES),
+            t,
+            snapshot.pix_id,
+        )
+        sum_24h = self.pix_transaction_repository.sum_source_not_rejected_since(
+            snapshot.source_document, t - timedelta(hours=24), t, snapshot.pix_id
+        )
+        return RuleContext(
+            source_attempts_last_velocity_window=attempts,
+            source_sum_last_24h_cents=sum_24h,
+        )
+
+    @staticmethod
+    def _decide(results: list) -> str:
+        if not results:
+            return APPROVED
+        return max(results, key=lambda result: SEVERITY[result.decision]).decision
 
     def _find_replay(self, payload: dict) -> dict | None:
         pix_analysis = self.pix_transaction_repository.get_by_pix_id(payload["id"])
