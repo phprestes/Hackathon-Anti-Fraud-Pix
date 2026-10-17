@@ -1,6 +1,6 @@
-# [Nome do grupo]
+# Hackathon-Anti-Fraud-Pix
 
-**Integrantes:** [nomes]
+**Integrantes:** Pedro H. S. Prestes · Laura Pazini Medeiros
 
 Motor antifraude de Pix do Hackathon QI Tech 2026: uma API que recebe um Pix e responde `approved`, `two_factor_required` ou `rejected`, sempre com o motivo. Feito a partir do [`bootcamp-base-api`](docs/referencia/base-service-readme.md). Stack: Python 3.11, FastAPI, PostgreSQL 16, Docker. Enunciado completo em [docs/01-contexto/enunciado.md](docs/01-contexto/enunciado.md).
 
