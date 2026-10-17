@@ -35,14 +35,14 @@ A dependência anda num sentido só: `resources → controllers → (repositorie
 | `resources/` | receber a requisição, validar o schema, chamar o controller, escolher o status de sucesso (201 ou 200) | SQL, regra, `raise` |
 | `schemas/` | descrever o JSON aceito (`additionalProperties: false`) | consultar banco, decidir |
 | `controllers/` | buscar idempotência, montar o `RuleContext`, rodar as regras, agregar a decisão, gravar, dar `commit` | escrever SQL, conhecer HTTP |
-| `rules/` | decidir se **uma** regra dispara, com o Pix, o contexto e seus parâmetros | tocar banco, chamar `datetime.now()`, ler ambiente, conhecer outra regra |
+| `rules/` | decidir se **uma** regra dispara, com o Pix, o contexto e seus parâmetros; cálculos compartilhados em `signals.py` | tocar banco, chamar `datetime.now()`, ler ambiente, ler o resultado de outra regra |
 | `repositories/` | buscar, inserir, calcular agregados por janela | decidir se é fraude |
 | `models/` | descrever tabelas | ter regra |
 | `dtos/` | montar `{key, status, metadata}` | serializar `id` ou FK |
 | `errors/` | código, mensagem e status de cada recusa | ter regra |
 | `middlewares/` | agir em toda requisição | conhecer uma rota |
 | `connectors/` | (sem uso neste projeto, [ADR 0002](decisoes/0002-monolito-sincrono-sem-dependencia-externa.md)) | — |
-| `utils/` | logger, request id, validação de schema, documento | virar depósito |
+| `utils/` | logger, request id, validação de schema, documento, estatística pura (`statistics.py`) | virar depósito |
 
 Exemplo: `if pix.amount > self.max_night_amount_cents: return RuleResult(...)` mora em `src/rules/limit_night_amount_rule.py`. A consulta "soma dos Pix desse documento nas últimas 24h" mora no `pix_transaction_repository.py`. Quem junta as duas coisas é o controller.
 

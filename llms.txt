@@ -61,6 +61,7 @@ Documentação em pt-BR; código, rotas, campos e códigos de regra em inglês. 
 - [Motor de regras](docs/05-motor/motor-de-regras.md): peças, contrato da regra, passo a passo, sinais disponíveis
 - [Catálogo de regras](docs/05-motor/regras.md): regras, parâmetros, decisão, porquê, estado
 - [Decisão](docs/05-motor/decisao.md): severidade, quando sai 2FA, exemplos
+- [Calibração](docs/05-motor/calibracao.md): metas, experimentos do simulador, configuração final e limites da evidência
 
 ## Operação e testes
 

@@ -9,7 +9,7 @@ sources: [Pizzolato et al. (2025), A Taxonomy of Pix Fraud in Brazil; Pesquisa Q
 
 > [Índice](../../README.md) › [Decisões](README.md) › 0018
 
-**Status:** proposta
+**Status:** aceita
 
 ## Contexto
 

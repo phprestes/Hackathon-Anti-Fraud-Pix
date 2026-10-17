@@ -41,6 +41,7 @@ sources: [Desafio Antifraude Pix, bootcamp-base-api, Projeto fase 1]
 | [motor-de-regras.md](05-motor/motor-de-regras.md) | Como o motor está estruturado e de onde vem o histórico? |
 | [regras.md](05-motor/regras.md) | Quais regras, com que parâmetros, e por quê? |
 | [decisao.md](05-motor/decisao.md) | Como os disparos viram uma decisão; quando sai 2FA? |
+| [calibracao.md](05-motor/calibracao.md) | Por que cada parâmetro tem o valor que tem? Quanta fricção e quanta captura no simulador? |
 | **06 · Operação** | |
 | [rodando-localmente.md](06-operacao/rodando-localmente.md) | Como subir, testar, resetar; variáveis e armadilhas |
 | **07 · Testes** | |

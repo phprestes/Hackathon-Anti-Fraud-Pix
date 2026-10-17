@@ -4,7 +4,7 @@
 
 Motor antifraude de Pix do Hackathon QI Tech 2026: uma API que recebe um Pix e responde `approved`, `two_factor_required` ou `rejected`, sempre com o motivo. Feito a partir do [`bootcamp-base-api`](docs/referencia/base-service-readme.md). Stack: Python 3.11, FastAPI, PostgreSQL 16, Docker. Enunciado completo em [docs/01-contexto/enunciado.md](docs/01-contexto/enunciado.md).
 
-> **Estado:** estrutura e decisões prontas; motor em construção. O que já mudou está no [CHANGELOG](CHANGELOG.md).
+> **Estado:** motor completo: 17 regras, 116 testes black box, calibrado com simulador (cerca de 4% de 2FA em legítimos, nenhuma sequência de fraude simulada passa sem barreira, P95 de 55 ms). Próximos passos no [plano 2](docs/plano-de-implementacao-2.md); histórico no [CHANGELOG](CHANGELOG.md).
 
 ## Como o motor de decisão funciona
 
@@ -14,25 +14,39 @@ Detalhe em [motor de regras](docs/05-motor/motor-de-regras.md). O porquê de cad
 
 ## Regras
 
-Fonte da verdade: [catálogo de regras](docs/05-motor/regras.md). Os parâmetros abaixo são **sugestões iniciais**, que o time ainda vai calibrar e justificar.
+Fonte da verdade, com o porquê completo de cada parâmetro: [catálogo de regras](docs/05-motor/regras.md). Os parâmetros marcados com ★ foram ajustados com o simulador ([calibração](docs/05-motor/calibracao.md)). Todos são variáveis `RULE_*` em `src/constants.py`.
 
 | Regra | Lógica | Parâmetros | Por quê |
 |-------|--------|------------|---------|
-| `LIMIT_NIGHT_AMOUNT` | Pix entre 20h e 6h acima do teto noturno | R$ 1.000 | O limite noturno padrão do BC para pessoa física; golpes de sequestro concentram-se à noite |
-| `VELOCITY_SOURCE_COUNT` | Pix do pagador nos últimos 10 min | 2FA a partir de 5, reprova a partir de 10 | Conta tomada é esvaziada em rajada |
-| `VELOCITY_DEVICE_SOURCES` | Pagadores distintos no mesmo aparelho em 24h | reprova acima de 3 | Aparelho operando várias contas = fazenda de contas |
-| `AMOUNT_SOURCE_DAILY_SUM` | Soma do pagador em 24h | R$ 10.000 | Fracionamento para fugir do teto por Pix |
-| `PROFILE_AMOUNT_OUTLIER` | Valor × média de 30 dias do pagador | 5×, com 5 Pix de histórico no mínimo | Fora do padrão do cliente |
-| `COUNTERPARTY_NEW_ACCOUNT` | Idade da conta de destino | 2FA abaixo de 30 dias | Contas laranja são novas |
-| `COUNTERPARTY_FAN_IN` | Pagadores distintos para o mesmo destino em 1h | reprova acima de 10 | Conta de passagem recebendo de várias vítimas |
+| `LIMIT_NIGHT_AMOUNT` | Pix entre 20h e 6h (hora local) acima do teto; não vale para CNPJ | R$ 1.000 | Limite noturno padrão do BC para pessoa física (Res. 142/2021); sequestro relâmpago |
+| `LIMIT_SINGLE_AMOUNT` | Valor de um Pix acima do teto | R$ 50 mil CPF, R$ 200 mil CNPJ | Teto de exposição de um Pix só |
+| `VELOCITY_SOURCE_COUNT` | Tentativas do pagador em 10 min, inclusive reprovadas | 2FA a partir de 5, reprova a partir de 10 | Conta tomada é esvaziada em rajada; protege o pagador sem histórico |
+| `VELOCITY_DEVICE_SOURCES` | Pagadores distintos no mesmo aparelho em 24 h | reprova acima de 3 | Fazenda de contas; família raramente passa de 3 |
+| `VELOCITY_POISSON_GAMMA` | Rajada da última hora improvável para o ritmo histórico do pagador | ★ cauda < 0,0001, 24 h de histórico | O "rápido demais" de cada um: a 0,001 travava 143 legítimos, a 0,0001 trava 47 |
+| `AMOUNT_SOURCE_DAILY_SUM` | Soma de 24 h (só não reprovados) + este Pix | ★ R$ 30 mil CPF, R$ 50 mil CNPJ | Fracionamento; a R$ 10 mil gerava 266 dos 347 casos de 2FA em legítimos |
+| `PROFILE_NEW_DEVICE` | Pagador com histórico, aparelho nunca visto | a partir de R$ 500 | Primeiro passo da tomada de conta; piso evita fricção no cafezinho |
+| `PROFILE_NEW_SOURCE_ACCOUNT` | Conta de origem nova com valor alto | < 7 dias e > R$ 2.000 | Conta aberta com identidade falsa é usada logo (art. 39-B do Regulamento do Pix) |
+| `PROFILE_AMOUNT_ROBUST_Z` | z robusto de log(valor) sobre 30 dias do pagador (mediana/MAD) | z > 3,5, mínimo 5 Pix | Fora do padrão do próprio cliente (Bolton & Hand); robusto a histórico pequeno |
+| `PROFILE_GEO_VELOCITY` | Distância ao último Pix com GPS ÷ tempo | > 50 km e > 900 km/h | Viagem impossível; 900 km/h é um avião comercial |
+| `COUNTERPARTY_NEW_ACCOUNT` | Idade da conta de destino | 2FA < 30 dias; reprova < 3 dias e > R$ 1.000 | Contas laranja são novas; com vítima coagida, só o destino denuncia |
+| `COUNTERPARTY_FAN_IN` | Pagadores distintos para o destino em 1 h | reprova acima de 10 | Conta de passagem (funil) |
+| `COUNTERPARTY_FIRST_TIME_HIGH` | Primeiro Pix do pagador para esse destino, valor alto | > R$ 3.000 | Falso parente e falso boleto vão para destino novo; o aluguel não |
+| `COUNTERPARTY_FLAGGED` | Destino recebeu Pix reprovado de outro pagador em 7 dias | 7 dias | Reputação derivada do próprio histórico, sem lista externa |
+| `TYPOLOGY_ACCOUNT_TAKEOVER` | Histórico + aparelho novo + (viagem impossível ou z > 3,0) | z > 3,0 | Os sinais juntos descrevem tomada de conta: risco claro |
+| `TYPOLOGY_MULE` | Destino < 30 dias recebendo de 5+ pagadores em 1 h | 5 pagadores | Barra a conta laranja antes do fan-in genérico |
+| `TYPOLOGY_SPLITTING` | 6+ Pix pequenos (≤ R$ 2.000) para 4+ destinos **novos** em 24 h acima do corte | ★ R$ 15 mil | Fracionamento espalha para contas novas; contar só destinos novos zerou os legítimos reprovados |
 
-Lista completa, com as candidatas restantes, no [catálogo](docs/05-motor/regras.md).
+**Calibração** (simulador com 4.926 Pix legítimos e 136 de fraude em 5 tipologias): cerca de 96% de legítimos aprovados, 3,8% com 2FA, 2 reprovados (0,04%), e as 22 sequências de fraude com ao menos um Pix barrado. Os dados são sintéticos e as fraudes foram desenhadas por nós, então isso mede fricção e coerência, não eficácia contra fraude real ([calibração](docs/05-motor/calibracao.md)).
 
 ## Como as regras viram decisão
 
-Todas as regras rodam, sem parar na primeira. Cada uma devolve nada, `two_factor_required` (dúvida: o sinal sozinho não prova fraude) ou `rejected` (risco claro). A decisão final é a mais severa: `rejected` > `two_factor_required` > `approved`. Sem disparo, `approved`. Todos os disparos vão para `metadata.reasons`, do mais severo ao menos severo, e a ordem das regras não muda a decisão.
+Todas as 17 regras rodam, sem parar na primeira. Cada uma devolve nada, `two_factor_required` ou `rejected`, e a decisão final é a mais severa: `rejected` > `two_factor_required` > `approved`. Sem disparo, `approved`. A ordem das regras não muda a decisão, só a ordem dos motivos.
 
-Exemplos e critérios de 2FA em [como as regras viram decisão](docs/05-motor/decisao.md).
+- **2FA** quando um sinal isolado gera dúvida, mas acontece com cliente bom: limites, aparelho novo, valor fora do perfil, conta de destino nova, primeiro Pix alto para alguém, destino sinalizado. O cliente legítimo resolve com um toque.
+- **Reprovação** quando o risco é claro: um sinal extremo (conta de destino com menos de 3 dias e mais de R$ 1.000, 10 Pix em 10 min, aparelho com mais de 3 contas, mais de 10 pagadores para o mesmo destino em 1 h) ou uma **tipologia** (conta tomada, mula, fracionamento). Dois 2FA não somam uma reprovação: só uma tipologia explícita combina sinais.
+- O `metadata` traz `reasons` (regra, decisão, motivo em português, do mais severo ao menos severo), `signals` (os números que cada regra usou) e `rule_set_version`.
+
+Exemplos em [como as regras viram decisão](docs/05-motor/decisao.md).
 
 ## Como rodar e testar
 

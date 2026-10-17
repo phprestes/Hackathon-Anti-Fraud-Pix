@@ -37,12 +37,13 @@ A pesquisa descreve a arquitetura de produção: regras e listas na primeira lin
 
 ## Alternativas descartadas
 
-- **Treinar com dado sintético (PaySim, gerador próprio).**
-  - **Preço:** os rótulos saem das próprias regras, e o modelo aprende a copiá-las (circularidade que a pesquisa admite); sklearn e o arquivo do modelo entram na imagem.
-  - **Ganharia se** houvesse rótulos reais, mesmo que atrasados como os do MED (Dal Pozzolo, 2018).
-- **Treinar com as decisões das próprias regras como rótulo.**
-  - **Preço:** o modelo só aprende a imitar as regras; não descobre fraude nova.
+- **Treinar com as decisões das próprias regras como rótulo** (`rejected` = fraude).
+  - **Preço:** o modelo só aprende a imitar as regras; no máximo empata com elas e nunca descobre fraude nova.
   - **Ganharia se** o objetivo fosse só suavizar cortes, não detectar mais.
+- **Treinar com as etiquetas do simulador como modelo de produção.** As etiquetas vêm do gerador (`legit`, `mule`…), independentes das regras, então o modelo pode superar as regras **dentro do mundo simulado**.
+  - **Preço:** ele aprende o gerador que nós escrevemos, não fraude real (circularidade um nível acima); sklearn e o arquivo do modelo entrariam na imagem.
+  - **Ganharia se** houvesse rótulos reais, mesmo que atrasados como os do MED (Dal Pozzolo, 2018).
+  - **Possível como demonstração, depois da entrega:** script fora da API que treina com as etiquetas do simulador, avaliado em outra seed e com o gerador perturbado, e o modelo ligado como `MODEL_RISK_SCORE` em shadow mode. Mostra o caminho completo com dado mockado, rotulado como tal.
 - **LLM na decisão.**
   - **Preço:** latência e custo por Pix, risco de quebrar o schema da resposta, decisão não reproduzível.
   - **Ganharia se** existissem sinais textuais ou de sessão que o payload não tem.

@@ -6,7 +6,7 @@ COMPOSE := docker compose
 PYTHON_311 := $(shell command -v python3.11 2>/dev/null)
 
 .DEFAULT_GOAL := help
-.PHONY: help all up down stop reset rebuild ps logs shell install test test-cov lint check clean
+.PHONY: help all up down stop reset rebuild ps logs shell install test test-cov lint check simulate clean
 
 help: ## Lista os comandos
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  \033[36m%-10s\033[0m %s\n", $$1, $$2}'
@@ -61,6 +61,9 @@ lint: install ## Roda o flake8
 	$(BIN)/flake8 src tests
 
 check: lint test ## Lint e testes
+
+simulate: install ## Roda o simulador de calibração contra a api (depois, make reset limpa o banco)
+	$(BIN)/python scripts/simulate.py
 
 clean: ## Remove containers, volume, .venv e caches
 	$(COMPOSE) down -v

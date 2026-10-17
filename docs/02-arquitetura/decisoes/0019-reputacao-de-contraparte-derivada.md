@@ -9,7 +9,7 @@ sources: [Pesquisa QITech (listas, reputação de rede por GNN), Desafio Antifra
 
 > [Índice](../../README.md) › [Decisões](README.md) › 0019
 
-**Status:** proposta
+**Status:** aceita
 
 ## Contexto
 

@@ -32,10 +32,10 @@ Uma decisão por arquivo, sempre no mesmo formato: **Contexto → Decisão → A
 | [0013](0013-contrato-em-json-schema.md) | Contrato de entrada em JSON Schema fechado | API | aceita (herdada) |
 | [0014](0014-repositorio-ai-friendly.md) | `AGENTS.md` + `.agents/skills/` + `llms.txt` | Processo | aceita |
 | [0015](0015-changelog-e-adrs-no-lugar-da-rfc.md) | `CHANGELOG.md` + ADRs no lugar da RFC | Processo | aceita |
-| [0016](0016-sinais-estatisticos-como-regras.md) | Sinais estatísticos (z robusto, Poisson–Gamma, viagem impossível) como regras, em Python puro | Motor | proposta |
+| [0016](0016-sinais-estatisticos-como-regras.md) | Sinais estatísticos (z robusto, Poisson–Gamma, viagem impossível) como regras, em Python puro | Motor | aceita |
 | [0017](0017-ml-fora-do-prazo-e-do-hot-path.md) | ML, grafos e LLM fora desta entrega; viram roadmap | Motor | aceita |
-| [0018](0018-regras-compostas-por-tipologia.md) | Regras compostas por tipologia de golpe no lugar de score ponderado | Motor | proposta |
-| [0019](0019-reputacao-de-contraparte-derivada.md) | Reputação de contraparte derivada do próprio histórico | Motor | proposta |
+| [0018](0018-regras-compostas-por-tipologia.md) | Regras compostas por tipologia de golpe no lugar de score ponderado | Motor | aceita |
+| [0019](0019-reputacao-de-contraparte-derivada.md) | Reputação de contraparte derivada do próprio histórico | Motor | aceita |
 | [0020](0020-simulador-para-calibracao.md) | Simulador de tráfego para calibrar parâmetros e medir P95 | Processo | aceita |
 | [0021](0021-o-que-cada-janela-conta-e-versao-das-regras.md) | O que cada janela conta, redutores de fricção e `rule_set_version` | Motor | aceita |
 

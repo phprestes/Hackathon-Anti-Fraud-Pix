@@ -9,7 +9,7 @@ sources: [Pesquisa QITech (M1), Bolton & Hand (2002), Desafio Antifraude Pix (se
 
 > [Índice](../../README.md) › [Decisões](README.md) › 0016
 
-**Status:** proposta
+**Status:** aceita
 
 ## Contexto
 
