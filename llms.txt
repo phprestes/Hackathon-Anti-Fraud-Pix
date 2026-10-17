@@ -21,6 +21,7 @@ Documentação em pt-BR; código, rotas, campos e códigos de regra em inglês. 
 ## Arquitetura
 
 - [Visão geral](docs/02-arquitetura/visao-geral.md): api + db, caminho de um Pix, herdado × novo
+- [C4](docs/02-arquitetura/c4.md): contexto, containers, componentes (API e motor estatístico), simulador, proposta de backtest em lote com HistoryPort e teste de paridade
 - [Camadas](docs/02-arquitetura/camadas.md): o que cada pasta pode e não pode, incluindo rules/
 - [Decisões (ADRs)](docs/02-arquitetura/decisoes/README.md): índice com status
 - [ADR 0001](docs/02-arquitetura/decisoes/0001-partir-do-base-service.md): partir do bootcamp-base-api da Aula 1

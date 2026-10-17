@@ -13,6 +13,8 @@ sources: [bootcamp-base-api, Desafio Antifraude Pix]
 
 ## Ecossistema
 
+Os mesmos sistemas em diagramas C4 (contexto, containers e componentes) estão em [c4.md](c4.md).
+
 Dois containers, um `docker-compose.yml` ([ADR 0002](decisoes/0002-monolito-sincrono-sem-dependencia-externa.md)).
 
 ```mermaid

@@ -29,6 +29,7 @@ sources: [Desafio Antifraude Pix, bootcamp-base-api, Projeto fase 1]
 | [requisitos.md](01-contexto/requisitos.md) | O que o enunciado exige (E1–E8), quais regras herdadas valem (R1–R6), onde mostrar cada critério da banca? |
 | **02 · Arquitetura** | |
 | [visao-geral.md](02-arquitetura/visao-geral.md) | Quais serviços sobem, por onde passa um Pix, o que veio da base? |
+| [c4.md](02-arquitetura/c4.md) | Diagramas C4: contexto, containers, componentes da API e do motor estatístico, simulador e proposta de backtest sem HTTP e sem banco |
 | [camadas.md](02-arquitetura/camadas.md) | Em qual pasta mora cada coisa, inclusive uma regra antifraude? |
 | [decisoes/](02-arquitetura/decisoes/README.md) | Por que cada escolha, e o que foi descartado? (15 ADRs) |
 | **03 · API** | |
