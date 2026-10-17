@@ -16,6 +16,7 @@ class RuleContext:
     source_attempts_poisson_lookback: int
     source_first_seen: datetime | None
     source_last_geolocation: tuple[float, float, datetime] | None
-    source_distinct_destinations_last_24h: int
+    source_new_destinations_last_24h: int
+    destination_used_before: bool
     source_small_attempts_last_24h: int
     destination_rejected_by_others_last_window: int

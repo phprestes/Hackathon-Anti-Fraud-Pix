@@ -13,9 +13,9 @@ def _current(document: str):
 
 class TestAmountSourceDailySumRule:
     def test_post_daily_sum_at_limit_returns_approved(self):
-        """AMOUNT_SOURCE_DAILY_SUM: soma exatamente R$ 10.000,00 não dispara."""
+        """AMOUNT_SOURCE_DAILY_SUM: soma exatamente R$ 30.000,00 não dispara."""
         document = RandomGenerator.generate_cpf()
-        _post(document, 985000)
+        _post(document, 2985000)
 
         body = _current(document)
 
@@ -24,21 +24,21 @@ class TestAmountSourceDailySumRule:
     def test_post_daily_sum_above_limit_returns_two_factor_required(self):
         """AMOUNT_SOURCE_DAILY_SUM: R$ 0,01 acima do teto pede 2FA."""
         document = RandomGenerator.generate_cpf()
-        _post(document, 985001)
+        _post(document, 2985001)
 
         body = _current(document)
 
         assert body["status"] == "two_factor_required"
         assert body["metadata"]["reasons"][0]["rule"] == "AMOUNT_SOURCE_DAILY_SUM"
         assert body["metadata"]["signals"]["AMOUNT_SOURCE_DAILY_SUM"] == {
-            "sum_24h_cents": 1000001,
-            "limit_cents": 1000000,
+            "sum_24h_cents": 3000001,
+            "limit_cents": 3000000,
         }
 
     def test_post_previous_pix_older_than_24h_returns_approved(self):
         """AMOUNT_SOURCE_DAILY_SUM: Pix de 25h atrás fica fora da janela."""
         document = RandomGenerator.generate_cpf()
-        _post(document, 1000000, hours_ago=25)
+        _post(document, 3000000, hours_ago=25)
 
         body = _current(document)
 
@@ -47,7 +47,7 @@ class TestAmountSourceDailySumRule:
     def test_post_previous_rejected_pix_not_summed_returns_approved(self):
         """ADR 0021: Pix reprovado não entra na soma diária."""
         document = RandomGenerator.generate_cpf()
-        _, rejected = _post(document, 1000000, destination_opening_date=shifted(DEFAULT_AT, days=-1))
+        _, rejected = _post(document, 3000000, destination_opening_date=shifted(DEFAULT_AT, days=-1))
         assert rejected["status"] == "rejected"
 
         body = _current(document)
@@ -57,7 +57,7 @@ class TestAmountSourceDailySumRule:
     def test_post_cnpj_above_cpf_limit_returns_approved(self):
         """ADR 0021: CNPJ tem teto próprio de R$ 50.000,00."""
         document = RandomGenerator.generate_cnpj()
-        _post(document, 985001)
+        _post(document, 2985001)
 
         body = _current(document)
 

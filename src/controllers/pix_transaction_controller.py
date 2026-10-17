@@ -143,9 +143,10 @@ class PixTransactionController(BaseController):
             ),
             source_first_seen=repository.first_source_transaction_date(source, t, pix_id),
             source_last_geolocation=repository.last_source_geolocation(source, t, pix_id),
-            source_distinct_destinations_last_24h=repository.count_source_distinct_destinations_since(
+            source_new_destinations_last_24h=repository.count_source_new_destinations_since(
                 source, t - timedelta(hours=24), t, pix_id
             ),
+            destination_used_before=repository.source_used_destination(source, snapshot.destination_document, t, pix_id),
             source_small_attempts_last_24h=repository.count_source_small_attempts_since(
                 source, RULE_SPLITTING_MAX_AMOUNT_CENTS, t - timedelta(hours=24), t, pix_id
             ),

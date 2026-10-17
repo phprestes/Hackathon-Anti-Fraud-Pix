@@ -1,7 +1,7 @@
 from tests.utils import DEFAULT_AT, PayloadGenerator, RandomGenerator, RequestGenerator, shifted
 
 
-def _history(document: str, amount: int = 985001):
+def _history(document: str, amount: int = 2985001):
     RequestGenerator.POST_pix(PayloadGenerator.pix(
         payer_document=document, amount=amount, device_id=f"dvc-{document}", at=shifted(DEFAULT_AT, hours=-1)
     ))

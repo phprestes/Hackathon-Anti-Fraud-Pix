@@ -2,6 +2,7 @@ from datetime import datetime
 from uuid import uuid4
 
 from sqlalchemy import func
+from sqlalchemy.orm import aliased
 
 from database import Context
 from models import AnalysisStatus, PixAnalysis, PixAnalysisReason, PixTransaction
@@ -204,7 +205,18 @@ class PixTransactionRepository:
             return None
         return float(row.latitude), float(row.longitude), row.transaction_date
 
-    def count_source_distinct_destinations_since(self, document: str, since: datetime, until: datetime, exclude_pix_id: str) -> int:
+    def count_source_new_destinations_since(self, document: str, since: datetime, until: datetime, exclude_pix_id: str) -> int:
+        earlier = aliased(PixTransaction)
+        known_before_window = (
+            self.session.query(earlier.id)
+            .filter(
+                earlier.source_document_number == document,
+                earlier.destination_document_number == PixTransaction.destination_document_number,
+                earlier.transaction_date < since,
+                earlier.pix_id != exclude_pix_id,
+            )
+            .exists()
+        )
         return (
             self.session.query(func.count(func.distinct(PixTransaction.destination_document_number)))
             .filter(
@@ -212,8 +224,22 @@ class PixTransactionRepository:
                 PixTransaction.transaction_date >= since,
                 PixTransaction.transaction_date < until,
                 PixTransaction.pix_id != exclude_pix_id,
+                ~known_before_window,
             )
             .scalar()
+        )
+
+    def source_used_destination(self, document: str, destination_document: str, until: datetime, exclude_pix_id: str) -> bool:
+        return (
+            self.session.query(PixTransaction.id)
+            .filter(
+                PixTransaction.source_document_number == document,
+                PixTransaction.destination_document_number == destination_document,
+                PixTransaction.transaction_date < until,
+                PixTransaction.pix_id != exclude_pix_id,
+            )
+            .first()
+            is not None
         )
 
     def count_source_small_attempts_since(self, document: str, max_amount: int, since: datetime, until: datetime, exclude_pix_id: str) -> int:

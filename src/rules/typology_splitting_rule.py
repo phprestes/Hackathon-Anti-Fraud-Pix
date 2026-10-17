@@ -20,8 +20,7 @@ class TypologySplittingRule(BaseRule):
             return None
 
         count = context.source_small_attempts_last_24h + 1
-        # Assumes the current destination is new: whether it repeats a past one is not in the context.
-        destinations = context.source_distinct_destinations_last_24h + 1
+        destinations = context.source_new_destinations_last_24h + (0 if context.destination_used_before else 1)
         total = context.source_sum_last_24h_cents + pix.amount
         limit = self.limit_legal_entity_cents if pix.is_legal_entity_source else self.limit_cents
         if count < self.min_count or destinations < self.min_destinations or total <= limit:
