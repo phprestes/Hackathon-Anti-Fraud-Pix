@@ -1,0 +1,31 @@
+# Changelog
+
+Toda mudança relevante neste repositório, da mais recente para a mais antiga por data. Inspirado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); o porquê do formato está na [ADR 0015](docs/02-arquitetura/decisoes/0015-changelog-e-adrs-no-lugar-da-rfc.md) e o passo a passo na skill [registrar-mudanca](.agents/skills/registrar-mudanca/SKILL.md).
+
+- **Tipos:** `Adicionado`, `Alterado`, `Calibrado`, `Corrigido`, `Removido`, `Movido`, `Documentado`.
+- **Autor:** nome da pessoa, ou `agente (<ferramenta>)`. Para ver só o que agentes mudaram: `grep agente CHANGELOG.md`.
+- Dentro de cada data, as linhas seguem a ordem em que as mudanças aconteceram.
+
+## [Não lançado]
+
+### 2026-10-17
+
+| Tipo | Mudança | Arquivos | Por quê | Autor |
+|---|---|---|---|---|
+| Adicionado | Cópia integral do `bootcamp-base-api` da Aula 1 como ponto de partida (código, testes, `database/`, Docker, `.env.example`, `.flake8`, `.gitignore`, `LICENSE`) | `src/`, `tests/`, `database/`, `docker-compose.yml`, `Dockerfile` | [ADR 0001](docs/02-arquitetura/decisoes/0001-partir-do-base-service.md) | agente (Claude Code) |
+| Movido | PDFs do enunciado da raiz para a pasta de referência, com nomes em kebab-case | `docs/referencia/enunciado/desafio-antifraude-pix.pdf`, `docs/referencia/enunciado/hackathon-antifraude-pix.pdf` | Raiz só com o que roda o projeto | agente (Claude Code) |
+| Movido | README original do Base Service e guia de pastas para referência | `docs/referencia/base-service-readme.md`, `docs/referencia/como-o-projeto-e-organizado.md` | O README raiz passa a seguir o modelo do enunciado ([E8](docs/01-contexto/requisitos.md)) | agente (Claude Code) |
+| Documentado | Transcrição completa dos dois PDFs do hackathon em Markdown | `docs/01-contexto/enunciado.md` | Enunciado legível por pessoas e LLMs sem abrir PDF | agente (Claude Code) |
+| Documentado | Contexto: problema, garantias, fora do escopo; exigências E1–E8, regras R1–R6, critérios da banca e matriz regra → teste | `docs/01-contexto/problema.md`, `docs/01-contexto/requisitos.md` | Base para as decisões e para a apresentação | agente (Claude Code) |
+| Documentado | 15 ADRs, uma decisão por arquivo, e índice com status | `docs/02-arquitetura/decisoes/` | [Índice de decisões](docs/02-arquitetura/decisoes/README.md) | agente (Claude Code) |
+| Documentado | Visão geral (api + db, caminho de um Pix, herdado × novo) e camadas com a pasta nova `rules/` | `docs/02-arquitetura/visao-geral.md`, `docs/02-arquitetura/camadas.md` | [ADR 0002](docs/02-arquitetura/decisoes/0002-monolito-sincrono-sem-dependencia-externa.md), [ADR 0004](docs/02-arquitetura/decisoes/0004-motor-de-regras-em-codigo.md) | agente (Claude Code) |
+| Documentado | Contrato das rotas, formato do `metadata`, catálogo de erros com `QIT002001`–`QIT002002` planejados, payload de exemplo | `docs/03-api/` | [ADR 0003](docs/02-arquitetura/decisoes/0003-decisao-antifraude-e-dado-nao-erro-http.md), [ADR 0012](docs/02-arquitetura/decisoes/0012-idempotencia-pelo-id-do-pix.md) | agente (Claude Code) |
+| Documentado | Modelo de dados proposto: `pix_transaction`, `pix_analysis`, `pix_analysis_reason`, `analysis_status`, índices de janela | `docs/04-dados/modelo.md` | [ADR 0009](docs/02-arquitetura/decisoes/0009-historico-append-only.md) | agente (Claude Code) |
+| Documentado | Motor de regras, catálogo com 12 regras candidatas (parâmetros sugeridos, não calibrados) e regra de agregação | `docs/05-motor/` | [ADR 0004](docs/02-arquitetura/decisoes/0004-motor-de-regras-em-codigo.md) a [ADR 0008](docs/02-arquitetura/decisoes/0008-parametros-de-regra-por-ambiente.md) | agente (Claude Code) |
+| Documentado | Operação local, estratégia de testes (histórico com datas escolhidas), contribuição, trabalho com IA, glossário e índice da documentação | `docs/06-operacao/`, `docs/07-testes/`, `docs/contribuindo.md`, `docs/trabalhando-com-ia.md`, `docs/glossario.md`, `docs/README.md` | [ADR 0014](docs/02-arquitetura/decisoes/0014-repositorio-ai-friendly.md) | agente (Claude Code) |
+| Adicionado | README raiz no modelo da seção 6 do enunciado, com placeholders de grupo e regras sugeridas | `README.md` | [E8](docs/01-contexto/requisitos.md) | agente (Claude Code) |
+| Adicionado | `AGENTS.md`, `llms.txt` e skills `nova-regra`, `novo-erro`, `nova-decisao`, `registrar-mudanca`, `revisar-mudanca` | `AGENTS.md`, `llms.txt`, `.agents/` | [ADR 0014](docs/02-arquitetura/decisoes/0014-repositorio-ai-friendly.md) | agente (Claude Code) |
+| Adicionado | `CLAUDE.md` local apontando para o `AGENTS.md`, fora do Git via `.git/info/exclude`; repositório Git inicializado, sem commit | `CLAUDE.md`, `.git/` | [ADR 0014](docs/02-arquitetura/decisoes/0014-repositorio-ai-friendly.md) | agente (Claude Code) |
+| Adicionado | `Makefile` com `all`, `up`, `test`, `lint`, `check`, `reset`, `rebuild`, `logs`, `clean` (sem os alvos de `mock` e `pgadmin` da fase 1) | `Makefile` | R2: um comando do clone ao verde | agente (Claude Code) |
+| Alterado | `flake8==7.1.1` nas dependências de desenvolvimento, para o `make lint` funcionar | `requirements-dev.txt` | O Base Service não trazia o flake8 | agente (Claude Code) |
+| Adicionado | Este changelog | `CHANGELOG.md` | [ADR 0015](docs/02-arquitetura/decisoes/0015-changelog-e-adrs-no-lugar-da-rfc.md) | agente (Claude Code) |
