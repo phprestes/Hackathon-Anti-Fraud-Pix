@@ -1,8 +1,6 @@
 from rules.base_rule import BaseRule, RuleResult
 from rules.decision import TWO_FACTOR_REQUIRED
-from utils.statistics import haversine_km
-
-MIN_ELAPSED_HOURS = 1 / 60
+from rules.signals import geo_elapsed_hours, geo_speed_kmh
 
 
 class ProfileGeoVelocityRule(BaseRule):
@@ -14,19 +12,15 @@ class ProfileGeoVelocityRule(BaseRule):
         self.max_speed_kmh = max_speed_kmh
 
     def evaluate(self, pix, context) -> RuleResult | None:
-        previous = context.source_last_geolocation
-        if previous is None or pix.latitude is None or pix.longitude is None:
+        travel = geo_speed_kmh(pix, context)
+        if travel is None:
             return None
 
-        latitude, longitude, previous_at = previous
-        km = haversine_km(latitude, longitude, float(pix.latitude), float(pix.longitude))
-        # Floor avoids dividing by ~0 when two Pix share the same instant.
-        hours = max((pix.transaction_date - previous_at).total_seconds() / 3600, MIN_ELAPSED_HOURS)
-        speed = km / hours
+        km, speed = travel
         if km <= self.min_distance_km or speed <= self.max_speed_kmh:
             return None
 
-        minutes = round(hours * 60)
+        minutes = round(geo_elapsed_hours(pix, context) * 60)
         return RuleResult(
             self.code,
             TWO_FACTOR_REQUIRED,

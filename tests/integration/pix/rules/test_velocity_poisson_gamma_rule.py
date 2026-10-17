@@ -5,7 +5,7 @@ DEVICE = "dvc-poisson"
 
 def _post_at(document: str, **delta) -> dict:
     _, body = RequestGenerator.POST_pix(PayloadGenerator.pix(
-        payer_document=document, device_id=DEVICE, amount=5000, at=shifted(DEFAULT_AT, **delta)
+        payer_document=document, device_id=f"{DEVICE}-{document}", amount=5000, at=shifted(DEFAULT_AT, **delta)
     ))
     return body
 

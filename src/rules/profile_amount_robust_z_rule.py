@@ -1,9 +1,8 @@
-import math
 import statistics
 
 from rules.base_rule import BaseRule, RuleResult
 from rules.decision import TWO_FACTOR_REQUIRED
-from utils.statistics import robust_z
+from rules.signals import amount_z
 
 
 class ProfileAmountRobustZRule(BaseRule):
@@ -16,15 +15,11 @@ class ProfileAmountRobustZRule(BaseRule):
         self.z_threshold = z_threshold
 
     def evaluate(self, pix, context) -> RuleResult | None:
+        z = amount_z(pix, context, self.min_history, self.min_scale)
+        if z is None or z <= self.z_threshold:
+            return None
+
         amounts = context.source_amounts_last_30d_cents
-        if len(amounts) < self.min_history or pix.amount <= 0:
-            return None
-
-        # Log scale: amounts are multiplicative, so "2x the usual" weighs the same at any level.
-        z = robust_z([math.log(a) for a in amounts if a > 0], math.log(pix.amount), self.min_scale)
-        if z <= self.z_threshold:
-            return None
-
         z_text = f"{z:.1f}".replace(".", ",")
         median = round(statistics.median(amounts))
         return RuleResult(

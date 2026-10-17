@@ -4,10 +4,12 @@ from datetime import datetime, timedelta
 from sqlalchemy.exc import IntegrityError
 
 from constants import (
+    RULE_FLAGGED_WINDOW_DAYS,
     RULE_POISSON_LOOKBACK_DAYS,
     RULE_POISSON_WINDOW_MINUTES,
     RULE_PROFILE_LOOKBACK_DAYS,
     RULE_SET_VERSION,
+    RULE_SPLITTING_MAX_AMOUNT_CENTS,
     RULE_VELOCITY_WINDOW_MINUTES,
 )
 from controllers.base_controller import BaseController
@@ -141,6 +143,15 @@ class PixTransactionController(BaseController):
             ),
             source_first_seen=repository.first_source_transaction_date(source, t, pix_id),
             source_last_geolocation=repository.last_source_geolocation(source, t, pix_id),
+            source_distinct_destinations_last_24h=repository.count_source_distinct_destinations_since(
+                source, t - timedelta(hours=24), t, pix_id
+            ),
+            source_small_attempts_last_24h=repository.count_source_small_attempts_since(
+                source, RULE_SPLITTING_MAX_AMOUNT_CENTS, t - timedelta(hours=24), t, pix_id
+            ),
+            destination_rejected_by_others_last_window=repository.count_destination_rejected_by_others_since(
+                snapshot.destination_document, source, t - timedelta(days=RULE_FLAGGED_WINDOW_DAYS), t, pix_id
+            ),
         )
 
     @staticmethod

@@ -204,5 +204,46 @@ class PixTransactionRepository:
             return None
         return float(row.latitude), float(row.longitude), row.transaction_date
 
+    def count_source_distinct_destinations_since(self, document: str, since: datetime, until: datetime, exclude_pix_id: str) -> int:
+        return (
+            self.session.query(func.count(func.distinct(PixTransaction.destination_document_number)))
+            .filter(
+                PixTransaction.source_document_number == document,
+                PixTransaction.transaction_date >= since,
+                PixTransaction.transaction_date < until,
+                PixTransaction.pix_id != exclude_pix_id,
+            )
+            .scalar()
+        )
+
+    def count_source_small_attempts_since(self, document: str, max_amount: int, since: datetime, until: datetime, exclude_pix_id: str) -> int:
+        return (
+            self.session.query(func.count(PixTransaction.id))
+            .filter(
+                PixTransaction.source_document_number == document,
+                PixTransaction.amount <= max_amount,
+                PixTransaction.transaction_date >= since,
+                PixTransaction.transaction_date < until,
+                PixTransaction.pix_id != exclude_pix_id,
+            )
+            .scalar()
+        )
+
+    def count_destination_rejected_by_others_since(self, destination_document: str, document: str, since: datetime, until: datetime, exclude_pix_id: str) -> int:
+        return (
+            self.session.query(func.count(PixTransaction.id))
+            .join(PixAnalysis, PixAnalysis.pix_transaction_id == PixTransaction.id)
+            .join(AnalysisStatus, AnalysisStatus.id == PixAnalysis.status_id)
+            .filter(
+                PixTransaction.destination_document_number == destination_document,
+                PixTransaction.source_document_number != document,
+                PixTransaction.transaction_date >= since,
+                PixTransaction.transaction_date < until,
+                PixTransaction.pix_id != exclude_pix_id,
+                AnalysisStatus.enumerator == AnalysisStatus.REJECTED,
+            )
+            .scalar()
+        )
+
     def get_status(self, enumerator: str) -> AnalysisStatus:
         return self.session.query(AnalysisStatus).filter(AnalysisStatus.enumerator == enumerator).one()
