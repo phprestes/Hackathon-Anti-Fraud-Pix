@@ -6,7 +6,7 @@ COMPOSE := docker compose
 PYTHON_311 := $(shell command -v python3.11 2>/dev/null)
 
 .DEFAULT_GOAL := help
-.PHONY: help all up down stop reset rebuild ps logs shell install test test-cov lint check simulate events backtest parity calibrate calibrate-check clean
+.PHONY: help all up down stop reset rebuild ps logs shell install test test-cov lint check simulate events backtest parity calibrate calibrate-check analyze clean
 
 help: ## Lista os comandos
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  \033[36m%-10s\033[0m %s\n", $$1, $$2}'
@@ -100,3 +100,6 @@ model-parity: install ## Compara os avaliadores em Python puro com sklearn/light
 clean: ## Remove containers, volume, .venv e caches
 	$(COMPOSE) down -v
 	rm -rf $(VENV) .pytest_cache .coverage htmlcov
+
+analyze: install ## Gera docs/05-motor/analises.md (log-normalidade, dispersao, PSI, sensibilidade; sem API e sem banco)
+	$(BIN)/python scripts/analyze.py
