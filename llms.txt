@@ -72,6 +72,7 @@ Documentação em pt-BR; código, rotas, campos e códigos de regra em inglês. 
 - [Contribuindo](docs/contribuindo.md): Clean Code, nomes, commits, CHANGELOG, checklist
 - [Trabalhando com IA](docs/trabalhando-com-ia.md): arquivos para agentes e regras de uso
 - [Plano de implementação](docs/plano-de-implementacao.md): triagem da pesquisa, sugestões N1–N6, fases F0–F6 com time-box, riscos
+- [Plano de implementação 2](docs/plano-de-implementacao-2.md): backtest em lote, modelos síncronos em shadow, worker assíncrono (grafo, GraphSAGE, HMM), pipeline de calibração e CI
 - [Skills](.agents/README.md): nova-regra, novo-erro, nova-decisao, registrar-mudanca, revisar-mudanca
 
 ## Optional
