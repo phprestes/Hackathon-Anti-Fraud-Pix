@@ -1,7 +1,9 @@
 """Trains LogReg+Platt, LightGBM and Isolation Forest on mock labels and exports them as JSON (docs/05-motor)."""
+import argparse
 import json
 import os
 import pickle
+import shutil
 import sys
 import time
 from collections import defaultdict
@@ -17,7 +19,8 @@ ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 sys.path.insert(0, os.path.join(ROOT, "src"))
 sys.path.insert(0, os.path.join(ROOT, "scripts"))
 
-from cold_path import marked_blocks  # noqa: E402
+from cold_path import marked_blocks, upsert_block  # noqa: E402
+from model_eval import View, deciders, evaluate, pixsim_sha, render_tables, summarise  # noqa: E402
 from rules.features import FEATURE_NAMES  # noqa: E402
 
 OUT = os.path.join(ROOT, "scripts", "out")
@@ -29,6 +32,12 @@ SEED = 42
 VALIDATION_SHARE = 0.25
 TRAINED_ON = "train-events seed 42, 300 payers, 14 days (scripts/simulate.py)"
 MODELS = ["logreg", "lightgbm", "iforest"]
+PIXSIM_OUT = os.path.join(OUT, "pixsim")
+PIXSIM_MODELS = os.path.join(PIXSIM_OUT, "models")
+MOCK_MODELS = os.path.join(PIXSIM_OUT, "models-mock")
+PIXSIM_DOC = os.path.join(ROOT, "docs", "05-motor", "validacao-pixsim.md")
+PIXSIM_BLOCK = "pixsim_models"
+DOC_START, DOC_END = "<!-- pixsim:models:start -->", "<!-- pixsim:models:end -->"
 
 
 def load_rows(name):
@@ -125,9 +134,9 @@ def train_iforest(X_train, y_train):
     return model, predict, clf
 
 
-def write_model(name, model):
-    os.makedirs(MODEL_DIR, exist_ok=True)
-    with open(os.path.join(MODEL_DIR, f"{name}.json"), "w", encoding="utf-8") as handle:
+def write_model(name, model, directory=MODEL_DIR):
+    os.makedirs(directory, exist_ok=True)
+    with open(os.path.join(directory, f"{name}.json"), "w", encoding="utf-8") as handle:
         json.dump(model, handle, separators=(",", ":"))
 
 
@@ -190,7 +199,133 @@ def render_set(title, result):
     return lines + [""]
 
 
+def fit_all(X, y, directory):
+    split = int(len(y) * (1 - VALIDATION_SHARE))
+    X_fit, y_fit, X_val, y_val = X[:split], y[:split], X[split:], y[split:]
+    models, predictors, libraries = {}, {}, {}
+    for name, trainer, args in [
+        ("logreg", train_logreg, (X_fit, y_fit, X_val, y_val)),
+        ("lightgbm", train_lightgbm, (X_fit, y_fit, X_val, y_val)),
+        ("iforest", train_iforest, (X, y)),
+    ]:
+        models[name], predictors[name], libraries[name] = trainer(*args)
+        write_model(name, models[name], directory)
+    with open(os.path.join(directory, "models.pkl"), "wb") as handle:
+        pickle.dump(libraries, handle)
+    return models, predictors, split
+
+
+def load_mock_baseline():
+    """The models trained on our simulator, frozen in a side folder so installing PixSim models never moves the baseline."""
+    if not os.path.isdir(MOCK_MODELS):
+        os.makedirs(MOCK_MODELS)
+        for name in MODELS:
+            shutil.copy(os.path.join(MODEL_DIR, f"{name}.json"), MOCK_MODELS)
+        shutil.copy(os.path.join(OUT, "models.pkl"), MOCK_MODELS)
+    models = {}
+    for name in MODELS:
+        with open(os.path.join(MOCK_MODELS, f"{name}.json"), encoding="utf-8") as handle:
+            models[name] = json.load(handle)
+        assert models[name]["version"] == "mock-1", "baseline folder holds models that are not the mock ones"
+    with open(os.path.join(MOCK_MODELS, "models.pkl"), "rb") as handle:
+        libraries = pickle.load(handle)
+    scaler, lr, platt = libraries["logreg"]
+    predictors = {
+        "logreg": lambda X: platt.predict_proba(lr.decision_function(scaler.transform(X)).reshape(-1, 1))[:, 1],
+        "lightgbm": lambda X: libraries["lightgbm"].predict_proba(X)[:, 1],
+        "iforest": lambda X: -libraries["iforest"].score_samples(X),
+    }
+    return models, predictors
+
+
+def score_view(view, models, predictors):
+    X = view.columns(models["logreg"]["features"])
+    return {m: predictors[m](X) for m in MODELS}, {m: models[m]["threshold"] for m in MODELS}
+
+
+def replace_between(path, start, end, lines):
+    with open(path, encoding="utf-8") as handle:
+        text = handle.read()
+    block = "\n".join([start, *lines, end])
+    if start in text:
+        head, rest = text.split(start, 1)
+        text = head + block + rest.split(end, 1)[1]
+    else:
+        text = text.rstrip("\n") + "\n\n" + block + "\n"
+    with open(path, "w", encoding="utf-8") as handle:
+        handle.write(text)
+
+
+def install_models(names):
+    """Copies the chosen PixSim-trained models over the shipped ones; models.pkl stays in step for model-parity."""
+    with open(os.path.join(PIXSIM_MODELS, "models.pkl"), "rb") as handle:
+        trained = pickle.load(handle)
+    with open(os.path.join(MOCK_MODELS, "models.pkl"), "rb") as handle:
+        shipped = pickle.load(handle)
+    for name in names:
+        shutil.copy(os.path.join(PIXSIM_MODELS, f"{name}.json"), MODEL_DIR)
+        shipped[name] = trained[name]
+    with open(os.path.join(OUT, "models.pkl"), "wb") as handle:
+        pickle.dump(shipped, handle)
+
+
+def main_pixsim(install):
+    started = time.perf_counter()
+    sha = pixsim_sha(os.path.join(ROOT, "scripts", "pixsim_setup.sh"))
+    world_a = View(os.path.join(PIXSIM_OUT, "features-a.jsonl"), FEATURE_NAMES)
+    world_b = View(os.path.join(PIXSIM_OUT, "features-b.jsonl"), FEATURE_NAMES)
+    ours_test = View(os.path.join(OUT, "test-features.jsonl"), FEATURE_NAMES)
+    global MODEL_VERSION, TRAINED_ON, WARNING
+    MODEL_VERSION = "pixsim-1"
+    TRAINED_ON = (f"PixSim world A (seed 20260910, 5000 accounts, 30 days, SHA {sha}); "
+                  "positives = victim_to_mule Pix; burn-in excluded")
+    WARNING = "synthetic labels: PixSim simulator (third party), not real fraud"
+    models, predictors, split = fit_all(world_a.X, world_a.y, PIXSIM_MODELS)
+    thresholds = {m: models[m]["threshold"] for m in MODELS}
+    mock_models, mock_predictors = load_mock_baseline()
+
+    results = {}
+    for key, view, source in [("a_to_b", world_b, "a"), ("a_to_ours", ours_test, "a"),
+                              ("ours_to_b", world_b, "ours"), ("ours_to_ours", ours_test, "ours")]:
+        if source == "a":
+            scores, limits = {m: predictors[m](view.X) for m in MODELS}, thresholds
+        else:
+            scores, limits = score_view(view, mock_models, mock_predictors)
+        results[key] = evaluate(view, deciders(view, scores, limits))
+    worlds = {"PixSim A (treino)": summarise(world_a), "PixSim B (teste)": summarise(world_b),
+              "Nosso simulador (seed 7, teste)": summarise(ours_test)}
+    payload = {"trained_on": TRAINED_ON, "thresholds": thresholds, "fit_rows": split,
+               "validation_rows": len(world_a) - split, "worlds": worlds, "results": results}
+    with open(os.path.join(PIXSIM_OUT, "models-results.json"), "w", encoding="utf-8") as handle:
+        json.dump(payload, handle, indent=1)
+
+    intro = [
+        "", "Treino no mundo A do PixSim (seed 20260910), teste no mundo B (seed 20261017) e no nosso simulador (seed 7). "
+        "Mesmos hiperparâmetros fixos de `scripts/train_models.py`; fatia de ajuste = primeiros 75% do mundo A no tempo, "
+        f"validação = 25% finais (limiar por F1 máximo; Platt na validação). Linhas: {split} de ajuste, {len(world_a) - split} de validação. "
+        f"Limiares: {json.dumps({m: round(t, 4) for m, t in thresholds.items()})}.", "",
+        "Positivo = Pix de vítima (`victim_to_mule`); legítimo = tráfego legítimo. A dispersão (`mule_forward`, `cash_out`) e a semente do Pix errado ficam "
+        "fora do treino e da avaliação: o banco só a veria se a mula fosse cliente, e misturá-la como positivo ensinaria o modelo a pontuar o comportamento da mula, "
+        "não o da vítima. Burn-in só alimenta o histórico. Custos e precisão usam o peso de importância do PixSim; AUC, recall e P@k são brutos.", "",
+    ]
+    tables = render_tables(results, worlds)
+    replace_between(PIXSIM_DOC, DOC_START, DOC_END, intro + tables)
+    upsert_block(PIXSIM_BLOCK, ["## Modelos treinados no PixSim", *intro, *tables])
+    if install:
+        install_models(install)
+    print("\n".join(tables))
+    print(f"total {time.perf_counter() - started:.1f} s", file=sys.stderr)
+    return 0
+
+
 def main():
+    parser = argparse.ArgumentParser(description="Trains the hot-path models and exports them as JSON")
+    parser.add_argument("--source", choices=["mock", "pixsim"], default="mock")
+    parser.add_argument("--install", nargs="+", choices=MODELS, metavar="MODEL",
+                        help="with --source pixsim: replace these shipped JSON models with the PixSim-trained ones")
+    args = parser.parse_args()
+    if args.source == "pixsim":
+        return main_pixsim(args.install)
     started = time.perf_counter()
     train_rows, X, y = load_rows("train-features.jsonl")
     split = int(len(y) * (1 - VALIDATION_SHARE))

@@ -1,10 +1,14 @@
 """Trains the GraphSAGE destination-risk model in numpy and exports src/worker/model/graphsage.json.
 
-Usage: train_graphsage.py <train-events.jsonl>. Evaluation uses the test sets in scripts/out.
+Usage: train_graphsage.py <train-events.jsonl> (evaluates on the test sets in scripts/out) or
+train_graphsage.py --source pixsim [--install] (trains on PixSim world A, evaluates on world B).
 """
+import argparse
+import csv
 import json
 import os
 import random
+import shutil
 import sys
 import time
 from collections import defaultdict
@@ -12,9 +16,12 @@ from collections import defaultdict
 import numpy as np
 
 from cold_path import (
-    EVAL_SETS, MODEL_DIR, WARNING, WINDOW_HOURS, best_f1_threshold, build_window, first_seen_index, floor5,
+    EVAL_SETS, MODEL_DIR, WARNING, WINDOW_HOURS, Pix, best_f1_threshold, build_window, first_seen_index, floor5,
     load_pix, pct, roc_auc, upsert_block, window_clocks,
 )
+from model_eval import pixsim_sha
+from pixsim_adapter import load_accounts
+from replay import iter_events
 from worker import graphsage
 
 SEED = 42
@@ -25,13 +32,20 @@ BATCH = 64
 VERSION = "mock-1"
 
 
+PIXSIM_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "out", "pixsim")
+PIXSIM_BLOCK = "graphsage_pixsim"
+DOC = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "docs", "05-motor", "validacao-pixsim.md")
+DOC_START, DOC_END = "<!-- pixsim:graphsage:start -->", "<!-- pixsim:graphsage:end -->"
+
+
 class Graph:
-    def __init__(self, window):
+    def __init__(self, window, mule_docs=None):
         self.window = window
         self.index = {doc: i for i, doc in enumerate(window.docs)}
         self.raw = np.array([graphsage.node_vector(window.raw[d]) for d in window.docs], dtype=float)
         self.targets = np.array([self.index[d] for d in window.targets])
-        self.labels = np.array([1.0 if d in window.typologies else 0.0 for d in window.targets])
+        positives = window.typologies if mule_docs is None else mule_docs
+        self.labels = np.array([1.0 if d in positives else 0.0 for d in window.targets])
 
 
 def init_weights(rng):
@@ -141,7 +155,10 @@ def score_graphs(model, graphs):
 def evaluate(model, path):
     pix = load_pix(path)
     first = first_seen_index(pix)
-    graphs = [Graph(build_window(pix, clock, first)) for clock in window_clocks(pix)]
+    return evaluate_graphs(model, [Graph(build_window(pix, clock, first)) for clock in window_clocks(pix)])
+
+
+def evaluate_graphs(model, graphs):
     scores, labels, meta = score_graphs(model, graphs)
     flagged = scores >= model["threshold"]
     positives = labels == 1
@@ -173,10 +190,105 @@ def render(title, result):
     return lines + [""]
 
 
+def pixsim_world(data_dir, events_path):
+    """Windows over the evaluated period only (burn-in feeds first-seen); node label = the simulator's is_mule."""
+    documents = {a: v["document"] for a, v in load_accounts(os.path.join(data_dir, "accounts.csv")).items()}
+    with open(os.path.join(data_dir, "accounts.csv"), newline="", encoding="utf-8") as handle:
+        mules = {documents[int(r["account_id"])] for r in csv.DictReader(handle) if r["is_mule"] == "True"}
+    pix, evaluated = [], []
+    for event in iter_events(events_path):
+        item = Pix(event)
+        pix.append(item)
+        if not event.get("burn_in"):
+            evaluated.append(item)
+    first = first_seen_index(sorted(pix, key=lambda p: p.at))
+    evaluated.sort(key=lambda p: p.at)
+    graphs = [Graph(build_window(evaluated, clock, first), mules) for clock in window_clocks(evaluated)]
+    return graphs, len(mules)
+
+
+def replace_between(path, start, end, lines):
+    with open(path, encoding="utf-8") as handle:
+        text = handle.read()
+    block = "\n".join([start, *lines, end])
+    if start in text:
+        head, rest = text.split(start, 1)
+        text = head + block + rest.split(end, 1)[1]
+    else:
+        text = text.rstrip("\n") + "\n\n" + block + "\n"
+    with open(path, "w", encoding="utf-8") as handle:
+        handle.write(text)
+
+
+def main_pixsim(install):
+    started = time.perf_counter()
+    numeric_gradient_check()
+    sha = pixsim_sha(os.path.join(os.path.dirname(os.path.abspath(__file__)), "pixsim_setup.sh"))
+    graphs_a, mules_a = pixsim_world(os.path.join(PIXSIM_DIR, "data"), os.path.join(PIXSIM_DIR, "events.jsonl"))
+    graphs_b, mules_b = pixsim_world(os.path.join(PIXSIM_DIR, "data-b"), os.path.join(PIXSIM_DIR, "events-b.jsonl"))
+    stacked = np.vstack([g.raw for g in graphs_a])
+    mean, std = stacked.mean(axis=0), np.maximum(stacked.std(axis=0), 1e-6)
+    weights = train(graphs_a, mean, std)
+    model = {
+        "type": "graphsage", "version": "pixsim-1",
+        "warning": "synthetic labels: PixSim simulator (third party), not real fraud", "window_hours": WINDOW_HOURS,
+        "trained_on": f"PixSim world A (seed 20260910, SHA {sha}), node label is_mule, seed {SEED}, {len(graphs_a)} windows",
+        "features": graphsage.NODE_FEATURES, "mean": mean.tolist(), "std": std.tolist(),
+        "max_neighbors": graphsage.MAX_NEIGHBORS, "hidden": HIDDEN, "weights": {k: v.tolist() for k, v in weights.items()},
+    }
+    scores, labels, _ = score_graphs({**model, "threshold": 0.5}, graphs_a)
+    model["threshold"] = floor5(best_f1_threshold(labels, scores))
+    model["threshold_rule"] = "max F1 over the training destination nodes (in-sample); scores are class-balanced"
+    candidate = os.path.join(PIXSIM_DIR, "graphsage-pixsim.json")
+    with open(candidate, "w", encoding="utf-8") as handle:
+        json.dump(model, handle, separators=(",", ":"))
+    with open(os.path.join(MODEL_DIR, "graphsage.json"), encoding="utf-8") as handle:
+        shipped = json.load(handle)
+    if shipped["version"] != "mock-1":
+        with open(os.path.join(PIXSIM_DIR, "graphsage-mock.json"), encoding="utf-8") as handle:
+            shipped = json.load(handle)
+    else:
+        with open(os.path.join(PIXSIM_DIR, "graphsage-mock.json"), "w", encoding="utf-8") as handle:
+            json.dump(shipped, handle, separators=(",", ":"))
+    rows = [("treinado no PixSim A", evaluate_graphs(model, graphs_a), "treino (dentro da amostra)"),
+            ("treinado no PixSim A", evaluate_graphs(model, graphs_b), "PixSim B"),
+            ("treinado no nosso simulador", evaluate_graphs(shipped, graphs_b), "PixSim B")]
+    lines = [
+        "", f"Grafo pagador→destino em janelas de {WINDOW_HOURS} h (passo de 24 h) só do período avaliado; o burn-in alimenta apenas o "
+        f"primeiro pagamento das arestas. Rótulo de nó = `is_mule` da conta no PixSim (rótulo do simulador de terceiros, não o nosso); "
+        f"mulas: {mules_a} no mundo A, {mules_b} no B. Arquitetura e taxa de aprendizado do GraphSAGE do nosso simulador; épocas e lote mudados (200 e 64 no nosso) para caber no prazo, o grafo do PixSim tem muito mais nós alvo ({EPOCHS} épocas, "
+        f"lr {LEARNING_RATE}, lote {BATCH}, oculta {HIDDEN}); limiar {model['threshold']} (F1 máximo nos nós de treino, dentro da amostra). "
+        f"Treino em {time.perf_counter() - started:.0f} s. Só entram como nó alvo as contas que "
+        "recebem ao menos um Pix na janela.", "",
+        "| modelo | avaliado em | nós alvo | nós mula | AUC | precisão | recall | fricção em destinos legítimos |",
+        "|---|---|---|---|---|---|---|---|"]
+    for name, result, where in rows:
+        lines.append(f"| {name} | {where} | {result['nodes']} | {result['fraud_nodes']} | {result['auc']:.3f} | "
+                     f"{result['precision']:.3f} | {result['recall']:.3f} | {pct(*result['friction'])} |".replace(".", ","))
+    lines.append("")
+    replace_between(DOC, DOC_START, DOC_END, lines)
+    upsert_block(PIXSIM_BLOCK, ["## GraphSAGE treinado no PixSim", *lines])
+    if install:
+        shutil.copy(candidate, os.path.join(MODEL_DIR, "graphsage.json"))
+    print("\n".join(lines))
+    return 0
+
+
 def main():
-    if len(sys.argv) != 2:
-        print(__doc__, file=sys.stderr)
-        return 2
+    parser = argparse.ArgumentParser(description="Trains the GraphSAGE destination-risk model")
+    parser.add_argument("events", nargs="?", help="training events (mock source)")
+    parser.add_argument("--source", choices=["mock", "pixsim"], default="mock")
+    parser.add_argument("--install", action="store_true", help="with --source pixsim: replace the shipped graphsage.json")
+    parser.add_argument("--epochs", type=int, help="override EPOCHS (pixsim: the graphs are ~30x larger)")
+    parser.add_argument("--batch", type=int, help="override BATCH")
+    args = parser.parse_args()
+    global EPOCHS, BATCH
+    EPOCHS, BATCH = args.epochs or EPOCHS, args.batch or BATCH
+    if args.source == "pixsim":
+        return main_pixsim(args.install)
+    if not args.events:
+        parser.error("events file required")
+    sys.argv = [sys.argv[0], args.events]
     started = time.perf_counter()
     numeric_gradient_check()
     pix = load_pix(sys.argv[1])

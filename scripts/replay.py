@@ -8,19 +8,29 @@ from api_client import send_events
 from report import render_report, summarize
 
 
-def load_events(path):
+def iter_events(path):
     with open(path, encoding="utf-8") as handle:
-        return [json.loads(line) for line in handle if line.strip()]
+        for line in handle:
+            if line.strip():
+                yield json.loads(line)
+
+
+def load_events(path):
+    return list(iter_events(path))
+
+
+def write_response(handle, event):
+    response = event.get("response")
+    if response is None:
+        return
+    line = {"pix_id": event["payload"]["id"], "status": response["status"], "metadata": response["metadata"]}
+    handle.write(json.dumps(line, separators=(",", ":")) + "\n")
 
 
 def write_responses(events, path):
     with open(path, "w", encoding="utf-8") as handle:
         for event in events:
-            response = event.get("response")
-            if response is None:
-                continue
-            line = {"pix_id": event["payload"]["id"], "status": response["status"], "metadata": response["metadata"]}
-            handle.write(json.dumps(line, separators=(",", ":")) + "\n")
+            write_response(handle, event)
 
 
 def parse_args():

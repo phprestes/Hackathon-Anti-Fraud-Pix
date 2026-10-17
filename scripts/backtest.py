@@ -1,5 +1,6 @@
 """Batch backtest: runs the rule engine over an events file with no HTTP and no database."""
 import argparse
+import hashlib
 import json
 import os
 import sys
@@ -8,7 +9,7 @@ import time
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src"))
 
 from in_memory_history import InMemoryHistory  # noqa: E402
-from replay import load_events, write_responses  # noqa: E402
+from replay import iter_events, write_response  # noqa: E402
 from report import render_report, summarize  # noqa: E402
 from rules import build_rules, engine  # noqa: E402
 from rules.pix_snapshot import PixSnapshot  # noqa: E402
@@ -18,26 +19,53 @@ def canonical(payload):
     return json.dumps(payload, sort_keys=True, separators=(",", ":"))
 
 
-def run_backtest(events, rules):
-    """Annotates each event with `response`; returns (elapsed_seconds, id_conflicts)."""
+def digest(payload):
+    return hashlib.blake2b(canonical(payload).encode(), digest_size=16).digest()
+
+
+def slim_metadata(metadata):
+    """The fields the aggregates read; duplicates of an id replay this instead of the full metadata."""
+    return {"reasons": [{"rule": r["rule"]} for r in metadata.get("reasons", [])],
+            "shadow": metadata.get("shadow", []), "rule_set_version": metadata.get("rule_set_version")}
+
+
+def stream_backtest(events, rules, stats, keep_metadata=False):
+    """Yields each event annotated with `response`; only digests and slim responses outlive an event."""
     history = InMemoryHistory()
     seen = {}
-    conflicts = 0
-    started = time.perf_counter()
+    stats["conflicts"] = 0
+    stats["elapsed"] = 0.0
     for event in events:
+        started = time.perf_counter()
         payload = event["payload"]
         previous = seen.get(payload["id"])
         if previous is not None:
-            if canonical(previous[0]) != canonical(payload):
-                conflicts += 1
-            event["response"] = previous[1]
-            continue
-        snapshot = PixSnapshot.from_payload(payload)
-        outcome = engine.evaluate(snapshot, engine.build_context(snapshot, history), rules)
-        history.record(snapshot, outcome.status)
-        event["response"] = {"status": outcome.status, "metadata": engine.metadata_from(outcome)}
-        seen[payload["id"]] = (payload, event["response"])
-    return time.perf_counter() - started, conflicts
+            if previous[0] != digest(payload):
+                stats["conflicts"] += 1
+            event["response"] = previous[1] if keep_metadata else json.loads(previous[1])
+        else:
+            snapshot = PixSnapshot.from_payload(payload)
+            outcome = engine.evaluate(snapshot, engine.build_context(snapshot, history), rules)
+            history.record(snapshot, outcome.status)
+            metadata = engine.metadata_from(outcome)
+            event["response"] = {"status": outcome.status, "metadata": metadata}
+            if keep_metadata:
+                remembered = event["response"]
+            else:
+                remembered = json.dumps({"status": outcome.status, "metadata": slim_metadata(metadata)},
+                                        separators=(",", ":"))
+            seen[payload["id"]] = (digest(payload), remembered)
+        stats["elapsed"] += time.perf_counter() - started
+        stats["count"] = stats.get("count", 0) + 1
+        yield event
+
+
+def run_backtest(events, rules):
+    """Annotates each event of a list with `response`; returns (elapsed_seconds, id_conflicts)."""
+    stats = {}
+    for _ in stream_backtest(events, rules, stats, keep_metadata=True):
+        pass
+    return stats["elapsed"], stats["conflicts"]
 
 
 def parse_overrides(pairs):
@@ -83,22 +111,30 @@ def main():
         rules = build_rules(parse_overrides(args.set))
     except ValueError as error:
         raise SystemExit(str(error))
-    events = load_events(args.events)
-    elapsed, conflicts = run_backtest(events, rules)
-    rate = len(events) / elapsed if elapsed else 0
-    timing = f"- backtest: {len(events)} Pix in {elapsed:.2f} s ({rate:.0f} Pix/s), id conflicts skipped: {conflicts}"
-    summary = summarize(events)
+    stats = {}
+    responses = open(args.responses, "w", encoding="utf-8") if args.responses else None
+    try:
+        def consume():
+            for event in stream_backtest(iter_events(args.events), rules, stats, keep_metadata=bool(responses)):
+                if responses:
+                    write_response(responses, event)
+                yield event
+        summary = summarize(consume())
+    finally:
+        if responses:
+            responses.close()
+    total, elapsed = stats["count"], stats["elapsed"]
+    rate = total / elapsed if elapsed else 0
+    timing = f"- backtest: {total} Pix in {elapsed:.2f} s ({rate:.0f} Pix/s), id conflicts skipped: {stats['conflicts']}"
     summary["timing"] = timing
     report = render_report(summary)
     print(report)
     if args.out:
         with open(args.out, "w", encoding="utf-8") as handle:
             handle.write(report)
-    if args.responses:
-        write_responses(events, args.responses)
     if args.json:
         with open(args.json, "w", encoding="utf-8") as handle:
-            json.dump(metrics_from(summary, elapsed, len(events)), handle, indent=2)
+            json.dump(metrics_from(summary, elapsed, total), handle, indent=2)
     return 0
 
 

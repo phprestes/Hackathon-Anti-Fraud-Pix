@@ -1,8 +1,8 @@
 """Report shared by simulate.py, replay.py and backtest.py."""
 import math
-from collections import Counter, defaultdict
+from collections import Counter
 
-from costs import KS, expected_cost, has_lightgbm, precision_at_k
+from costs import KS, CostAccumulator, PrecisionAccumulator, lightgbm_score
 
 TYPOLOGIES = ["account_takeover", "mule", "splitting", "night_kidnapping", "device_farm"]
 
@@ -18,45 +18,63 @@ def _pct(part, total):
 
 
 def summarize(events):
-    answered = [e for e in events if e.get("response")]
-    legit = [e for e in answered if e["label"] == "legit"]
-    legit_status = Counter(e["response"]["status"] for e in legit)
-    rules = Counter(r["rule"] for e in legit for r in e["response"]["metadata"].get("reasons", []))
-    typologies = {}
-    for name in TYPOLOGIES:
-        items = [e for e in answered if e["label"] == name]
-        groups = defaultdict(list)
-        for e in items:
-            groups[e["sequence"]].append(e["response"]["status"] != "approved")
-        typologies[name] = {
-            "count": len(items),
-            "status": Counter(e["response"]["status"] for e in items),
-            "sequences": len(groups),
-            "caught_sequences": sum(1 for flags in groups.values() if any(flags)),
-        }
+    """Single pass over any iterable of events; keeps counters and per-Pix score tuples, never the events."""
+    legit_total = 0
+    legit_status = Counter()
+    rules = Counter()
+    type_status = {name: Counter() for name in TYPOLOGIES}
+    type_groups = {name: {} for name in TYPOLOGIES}
     shadow = {}
-    for e in answered:
-        for entry in e["response"]["metadata"].get("shadow", []):
+    latencies = []
+    errors = 0
+    versions = set()
+    cost = CostAccumulator()
+    rank_rules, rank_lgbm = PrecisionAccumulator(), PrecisionAccumulator(with_lightgbm=True)
+    lgbm_seen = False
+    for e in events:
+        if "latency_ms" in e:
+            latencies.append(e["latency_ms"])
+        if "http_status" in e and not 200 <= e["http_status"] < 300:
+            errors += 1
+        response = e.get("response")
+        if not response:
+            continue
+        status, metadata, label = response["status"], response["metadata"], e["label"]
+        versions.add(metadata.get("rule_set_version"))
+        cost.add(e)
+        rank_rules.add(e)
+        rank_lgbm.add(e)
+        lgbm_seen = lgbm_seen or lightgbm_score(response) is not None
+        if label == "legit":
+            legit_total += 1
+            legit_status[status] += 1
+            rules.update(r["rule"] for r in metadata.get("reasons", []))
+        elif label in type_status:
+            type_status[label][status] += 1
+            flags = type_groups[label]
+            flags[e["sequence"]] = flags.get(e["sequence"], False) or status != "approved"
+        for entry in metadata.get("shadow", []):
             model = shadow.setdefault(entry["rule"], {"legit": 0, "legit_flagged": 0, "typologies": {}})
             flagged = entry["would_decide"] != "approved"
-            if e["label"] == "legit":
+            if label == "legit":
                 model["legit"] += 1
                 model["legit_flagged"] += flagged
             else:
-                counts = model["typologies"].setdefault(e["label"], [0, 0])
+                counts = model["typologies"].setdefault(label, [0, 0])
                 counts[0] += 1
                 counts[1] += flagged
-    latencies = [e["latency_ms"] for e in events if "latency_ms" in e]
-    versions = {e["response"]["metadata"].get("rule_set_version") for e in answered}
+    typologies = {
+        name: {"count": sum(type_status[name].values()), "status": type_status[name],
+               "sequences": len(type_groups[name]), "caught_sequences": sum(type_groups[name].values())}
+        for name in TYPOLOGIES
+    }
     return {
-        "legit_total": len(legit), "legit_status": legit_status, "rules": rules,
+        "legit_total": legit_total, "legit_status": legit_status, "rules": rules,
         "typologies": typologies, "shadow": shadow, "latencies": latencies,
-        "requests": len(latencies),
-        "errors": sum(1 for e in events if "http_status" in e and not 200 <= e["http_status"] < 300),
+        "requests": len(latencies), "errors": errors,
         "versions": sorted(v for v in versions if v),
-        "cost": expected_cost(answered),
-        "p_at_k": {"rules": precision_at_k(answered),
-                   "rules_lightgbm": precision_at_k(answered, with_lightgbm=True) if has_lightgbm(answered) else None},
+        "cost": cost.result(),
+        "p_at_k": {"rules": rank_rules.result(), "rules_lightgbm": rank_lgbm.result() if lgbm_seen else None},
     }
 
 

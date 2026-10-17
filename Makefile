@@ -6,7 +6,7 @@ COMPOSE := docker compose
 PYTHON_311 := $(shell command -v python3.11 2>/dev/null)
 
 .DEFAULT_GOAL := help
-.PHONY: help all up down stop reset rebuild ps logs shell install test test-cov lint check simulate events backtest parity calibrate calibrate-check train-graphsage train-hmm clean pixsim validate-pixsim pixsim-parity
+.PHONY: help all up down stop reset rebuild ps logs shell install test test-cov lint check simulate events backtest parity calibrate calibrate-check train-models-mock pixsim-datasets train-graphsage train-hmm clean pixsim validate-pixsim pixsim-parity
 
 help: ## Lista os comandos
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  \033[36m%-10s\033[0m %s\n", $$1, $$2}'
@@ -94,7 +94,10 @@ datasets: install ## Gera os eventos e as features de treino (seed 42), teste (s
 	$(BIN)/python scripts/export_features.py scripts/out/test-events.jsonl scripts/out/test-features.jsonl
 	$(BIN)/python scripts/export_features.py scripts/out/test-perturbed-events.jsonl scripts/out/test-perturbed-features.jsonl
 
-train-models: datasets ## Treina LogReg, LightGBM e Isolation Forest e escreve src/rules/model/*.json e scripts/model-results.md
+train-models: datasets pixsim-datasets ## Treina LogReg e LightGBM no mundo A do PixSim, avalia no B e no nosso simulador e instala os JSON
+	ulimit -v 2500000; $(BIN)/python scripts/train_models.py --source pixsim --install logreg lightgbm
+
+train-models-mock: datasets ## Treina no nosso simulador (rótulos nossos); SOBRESCREVE os modelos do PixSim em src/rules/model/
 	$(BIN)/python scripts/train_models.py
 
 train-graphsage: datasets ## Treina o GraphSAGE (numpy, ~5 min) e escreve src/worker/model/graphsage.json e a secao em scripts/model-results.md
@@ -117,10 +120,12 @@ calibrate-cost: install ## Grid de parametros pelo custo assimetrico (scripts/co
 	$(BIN)/python scripts/calibrate.py --objective cost
 
 PIXSIM_DIR := scripts/out/pixsim
+PIXSIM_SEED ?= 20260910
+PIXSIM_OUT ?= $(PIXSIM_DIR)/data
 
-pixsim: ## Clona o PixSim (SHA fixo), cria o venv proprio e gera o mundo reduzido em scripts/out/pixsim/data
+pixsim: ## Clona o PixSim (SHA fixo), cria o venv proprio e gera um mundo reduzido (PIXSIM_SEED, PIXSIM_OUT; padrao: mundo A em scripts/out/pixsim/data)
 	scripts/pixsim_setup.sh
-	ulimit -v 3000000; OPENBLAS_NUM_THREADS=1 $(PIXSIM_DIR)/.venv/bin/python -I scripts/pixsim_export.py
+	ulimit -v 3000000; OPENBLAS_NUM_THREADS=1 $(PIXSIM_DIR)/.venv/bin/python -I scripts/pixsim_export.py --seed $(PIXSIM_SEED) --out $(PIXSIM_OUT)
 
 validate-pixsim: install ## Adaptador, backtest e relatorio (atualiza docs/05-motor/validacao-pixsim.md)
 	test -f $(PIXSIM_DIR)/data/transactions.csv || $(MAKE) pixsim
@@ -128,8 +133,16 @@ validate-pixsim: install ## Adaptador, backtest e relatorio (atualiza docs/05-mo
 	ulimit -v 2500000; $(BIN)/python scripts/backtest.py $(PIXSIM_DIR)/events.jsonl --json $(PIXSIM_DIR)/backtest.json > /dev/null
 	ulimit -v 2500000; $(BIN)/python scripts/pixsim_report.py
 
+pixsim-datasets: install ## Gera os mundos A e B do PixSim (se faltarem) e exporta as features de treino e teste
+	test -f $(PIXSIM_DIR)/data/transactions.csv || $(MAKE) pixsim
+	test -f $(PIXSIM_DIR)/data-b/transactions.csv || $(MAKE) pixsim PIXSIM_SEED=20261017 PIXSIM_OUT=$(PIXSIM_DIR)/data-b
+	test -f $(PIXSIM_DIR)/events.jsonl || $(BIN)/python scripts/pixsim_adapter.py
+	test -f $(PIXSIM_DIR)/events-b.jsonl || $(BIN)/python scripts/pixsim_adapter.py --data $(PIXSIM_DIR)/data-b --out $(PIXSIM_DIR)/events-b.jsonl
+	ulimit -v 2500000; $(BIN)/python scripts/export_features.py $(PIXSIM_DIR)/events.jsonl $(PIXSIM_DIR)/features-a.jsonl
+	ulimit -v 2500000; $(BIN)/python scripts/export_features.py $(PIXSIM_DIR)/events-b.jsonl $(PIXSIM_DIR)/features-b.jsonl
+
 pixsim-parity: install ## Zera o banco e compara API x backtest nas 500 linhas de scripts/out/pixsim/events-parity.jsonl
-	python3 -c "r=open('$(PIXSIM_DIR)/events.jsonl').readlines(); i=next(k for k,l in enumerate(r) if '\"burn_in\":false' in l and '\"label\":\"legit\"' not in l); open('$(PIXSIM_DIR)/events-parity.jsonl','w').writelines(r[i-250:i+250])"
+	n=$$(grep -n '"burn_in":false' $(PIXSIM_DIR)/events.jsonl | grep -v '"label":"legit"' | head -1 | cut -d: -f1); sed -n "$$((n-250)),$$((n+249))p" $(PIXSIM_DIR)/events.jsonl > $(PIXSIM_DIR)/events-parity.jsonl
 	$(MAKE) reset
 	$(COMPOSE) stop worker
 	$(BIN)/python scripts/parity.py $(PIXSIM_DIR)/events-parity.jsonl

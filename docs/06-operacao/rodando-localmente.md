@@ -32,7 +32,9 @@ Docker com `docker compose`, Git e Python 3.11 (ou `uv`, que o `make install` us
 | `make events` / `make backtest` | gera eventos / roda o motor em lote, sem HTTP e sem banco | experimentos rápidos |
 | `make parity` | zera o banco e compara API × backtest Pix a Pix | depois de mexer em agregados |
 | `make calibrate` / `make calibrate-check` | grid de parâmetros / trava de regressão | antes de mudar parâmetro de regra |
-| `make datasets`, `make train-models`, `make train-graphsage`, `make train-hmm`, `make model-parity` | dados de treino, treino e fidelidade dos modelos em shadow | retreinar |
+| `make pixsim`, `make validate-pixsim`, `make pixsim-parity` | gera um mundo do PixSim (venv isolado), valida o motor nele e confere API × backtest nesse dado | números de referência |
+| `make train-models` | treina LogReg e LightGBM no mundo A do PixSim, avalia no B e instala os JSON (`make train-models-mock` treina no nosso simulador e sobrescreve) | retreinar |
+| `make datasets`, `make pixsim-datasets`, `make train-graphsage`, `make train-hmm`, `make model-parity` | dados de treino, demais modelos e fidelidade dos avaliadores | retreinar |
 | `make analyze` | análises estatísticas em `docs/05-motor/analises.md` | revisar hipóteses das regras |
 | `make clean` | remove containers, volume, `.venv` e caches | recomeçar do zero |
 

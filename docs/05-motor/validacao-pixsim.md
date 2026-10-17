@@ -32,7 +32,7 @@ Zeimarani, B.; Khatib, A.; Mousavinasr, S.; Figueiredo, C. M. S. (2026). *PixSim
 | Eventos de fraude | 986: 618 engenharia social, 209 conta tomada, 91 Pix errado, 68 QR adulterado |
 | Pix de fraude | 6.310: 1.380 pagador→mula, 91 sementes de Pix errado, 1.771 `mule_forward`, 3.068 `cash_out` |
 
-O artigo roda 1,08 milhão de contas (19 GB por parte); a máquina de desenvolvimento tem cerca de 2 GB livres e o backtest guarda os eventos em memória (pico de 2,1 GB no `scripts/backtest.py` com este mundo). Duas escolhas fora do `baseline.yaml` do PixSim: burn-in de 30 dias (o config traz 90; 30 dias cobre a maior janela do motor) e 1.000 eventos de fraude por mês no lugar dos 2.000, que foram calibrados para 100 mil contas. A fraude é superamostrada de propósito, e cada Pix de fraude carrega o peso de importância do PixSim (0,0071 aqui); os custos "ponderados" abaixo usam esse peso.
+O artigo roda 1,08 milhão de contas (19 GB por parte); a máquina de desenvolvimento tem cerca de 2 GB livres. O `scripts/backtest.py` agora lê o `events.jsonl` em streaming e agrega as métricas aos poucos: o pico neste mundo caiu de 2,07 GB para 0,52 GB (saída idêntica). Duas escolhas fora do `baseline.yaml` do PixSim: burn-in de 30 dias (o config traz 90; 30 dias cobre a maior janela do motor) e 1.000 eventos de fraude por mês no lugar dos 2.000, que foram calibrados para 100 mil contas. A fraude é superamostrada de propósito, e cada Pix de fraude carrega o peso de importância do PixSim (0,0071 aqui); os custos "ponderados" abaixo usam esse peso.
 
 ## O que foi mapeado, inventado e não existe
 
@@ -200,6 +200,139 @@ Base: nosso simulador (seed 42); comparado: PixSim. PSI acima de 0,25 é deriva 
 ## Modelos em shadow: teste fora da distribuição
 
 Os três modelos (regressão logística, LightGBM, Isolation Forest) foram treinados no nosso simulador. No PixSim o AUC contra legítimos cai de 1,000 para 0,707 (LightGBM), de 0,997 para 0,756 (logística) e de 0,892 para 0,797 (Isolation Forest); o recall no limiar do próprio modelo cai de 99% para 28% no LightGBM, com 7% de fricção em legítimos. Isso é esperado de um modelo que aprendeu os sinais do nosso gerador (conta destino nova, geolocalização) e não os do PixSim. O resumo do artigo cita um *synthetic scorer* de 0,82 AUC; a referência vale só como ordem de grandeza, sem equivalência: aquele scorer foi treinado e testado dentro do próprio PixSim, com outras features. O AUC por decisão das regras (0,663) fica abaixo do melhor modelo isolado (Isolation Forest, 0,797), o que sugere ganho de ordenação no PixSim com um modelo treinado nele.
+
+## Modelos treinados no PixSim
+
+Regerar: `make pixsim` com `PIXSIM_SEED=20261017 PIXSIM_OUT=scripts/out/pixsim/data-b` (mundo B, 5.025 contas, 30 dias, mesma escala do A), `scripts/pixsim_adapter.py --data ... --out scripts/out/pixsim/events-b.jsonl`, `scripts/export_features.py` sobre os dois mundos, `scripts/train_models.py --source pixsim` e `scripts/train_graphsage.py --source pixsim --epochs 100 --batch 256`. Mundo A = seed 20260910 (o das seções acima); mundo B = seed 20261017, 259.646 Pix (125.293 de burn-in), 986 eventos de fraude, 6.670 Pix de fraude, 1.438 de vítima.
+
+### Modelos do caminho quente (regressão logística, LightGBM, Isolation Forest)
+
+<!-- pixsim:models:start -->
+
+Treino no mundo A do PixSim (seed 20260910), teste no mundo B (seed 20261017) e no nosso simulador (seed 7). Mesmos hiperparâmetros fixos de `scripts/train_models.py`; fatia de ajuste = primeiros 75% do mundo A no tempo, validação = 25% finais (limiar por F1 máximo; Platt na validação). Linhas: 95173 de ajuste, 31725 de validação. Limiares: {"logreg": 0.1899, "lightgbm": 0.9404, "iforest": 0.5942}.
+
+Positivo = Pix de vítima (`victim_to_mule`); legítimo = tráfego legítimo. A dispersão (`mule_forward`, `cash_out`) e a semente do Pix errado ficam fora do treino e da avaliação: o banco só a veria se a mula fosse cliente, e misturá-la como positivo ensinaria o modelo a pontuar o comportamento da mula, não o da vítima. Burn-in só alimenta o histórico. Custos e precisão usam o peso de importância do PixSim; AUC, recall e P@k são brutos.
+
+| Conjunto | Pix avaliados | Legítimos | Fraude pagador→mula | Peso médio da fraude |
+|---|---|---|---|---|
+| PixSim A (treino) | 126898 | 125518 | 1380 | 0,0071 |
+| PixSim B (teste) | 129121 | 127683 | 1438 | 0,0072 |
+| Nosso simulador (seed 7, teste) | 7100 | 6920 | 180 | 1,0000 |
+
+**AUC**
+
+| decisor | nosso → PixSim B | PixSim A → PixSim B | PixSim A → nosso | nosso → nosso (referência) |
+|---|---|---|---|---|
+| logreg | 0,770 | 0,990 | 0,901 | 0,978 |
+| lightgbm | 0,580 | 0,990 | 0,674 | 0,990 |
+| iforest | 0,788 | 0,846 | 0,926 | 0,866 |
+| rules | 0,673 | 0,673 | 0,896 | 0,896 |
+| rules+lightgbm | 0,654 | 0,987 | 0,910 | 0,993 |
+
+**Recall no limiar**
+
+| decisor | nosso → PixSim B | PixSim A → PixSim B | PixSim A → nosso | nosso → nosso (referência) |
+|---|---|---|---|---|
+| logreg | 8,0% | 65,0% | 62,8% | 68,3% |
+| lightgbm | 27,5% | 63,6% | 14,4% | 83,9% |
+| iforest | 38,9% | 8,5% | 67,8% | 25,6% |
+| rules | 38,4% | 38,4% | 81,1% | 81,1% |
+| rules+lightgbm | 51,5% | 70,8% | 85,6% | 89,4% |
+
+**Precisão ponderada**
+
+| decisor | nosso → PixSim B | PixSim A → PixSim B | PixSim A → nosso | nosso → nosso (referência) |
+|---|---|---|---|---|
+| logreg | 0,1% | 0,6% | 28,3% | 93,2% |
+| lightgbm | 0,0% | 1,1% | 14,2% | 95,0% |
+| iforest | 0,0% | 0,1% | 34,0% | 39,7% |
+| rules | 0,1% | 0,1% | 38,7% | 38,7% |
+| rules+lightgbm | 0,0% | 0,1% | 30,6% | 40,7% |
+
+**Fricção em legítimos**
+
+| decisor | nosso → PixSim B | PixSim A → PixSim B | PixSim A → nosso | nosso → nosso (referência) |
+|---|---|---|---|---|
+| logreg | 0,8% | 0,8% | 4,1% | 0,1% |
+| lightgbm | 7,3% | 0,5% | 2,3% | 0,1% |
+| iforest | 8,9% | 1,4% | 3,4% | 1,0% |
+| rules | 3,8% | 3,8% | 3,3% | 3,3% |
+| rules+lightgbm | 10,3% | 4,1% | 5,0% | 3,4% |
+
+**Custo ponderado por 1.000 Pix**
+
+| decisor | nosso → PixSim B | PixSim A → PixSim B | PixSim A → nosso | nosso → nosso (referência) |
+|---|---|---|---|---|
+| logreg | R$ 156,12 | R$ 53,44 | R$ 24.872,61 | R$ 29.799,46 |
+| lightgbm | R$ 254,61 | R$ 58,68 | R$ 50.786,57 | R$ 10.228,05 |
+| iforest | R$ 253,11 | R$ 158,33 | R$ 15.725,87 | R$ 33.790,64 |
+| rules | R$ 157,60 | R$ 157,60 | R$ 8.000,14 | R$ 8.000,14 |
+| rules+lightgbm | R$ 274,15 | R$ 128,79 | R$ 6.720,78 | R$ 6.124,20 |
+
+**P@k diário** (fraude superamostrada: a precisão do PixSim é inflada na proporção do peso)
+
+| cenário | decisor | P@5 | P@10 | P@25 | P@50 |
+|---|---|---|---|---|---|
+| nosso → PixSim B | logreg | 11,3% | 12,3% | 11,6% | 9,3% |
+| nosso → PixSim B | lightgbm | 27,3% | 16,0% | 7,2% | 3,7% |
+| nosso → PixSim B | iforest | 6,0% | 6,7% | 9,9% | 8,0% |
+| nosso → PixSim B | rules | 12,0% | 9,7% | 14,4% | 18,3% |
+| nosso → PixSim B | rules+lightgbm | 30,0% | 18,7% | 9,1% | 4,7% |
+| PixSim A → PixSim B | logreg | 88,7% | 83,3% | 67,2% | 52,6% |
+| PixSim A → PixSim B | lightgbm | 100,0% | 97,7% | 80,1% | 59,7% |
+| PixSim A → PixSim B | iforest | 2,7% | 3,0% | 5,6% | 6,3% |
+| PixSim A → PixSim B | rules | 12,0% | 9,7% | 14,4% | 18,3% |
+| PixSim A → PixSim B | rules+lightgbm | 80,7% | 85,7% | 76,8% | 58,9% |
+| PixSim A → nosso | logreg | 52,9% | 46,4% | 30,6% | 19,3% |
+| PixSim A → nosso | lightgbm | 21,4% | 15,7% | 11,4% | 7,7% |
+| PixSim A → nosso | iforest | 57,1% | 48,6% | 33,4% | 20,3% |
+| PixSim A → nosso | rules | 61,4% | 49,3% | 35,1% | 21,1% |
+| PixSim A → nosso | rules+lightgbm | 55,7% | 47,9% | 31,4% | 18,3% |
+
+**Captura por tipologia do PixSim em PixSim B** (Pix de vítima acima do limiar do modelo, ou fora de `approved` nas regras)
+
+| tipologia | logreg (nosso) | lightgbm (nosso) | iforest (nosso) | logreg (PixSim A) | lightgbm (PixSim A) | iforest (PixSim A) | regras |
+|---|---|---|---|---|---|---|---|
+| account_takeover | 11,5% | 45,5% | 63,1% | 91,9% | 84,9% | 11,2% | 63,7% |
+| pix_errado | 3,7% | 1,9% | 14,8% | 16,7% | 11,1% | 3,7% | 7,4% |
+| qr_substitution | 2,5% | 10,0% | 15,0% | 28,7% | 25,0% | 2,5% | 11,2% |
+| social_engineering | 7,4% | 23,6% | 33,1% | 60,7% | 61,7% | 8,2% | 32,9% |
+
+**Captura por tipologia do nosso simulador (modelos do PixSim A)**
+
+| tipologia | logreg | lightgbm | iforest | rules | rules+lightgbm |
+|---|---|---|---|---|---|
+| account_takeover | 43,8% | 6,2% | 43,8% | 100,0% | 100,0% |
+| device_farm | 40,7% | 0,0% | 0,0% | 70,4% | 70,4% |
+| mule | 62,7% | 0,0% | 84,0% | 100,0% | 100,0% |
+| night_kidnapping | 66,7% | 0,0% | 33,3% | 100,0% | 100,0% |
+| splitting | 78,6% | 44,6% | 89,3% | 53,6% | 67,9% |
+
+<!-- pixsim:models:end -->
+
+### GraphSAGE (nível de nó, offline)
+
+<!-- pixsim:graphsage:start -->
+
+Grafo pagador→destino em janelas de 72 h (passo de 24 h) só do período avaliado; o burn-in alimenta apenas o primeiro pagamento das arestas. Rótulo de nó = `is_mule` da conta no PixSim (rótulo do simulador de terceiros, não o nosso); mulas: 1366 no mundo A, 1321 no B. Arquitetura e taxa de aprendizado do GraphSAGE do nosso simulador; épocas e lote mudados (200 e 64 no nosso) para caber no prazo, o grafo do PixSim tem muito mais nós alvo (100 épocas, lr 0.01, lote 256, oculta 16); limiar 0.73864 (F1 máximo nos nós de treino, dentro da amostra). Treino em 404 s. Só entram como nó alvo as contas que recebem ao menos um Pix na janela.
+
+| modelo | avaliado em | nós alvo | nós mula | AUC | precisão | recall | fricção em destinos legítimos |
+|---|---|---|---|---|---|---|---|
+| treinado no PixSim A | treino (dentro da amostra) | 80709 | 9143 | 0,912 | 0,777 | 0,754 | 2,8% |
+| treinado no PixSim A | PixSim B | 82682 | 8688 | 0,919 | 0,786 | 0,787 | 2,5% |
+| treinado no nosso simulador | PixSim B | 82682 | 8688 | 0,518 | 0,241 | 0,005 | 0,2% |
+
+<!-- pixsim:graphsage:end -->
+
+### Conclusão
+
+- Treinados no PixSim A e testados no PixSim B, regressão logística e LightGBM sobem de AUC 0,77 e 0,58 (treino no nosso gerador) para 0,99; o LightGBM leva a captura de conta tomada a 85% e a de engenharia social a 62%, com 0,5% de fricção em legítimos. O custo ponderado por 1.000 Pix cai de R$ 157,60 (regras) para R$ 58,68 (LightGBM) e R$ 53,44 (logística).
+- Isso é otimista: os mundos A e B vêm do mesmo gerador e da mesma configuração, só muda a seed. O teste mede generalização entre amostras do PixSim, não entre geradores; para o PixSim real ou para dados de banco o número não se transfere.
+- Pix errado (11% a 17% de captura) e QR adulterado (25% a 29%) continuam difíceis: o Pix da vítima parece um pagamento comum. A precisão ponderada pelo peso de importância fica em torno de 1%: com a taxa de fraude real, a fila dos analistas seria quase toda de falso positivo.
+- No sentido inverso (PixSim A → nosso simulador) o LightGBM cai a AUC 0,67 e 14% de recall, e as regras (0,90) ganham dos modelos. Os dois geradores ensinam sinais diferentes; nenhum dos modelos é "o" modelo, e o PixSim não substitui o nosso simulador como teste.
+- O Isolation Forest treinado no PixSim melhora o AUC (0,85 contra 0,79), mas o limiar p99 só captura 8,5% da fraude e o P@k despenca; o critério de troca não foi atendido e o arquivo `iforest.json` continua o do simulador.
+- GraphSAGE: AUC de nó 0,92 no mundo B (0,52 para o modelo treinado no nosso simulador), com precisão 0,79 e recall 0,79 no limiar. O rótulo `is_mule` é estático por conta e a janela contém os Pix sendo pontuados, então é um teto, não o desempenho do ciclo anterior que o caminho quente usaria.
+- Trocados em `src/`: `logreg.json` e `lightgbm.json` (`trained_on` com o SHA do PixSim e a seed; continuam em shadow). O `graphsage.json` **não** foi trocado: o modelo do PixSim melhora o AUC no mundo B, mas pontua uma conta nova com 10 pagadores em 10 minutos (a mula do nosso simulador) abaixo de uma conta comum, e o teste de integração do worker (`test_post_mule_destination_after_worker_returns_graphsage_score_above_ordinary`) exige o contrário. O candidato fica em `scripts/out/pixsim/graphsage-pixsim.json` (`--install` o instala). O `make train-models` (fonte mock) sobrescreve `logreg.json` e `lightgbm.json` com os modelos do simulador; o PixSim A é reproduzível pelos comandos acima.
 
 ## Deriva das features
 

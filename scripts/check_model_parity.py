@@ -23,11 +23,14 @@ def load_model(name):
         return json.load(handle)
 
 
+def matrix(features, model):
+    return np.array([[f[n] for n in model["features"]] for f in features], dtype=float)
+
+
 def main():
     with open(os.path.join(OUT, "models.pkl"), "rb") as handle:
         libs = pickle.load(handle)
     models = {name: load_model(name) for name in libs}
-    feature_names = models["logreg"]["features"]
     scaler, lr, platt = libs["logreg"]
     forest = libs["iforest"]
     worst = {"logreg": 0.0, "lightgbm": 0.0, "iforest score": 0.0, "iforest path length": 0.0}
@@ -35,10 +38,9 @@ def main():
     for name in SETS:
         with open(os.path.join(OUT, name), encoding="utf-8") as handle:
             features = [json.loads(line)["features"] for line in handle if line.strip()]
-        X = np.array([[f[n] for n in feature_names] for f in features], dtype=float)
-        ref_lr = platt.predict_proba(lr.decision_function(scaler.transform(X)).reshape(-1, 1))[:, 1]
-        ref_gb = libs["lightgbm"].predict_proba(X)[:, 1]
-        ref_if = -forest.score_samples(X)
+        ref_lr = platt.predict_proba(lr.decision_function(scaler.transform(matrix(features, models["logreg"]))).reshape(-1, 1))[:, 1]
+        ref_gb = libs["lightgbm"].predict_proba(matrix(features, models["lightgbm"]))[:, 1]
+        ref_if = -forest.score_samples(matrix(features, models["iforest"]))
         c = iforest.average_path_length(models["iforest"]["n_samples"])
         for i, f in enumerate(features):
             worst["logreg"] = max(worst["logreg"], abs(logreg.score(models["logreg"], f) - ref_lr[i]))
