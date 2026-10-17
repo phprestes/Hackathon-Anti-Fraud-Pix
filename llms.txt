@@ -49,6 +49,7 @@ Documentação em pt-BR; código, rotas, campos e códigos de regra em inglês. 
 - [ADR 0023](docs/02-arquitetura/decisoes/0023-motor-extraido-e-history-port.md): engine.py, HistoryPort (SQL e memória), features e paridade
 - [ADR 0024](docs/02-arquitetura/decisoes/0024-modelos-servidos-em-python-puro.md): LogReg, LightGBM e Isolation Forest exportados para JSON, inferência em Python puro, shadow
 - [ADR 0025](docs/02-arquitetura/decisoes/0025-cold-path-worker.md): worker assíncrono com features de grafo em SQL, account_risk_score, COUNTERPARTY_GRAPH_RISK
+- [ADR 0027](docs/02-arquitetura/decisoes/0027-pipeline-de-calibracao-e-ci.md): make calibrate, make calibrate-check e GitHub Actions
 
 ## API
 

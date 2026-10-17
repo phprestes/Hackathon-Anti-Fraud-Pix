@@ -9,7 +9,7 @@ sources: [Pesquisa QITech (M2, M3, GNN, RNN, JEV), Dal Pozzolo et al. (2015, 201
 
 > [Índice](../../README.md) › [Decisões](README.md) › 0017
 
-**Status:** aceita
+**Status:** substituída parcialmente por [0022](0022-shadow-mode.md), [0024](0024-modelos-servidos-em-python-puro.md) e [0025](0025-cold-path-worker.md). Continua valendo: nenhum modelo decide e os rótulos são sintéticos.
 
 ## Contexto
 
