@@ -29,3 +29,4 @@ Toda mudança relevante neste repositório, da mais recente para a mais antiga p
 | Adicionado | `Makefile` com `all`, `up`, `test`, `lint`, `check`, `reset`, `rebuild`, `logs`, `clean` (sem os alvos de `mock` e `pgadmin` da fase 1) | `Makefile` | R2: um comando do clone ao verde | agente (Claude Code) |
 | Alterado | `flake8==7.1.1` nas dependências de desenvolvimento, para o `make lint` funcionar | `requirements-dev.txt` | O Base Service não trazia o flake8 | agente (Claude Code) |
 | Adicionado | Este changelog | `CHANGELOG.md` | [ADR 0015](docs/02-arquitetura/decisoes/0015-changelog-e-adrs-no-lugar-da-rfc.md) | agente (Claude Code) |
+| Adicionado | Histórico em 13 commits atômicos (Conventional Commits) e remote `origin` apontando para o GitHub | `.git/` | Uma mudança lógica por commit, rastreável | agente (Claude Code) |
