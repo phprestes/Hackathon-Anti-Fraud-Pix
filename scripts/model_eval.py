@@ -1,6 +1,7 @@
 """Out-of-distribution evaluation of the hot-path models on labelled feature rows (docs/05-motor/validacao-pixsim.md)."""
 import json
 import re
+from datetime import datetime
 from array import array
 from collections import Counter
 
@@ -20,6 +21,7 @@ class View:
         self.names = list(feature_names)
         values, self.y = array("d"), array("b")
         self.typology, self.status, self.amount, self.day, self.weight = [], [], array("q"), [], array("d")
+        self.at, self.delay_days, self.reported = array("d"), array("d"), array("b")
         with open(path, encoding="utf-8") as handle:
             for line in handle:
                 row = json.loads(line)
@@ -34,9 +36,15 @@ class View:
                 self.amount.append(row["amount"])
                 self.day.append(row["day"])
                 self.weight.append(row.get("weight", 1.0))
+                self.at.append(datetime.fromisoformat(row["at"]).timestamp() if "at" in row else float("nan"))
+                self.delay_days.append(row.get("report_delay_days", float("nan")))
+                self.reported.append(int(row.get("reported", False)))
         self.X = np.frombuffer(values, dtype=float).reshape(-1, len(self.names))
         self.y = np.frombuffer(self.y, dtype=np.int8).astype(int)
         self.weight = np.frombuffer(self.weight, dtype=float)
+        self.at = np.frombuffer(self.at, dtype=float)
+        self.delay_days = np.frombuffer(self.delay_days, dtype=float)
+        self.reported = np.frombuffer(self.reported, dtype=np.int8).astype(bool)
         self.fraud_weight = float(self.weight[self.y == 1].mean()) if self.y.sum() else 1.0
 
     def columns(self, names):

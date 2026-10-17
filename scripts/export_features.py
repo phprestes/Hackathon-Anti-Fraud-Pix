@@ -31,9 +31,10 @@ def export(events_path, out_path):
                 "status": response["status"],
                 "amount": payload["amount"],
                 "day": payload["transaction_date"][:10],
+                "at": payload["transaction_date"],
                 "features": response["metadata"]["features"],
             }
-            for extra in ("role", "weight"):
+            for extra in ("role", "weight", "report_delay_days", "reported"):
                 if extra in event:
                     row[extra] = event[extra]
             handle.write(json.dumps(row, separators=(",", ":")) + "\n")

@@ -15,14 +15,16 @@ def _shadow(body: dict) -> dict:
 
 
 def _mule_and_ordinary_destinations() -> tuple[str, str, str]:
-    """A fresh account paid by 10 payers in 10 minutes, an old account paid once; returns (mule, ordinary, last_at)."""
+    """An old account paid by 10 payers that then forwards to 6 destinations, one repeat-paid by the same payer; returns (mule, ordinary, last_at)."""
     mule, ordinary = RandomGenerator.generate_cpf(), RandomGenerator.generate_cpf()
-    opening = shifted(DEFAULT_AT, days=-2)
     for minute in range(10):
-        _post(destination_document=mule, destination_opening_date=opening, amount=80000,
-              at=shifted(DEFAULT_AT, minutes=minute))
-    _post(destination_document=ordinary, amount=15000, at=shifted(DEFAULT_AT, minutes=10))
-    return mule, ordinary, shifted(DEFAULT_AT, minutes=10)
+        _post(destination_document=mule, amount=80000, at=shifted(DEFAULT_AT, minutes=minute))
+    for minute in range(6):
+        _post(payer_document=mule, amount=120000, at=shifted(DEFAULT_AT, minutes=20 + minute))
+    payer = RandomGenerator.generate_cpf()
+    _post(payer_document=payer, destination_document=ordinary, amount=15000, at=shifted(DEFAULT_AT, days=-10))
+    _post(payer_document=payer, destination_document=ordinary, amount=15000, at=shifted(DEFAULT_AT, minutes=30))
+    return mule, ordinary, shifted(DEFAULT_AT, minutes=30)
 
 
 class TestColdPathShadowModels:
@@ -38,7 +40,11 @@ class TestColdPathShadowModels:
         assert body["metadata"]["features"]["source_sequence_score"] == -1
 
     def test_post_mule_destination_after_worker_returns_graphsage_score_above_ordinary(self):
-        """G6/MODEL_GRAPHSAGE: destino-mula (10 pagadores, conta nova) pontua acima do destino comum; decisão não muda."""
+        """G6/MODEL_GRAPHSAGE: destino-mula (conta antiga, 10 pagadores, repassa a 6 destinos) pontua acima do comum; decisão não muda.
+
+        O cenário mudou com o modelo treinado no PixSim: as mulas dele são contas antigas que dispersam, não contas novas,
+        e o destino comum é um pagador recorrente (um pagador novo único já pontua alto no PixSim).
+        """
         DbUtils.rollback()
         mule, ordinary, last = _mule_and_ordinary_destinations()
         run_worker_once()

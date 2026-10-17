@@ -6,7 +6,7 @@ COMPOSE := docker compose
 PYTHON_311 := $(shell command -v python3.11 2>/dev/null)
 
 .DEFAULT_GOAL := help
-.PHONY: help all up down stop reset rebuild ps logs shell install test test-cov lint check simulate events backtest parity calibrate calibrate-check train-models-mock pixsim-datasets train-graphsage train-hmm clean pixsim validate-pixsim pixsim-parity
+.PHONY: help all up down stop reset rebuild ps logs shell install test test-cov lint check simulate events backtest parity calibrate calibrate-check train-models-mock pixsim-datasets train-graphsage train-hmm clean pixsim validate-pixsim pixsim-parity delayed-labels
 
 help: ## Lista os comandos
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  \033[36m%-10s\033[0m %s\n", $$1, $$2}'
@@ -105,6 +105,9 @@ train-graphsage: datasets ## Treina o GraphSAGE (numpy, ~5 min) e escreve src/wo
 
 train-hmm: datasets ## Treina o HMM de sequencia (numpy) e escreve src/worker/model/hmm.json e a secao em scripts/model-results.md
 	$(BIN)/python scripts/train_hmm.py scripts/out/train-events.jsonl
+
+delayed-labels: pixsim-datasets ## V5: LightGBM com rotulos atrasados (MED do PixSim) no mundo A, avaliado no B; atualiza validacao-pixsim.md
+	ulimit -v 2500000; $(BIN)/python scripts/delayed_labels.py
 
 model-parity: install ## Compara os avaliadores em Python puro com sklearn/lightgbm no conjunto de teste
 	$(BIN)/python scripts/check_model_parity.py

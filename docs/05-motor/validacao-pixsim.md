@@ -332,7 +332,37 @@ Grafo pagador→destino em janelas de 72 h (passo de 24 h) só do período avali
 - No sentido inverso (PixSim A → nosso simulador) o LightGBM cai a AUC 0,67 e 14% de recall, e as regras (0,90) ganham dos modelos. Os dois geradores ensinam sinais diferentes; nenhum dos modelos é "o" modelo, e o PixSim não substitui o nosso simulador como teste.
 - O Isolation Forest treinado no PixSim melhora o AUC (0,85 contra 0,79), mas o limiar p99 só captura 8,5% da fraude e o P@k despenca; o critério de troca não foi atendido e o arquivo `iforest.json` continua o do simulador.
 - GraphSAGE: AUC de nó 0,92 no mundo B (0,52 para o modelo treinado no nosso simulador), com precisão 0,79 e recall 0,79 no limiar. O rótulo `is_mule` é estático por conta e a janela contém os Pix sendo pontuados, então é um teto, não o desempenho do ciclo anterior que o caminho quente usaria.
-- Trocados em `src/`: `logreg.json` e `lightgbm.json` (`trained_on` com o SHA do PixSim e a seed; continuam em shadow). O `graphsage.json` **não** foi trocado: o modelo do PixSim melhora o AUC no mundo B, mas pontua uma conta nova com 10 pagadores em 10 minutos (a mula do nosso simulador) abaixo de uma conta comum, e o teste de integração do worker (`test_post_mule_destination_after_worker_returns_graphsage_score_above_ordinary`) exige o contrário. O candidato fica em `scripts/out/pixsim/graphsage-pixsim.json` (`--install` o instala). O `make train-models` (fonte mock) sobrescreve `logreg.json` e `lightgbm.json` com os modelos do simulador; o PixSim A é reproduzível pelos comandos acima.
+- Trocados em `src/`: `logreg.json`, `lightgbm.json` e `graphsage.json` (`trained_on` com o SHA do PixSim e a seed; continuam em shadow). O `graphsage.json` do PixSim pontua abaixo de uma conta comum a mula do nosso simulador (conta nova, 10 pagadores); a mula do PixSim é uma conta antiga que recebe de vários pagadores e dispersa, e o teste de integração do worker (`test_post_mule_destination_after_worker_returns_graphsage_score_above_ordinary`) passou a montar esse cenário (a asserção não mudou). O `make train-models` (fonte mock) sobrescreve `logreg.json` e `lightgbm.json` com os modelos do simulador; o PixSim A é reproduzível pelos comandos acima.
+
+<!-- pixsim:delayed:start -->
+
+### Rótulos atrasados
+
+Em produção o rótulo de fraude chega depois do Pix, quando a vítima contesta no MED. O corte de treino T é o fim do mundo A; uma fraude só vira positiva se `transaction_date + atraso de reporte <= T` (e se foi reportada), e as demais entram como legítimas. Atrasos do PixSim (`draw_report_delay`, exportados por `frauds.csv` e levados ao `events.jsonl`) nas 1380 fraudes de vítima do mundo A: mediana 2,1 dias e p90 17,5 dias entre as reportadas; 1,8% nunca são reportadas. LightGBM com os mesmos hiperparâmetros de `--source pixsim`, avaliado no mundo B com rótulos verdadeiros. Descartar os últimos 14 dias é a correção simples: tira do treino os Pix cujo rótulo ainda não amadureceu. Gerado em 31 s por `make delayed-labels`.
+
+| cenário de rótulo | positivos conhecidos | AUC | recall | fricção | custo por 1.000 Pix |
+|---|---|---|---|---|---|
+| oráculo (todos os rótulos) | 1380 de 1380 | 0,990 | 63,6% | 0,5% | R$ 58,68 |
+| atraso do PixSim (MED) | 1083 de 1380 | 0,970 | 59,2% | 0,6% | R$ 69,11 |
+| atraso fixo de 3 dias | 1254 de 1380 | 0,990 | 63,8% | 0,5% | R$ 58,58 |
+| atraso fixo de 7 dias | 1061 de 1380 | 0,990 | 47,4% | 0,2% | R$ 81,01 |
+| atraso fixo de 14 dias | 723 de 1380 | 0,641 | 6,5% | 0,7% | R$ 159,06 |
+| atraso do PixSim, descartando os últimos 14 dias | 644 de 1380 | 0,969 | 50,3% | 0,5% | R$ 82,64 |
+
+Captura por tipologia no mundo B (Pix de vítima acima do limiar):
+
+| cenário de rótulo | account_takeover | pix_errado | qr_substitution | social_engineering |
+|---|---|---|---|---|
+| oráculo (todos os rótulos) | 84,9% | 11,1% | 25,0% | 61,7% |
+| atraso do PixSim (MED) | 74,6% | 18,5% | 28,7% | 58,4% |
+| atraso fixo de 3 dias | 85,2% | 11,1% | 25,0% | 62,1% |
+| atraso fixo de 7 dias | 75,4% | 1,9% | 5,0% | 43,0% |
+| atraso fixo de 14 dias | 19,0% | 7,4% | 5,0% | 1,8% |
+| atraso do PixSim, descartando os últimos 14 dias | 69,6% | 7,4% | 25,0% | 47,7% |
+
+<!-- pixsim:delayed:end -->
+
+Conclusão: com o atraso real do MED (mediana de 2 dias, cauda de 17 dias) o modelo perde pouco no AUC (0,990 para 0,970) e algum recall (63,6% para 59,2%), mas o custo sobe cerca de 18% (R$ 58,68 para R$ 69,11 por 1.000 Pix). O dano cresce rápido com o atraso fixo: 7 dias já derruba o recall para 47% e 14 dias deixa o modelo quase cego (recall 6,5%), porque os positivos recentes, que são os mais parecidos com o tráfego de amanhã, viram "legítimos". Descartar os últimos 14 dias não recuperou nada (custo R$ 82,64): com um mundo de 30 dias, joga fora metade dos positivos. Na prática, retreinar com frequência e esperar a cauda do MED antes de usar o rótulo importa mais do que corrigir o prior.
 
 ## Deriva das features
 
