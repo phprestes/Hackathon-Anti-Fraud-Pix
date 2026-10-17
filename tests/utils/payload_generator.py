@@ -2,48 +2,49 @@ from uuid import uuid4
 
 from tests.utils.random_generator import RandomGenerator
 
+DEFAULT_AT = "2026-10-17T14:00:00-03:00"
+OLD_OPENING_DATE = "2024-03-02T10:00:00-03:00"
+
 
 class PayloadGenerator:
     @staticmethod
-    def create_sample_entity_payload(
-        hello: str = None,
-        name: str = None,
-        email: str = None,
-        document_number: str = None,
-        birthdate: str = None,
+    def pix(
+        pix_id: str = None,
+        amount: int = 15000,
+        at: str = DEFAULT_AT,
+        payer_document: str = None,
+        destination_document: str = None,
+        device_id: str = None,
+        source_opening_date: str = OLD_OPENING_DATE,
+        destination_opening_date: str = OLD_OPENING_DATE,
+        geolocation: dict = None,
+        channel: str = "app",
+        ip: str = "198.51.100.23",
     ) -> dict:
-        """Um cadastro valido, com qualquer campo trocado a pedido.
-
-        Sem argumento nenhum o payload sai aleatorio no que precisa ser
-        unico (e-mail e CPF), pra que dois cadastros seguidos nao batam
-        na regra de duplicidade. Quem testa FILTRO precisa do contrario
-        disso: um valor conhecido, pra poder procurar por ele depois.
-        """
-        if hello is None:
-            hello = "world"
-
-        if name is None:
-            name = "Maria da Silva"
-
-        if email is None:
-            email = f"maria.silva.{uuid4()}@exemplo.com.br"
-
-        if document_number is None:
-            document_number = RandomGenerator.generate_cpf()
-
-        if birthdate is None:
-            birthdate = "1990-05-17"
-
-        payload = {
-            "hello": hello,
-            "name": name,
-            "email": email,
-            "document_number": document_number,
-            "birthdate": birthdate,
+        source = {
+            "device_id": device_id or f"dvc-{uuid4().hex[:12]}",
+            "channel": channel,
+            "ip": ip,
         }
-        return payload
+        if geolocation is not None:
+            source["geolocation"] = geolocation
 
-    @staticmethod
-    def create_new_status_payload(new_status: str = None) -> dict:
-        payload = {"status": new_status}
-        return payload
+        return {
+            "id": pix_id or f"pix-{uuid4()}",
+            "amount": amount,
+            "transaction_date": at,
+            "source_account": {
+                "branch": "0001",
+                "account_number": "88213",
+                "opening_date": source_opening_date,
+                "owner": {"document_number": payer_document or RandomGenerator.generate_cpf()},
+            },
+            "destination_account": {
+                "participant": "60701190",
+                "branch": "3675",
+                "account_number": "10442",
+                "opening_date": destination_opening_date,
+                "owner": {"document_number": destination_document or RandomGenerator.generate_cpf()},
+            },
+            "source": source,
+        }
