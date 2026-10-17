@@ -109,9 +109,22 @@ class PixTransactionController(BaseController):
         sum_24h = self.pix_transaction_repository.sum_source_not_rejected_since(
             snapshot.source_document, t - timedelta(hours=24), t, snapshot.pix_id
         )
+        repository = self.pix_transaction_repository
+        source, pix_id = snapshot.source_document, snapshot.pix_id
         return RuleContext(
             source_attempts_last_velocity_window=attempts,
             source_sum_last_24h_cents=sum_24h,
+            source_history_size=repository.count_source_history(source, t, pix_id),
+            device_seen_for_source=repository.source_used_device(source, snapshot.device_id, t, pix_id),
+            destination_seen_for_source=repository.source_paid_destination_not_rejected(
+                source, snapshot.destination_document, t, pix_id
+            ),
+            device_distinct_other_sources_last_24h=repository.count_device_other_sources_since(
+                snapshot.device_id, source, t - timedelta(hours=24), t, pix_id
+            ),
+            destination_distinct_other_sources_last_1h=repository.count_destination_other_sources_since(
+                snapshot.destination_document, source, t - timedelta(hours=1), t, pix_id
+            ),
         )
 
     @staticmethod

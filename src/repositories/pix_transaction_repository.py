@@ -94,5 +94,71 @@ class PixTransactionRepository:
         )
         return int(total)
 
+    def count_source_history(self, document: str, until: datetime, exclude_pix_id: str) -> int:
+        return (
+            self.session.query(func.count(PixTransaction.id))
+            .filter(
+                PixTransaction.source_document_number == document,
+                PixTransaction.transaction_date < until,
+                PixTransaction.pix_id != exclude_pix_id,
+            )
+            .scalar()
+        )
+
+    def source_used_device(self, document: str, device_id: str, until: datetime, exclude_pix_id: str) -> bool:
+        return (
+            self.session.query(PixTransaction.id)
+            .filter(
+                PixTransaction.source_document_number == document,
+                PixTransaction.device_id == device_id,
+                PixTransaction.transaction_date < until,
+                PixTransaction.pix_id != exclude_pix_id,
+            )
+            .first()
+            is not None
+        )
+
+    def source_paid_destination_not_rejected(self, document: str, destination_document: str, until: datetime, exclude_pix_id: str) -> bool:
+        return (
+            self.session.query(PixTransaction.id)
+            .join(PixAnalysis, PixAnalysis.pix_transaction_id == PixTransaction.id)
+            .join(AnalysisStatus, AnalysisStatus.id == PixAnalysis.status_id)
+            .filter(
+                PixTransaction.source_document_number == document,
+                PixTransaction.destination_document_number == destination_document,
+                PixTransaction.transaction_date < until,
+                PixTransaction.pix_id != exclude_pix_id,
+                AnalysisStatus.enumerator != AnalysisStatus.REJECTED,
+            )
+            .first()
+            is not None
+        )
+
+    def count_device_other_sources_since(self, device_id: str, document: str, since: datetime, until: datetime, exclude_pix_id: str) -> int:
+        return (
+            self.session.query(func.count(func.distinct(PixTransaction.source_document_number)))
+            .filter(
+                PixTransaction.device_id == device_id,
+                PixTransaction.source_document_number != document,
+                PixTransaction.transaction_date >= since,
+                PixTransaction.transaction_date < until,
+                PixTransaction.pix_id != exclude_pix_id,
+            )
+            .scalar()
+        )
+
+    def count_destination_other_sources_since(self, destination_document: str, document: str, since: datetime, until: datetime, exclude_pix_id: str) -> int:
+        return (
+            self.session.query(func.count(func.distinct(PixTransaction.source_document_number)))
+            .filter(
+                PixTransaction.destination_document_number == destination_document,
+                PixTransaction.source_document_number != document,
+                PixTransaction.transaction_date >= since,
+                PixTransaction.transaction_date < until,
+                PixTransaction.pix_id != exclude_pix_id,
+            )
+            .scalar()
+        )
+
     def get_status(self, enumerator: str) -> AnalysisStatus:
         return self.session.query(AnalysisStatus).filter(AnalysisStatus.enumerator == enumerator).one()

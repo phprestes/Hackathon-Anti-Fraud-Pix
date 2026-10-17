@@ -5,3 +5,8 @@ from dataclasses import dataclass
 class RuleContext:
     source_attempts_last_velocity_window: int
     source_sum_last_24h_cents: int
+    source_history_size: int
+    device_seen_for_source: bool
+    destination_seen_for_source: bool
+    device_distinct_other_sources_last_24h: int
+    destination_distinct_other_sources_last_1h: int

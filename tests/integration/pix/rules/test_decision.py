@@ -2,9 +2,9 @@ from tests.utils import DEFAULT_AT, PayloadGenerator, RandomGenerator, RequestGe
 
 
 def _history(document: str, amount: int = 985001):
-    RequestGenerator.POST_pix(
-        PayloadGenerator.pix(payer_document=document, amount=amount, at=shifted(DEFAULT_AT, hours=-1))
-    )
+    RequestGenerator.POST_pix(PayloadGenerator.pix(
+        payer_document=document, amount=amount, device_id=f"dvc-{document}", at=shifted(DEFAULT_AT, hours=-1)
+    ))
 
 
 class TestDecision:
@@ -15,6 +15,7 @@ class TestDecision:
 
         _, body = RequestGenerator.POST_pix(PayloadGenerator.pix(
             payer_document=document,
+            device_id=f"dvc-{document}",
             destination_opening_date=shifted(DEFAULT_AT, days=-7),
         ))
 
@@ -31,6 +32,7 @@ class TestDecision:
 
         _, body = RequestGenerator.POST_pix(PayloadGenerator.pix(
             payer_document=document,
+            device_id=f"dvc-{document}",
             amount=100001,
             destination_opening_date=shifted(DEFAULT_AT, days=-1),
         ))
