@@ -30,3 +30,4 @@ Toda mudança relevante neste repositório, da mais recente para a mais antiga p
 | Alterado | `flake8==7.1.1` nas dependências de desenvolvimento, para o `make lint` funcionar | `requirements-dev.txt` | O Base Service não trazia o flake8 | agente (Claude Code) |
 | Adicionado | Este changelog | `CHANGELOG.md` | [ADR 0015](docs/02-arquitetura/decisoes/0015-changelog-e-adrs-no-lugar-da-rfc.md) | agente (Claude Code) |
 | Adicionado | Histórico em 13 commits atômicos (Conventional Commits) e remote `origin` apontando para o GitHub | `.git/` | Uma mudança lógica por commit, rastreável | agente (Claude Code) |
+| Documentado | Plano de implementação: triagem da pesquisa (fazer, talvez, não), sugestões N1–N6, fases F0–F6 com time-box, paralelismo e riscos; ADRs novas ficam para depois da autorização | `docs/plano-de-implementacao.md`, `docs/README.md`, `llms.txt` | Pesquisa do time sem triagem frente ao prazo de domingo 12:00 | agente (Claude Code) |

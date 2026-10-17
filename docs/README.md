@@ -47,6 +47,7 @@ sources: [Desafio Antifraude Pix, bootcamp-base-api, Projeto fase 1]
 | **Processo** | |
 | [contribuindo.md](contribuindo.md) | Clean Code, nomes, commits, CHANGELOG, checklist de PR |
 | [trabalhando-com-ia.md](trabalhando-com-ia.md) | Como usar agentes aqui e saber o que eles mudaram? |
+| [plano-de-implementacao.md](plano-de-implementacao.md) | O que da pesquisa entra até o prazo, em que ordem, e o que cortar se atrasar? |
 | [../CHANGELOG.md](../CHANGELOG.md) | O que mudou, quando, por quê e quem (pessoa ou agente)? |
 | **Referência** | |
 | [referencia/enunciado/](referencia/enunciado/) | PDFs originais do desafio e dos slides |
