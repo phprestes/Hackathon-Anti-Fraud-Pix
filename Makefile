@@ -6,7 +6,7 @@ COMPOSE := docker compose
 PYTHON_311 := $(shell command -v python3.11 2>/dev/null)
 
 .DEFAULT_GOAL := help
-.PHONY: help all up down stop reset rebuild ps logs shell install test test-cov lint check simulate events backtest parity calibrate calibrate-check train-graphsage train-hmm clean
+.PHONY: help all up down stop reset rebuild ps logs shell install test test-cov lint check simulate events backtest parity calibrate calibrate-check train-graphsage train-hmm clean pixsim validate-pixsim pixsim-parity
 
 help: ## Lista os comandos
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  \033[36m%-10s\033[0m %s\n", $$1, $$2}'
@@ -115,3 +115,21 @@ analyze: install ## Gera docs/05-motor/analises.md (log-normalidade, dispersao, 
 
 calibrate-cost: install ## Grid de parametros pelo custo assimetrico (scripts/cost-model.json); grava scripts/out/calibration.md/.json (sem banco)
 	$(BIN)/python scripts/calibrate.py --objective cost
+
+PIXSIM_DIR := scripts/out/pixsim
+
+pixsim: ## Clona o PixSim (SHA fixo), cria o venv proprio e gera o mundo reduzido em scripts/out/pixsim/data
+	scripts/pixsim_setup.sh
+	ulimit -v 3000000; OPENBLAS_NUM_THREADS=1 $(PIXSIM_DIR)/.venv/bin/python -I scripts/pixsim_export.py
+
+validate-pixsim: install ## Adaptador, backtest e relatorio (atualiza docs/05-motor/validacao-pixsim.md)
+	test -f $(PIXSIM_DIR)/data/transactions.csv || $(MAKE) pixsim
+	$(BIN)/python scripts/pixsim_adapter.py
+	ulimit -v 2500000; $(BIN)/python scripts/backtest.py $(PIXSIM_DIR)/events.jsonl --json $(PIXSIM_DIR)/backtest.json > /dev/null
+	ulimit -v 2500000; $(BIN)/python scripts/pixsim_report.py
+
+pixsim-parity: install ## Zera o banco e compara API x backtest nas 500 linhas de scripts/out/pixsim/events-parity.jsonl
+	python3 -c "r=open('$(PIXSIM_DIR)/events.jsonl').readlines(); i=next(k for k,l in enumerate(r) if '\"burn_in\":false' in l and '\"label\":\"legit\"' not in l); open('$(PIXSIM_DIR)/events-parity.jsonl','w').writelines(r[i-250:i+250])"
+	$(MAKE) reset
+	$(COMPOSE) stop worker
+	$(BIN)/python scripts/parity.py $(PIXSIM_DIR)/events-parity.jsonl

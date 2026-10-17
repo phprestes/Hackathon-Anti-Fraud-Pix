@@ -43,6 +43,7 @@ sources: [Desafio Antifraude Pix, bootcamp-base-api, Projeto fase 1]
 | [decisao.md](05-motor/decisao.md) | Como os disparos viram uma decisão; quando sai 2FA? |
 | [calibracao.md](05-motor/calibracao.md) | Por que cada parâmetro tem o valor que tem? Quanta fricção e quanta captura no simulador? |
 | [analises.md](05-motor/analises.md) | Os dados se comportam como as regras supõem? Distribuição de valores, dispersão das contagens, drift (PSI) e sensibilidade de limiar |
+| [validacao-pixsim.md](05-motor/validacao-pixsim.md) | Como o motor se sai num simulador de terceiros (PixSim, calibrado com dados do BCB)? O que se mantém e o que cai fora do nosso gerador |
 | **06 · Operação** | |
 | [rodando-localmente.md](06-operacao/rodando-localmente.md) | Como subir, testar, resetar; variáveis e armadilhas |
 | **07 · Testes** | |
