@@ -1,0 +1,72 @@
+# Motor Antifraude Pix: Hackathon QI Tech 2026
+
+> API que recebe um Pix (POST /pix/transaction) e responde {key, status, metadata} com approved, two_factor_required ou rejected, sempre com motivo; GET /pix/transaction/{id} devolve a análise gravada. Python 3.11 + FastAPI + PostgreSQL 16, Docker Compose (api, db), a partir do bootcamp-base-api. Regras antifraude são classes puras em src/rules/; todas rodam e a decisão mais severa vence. Dinheiro em centavos; key UUID; erros {title, description, translation, code} com código QIT.
+
+Documentação em pt-BR; código, rotas, campos e códigos de regra em inglês. Cada documento tem front-matter (title, summary, related, sources) e começa com "Responde a". Sem RFC: decisões em ADRs, mudanças no CHANGELOG.
+
+## Comece aqui
+
+- [Índice da documentação](docs/README.md): mapa completo, com a pergunta que cada documento responde
+- [AGENTS.md](AGENTS.md): instruções para agentes (comandos, regras R1–R6, motor, camadas, limites)
+- [README](README.md): README no modelo do enunciado (motor, regras, decisão, como rodar)
+- [CHANGELOG](CHANGELOG.md): toda mudança, com data, porquê e autor (pessoa ou agente)
+- [Glossário](docs/glossario.md): velocity, fan-in, conta laranja, ISPB, RuleContext, severidade
+
+## Contexto
+
+- [Enunciado](docs/01-contexto/enunciado.md): transcrição completa dos dois PDFs do hackathon
+- [Problema](docs/01-contexto/problema.md): tempo, histórico, fricção, explicabilidade; garantias; fora do escopo
+- [Requisitos](docs/01-contexto/requisitos.md): exigências E1–E8, regras herdadas R1–R6, critérios da banca, matriz regra → teste
+
+## Arquitetura
+
+- [Visão geral](docs/02-arquitetura/visao-geral.md): api + db, caminho de um Pix, herdado × novo
+- [Camadas](docs/02-arquitetura/camadas.md): o que cada pasta pode e não pode, incluindo rules/
+- [Decisões (ADRs)](docs/02-arquitetura/decisoes/README.md): índice com status
+- [ADR 0001](docs/02-arquitetura/decisoes/0001-partir-do-base-service.md): partir do bootcamp-base-api da Aula 1
+- [ADR 0002](docs/02-arquitetura/decisoes/0002-monolito-sincrono-sem-dependencia-externa.md): API síncrona, sem serviço externo no caminho da decisão
+- [ADR 0003](docs/02-arquitetura/decisoes/0003-decisao-antifraude-e-dado-nao-erro-http.md): decisão é dado (201), não erro HTTP
+- [ADR 0004](docs/02-arquitetura/decisoes/0004-motor-de-regras-em-codigo.md): uma classe por regra em src/rules/
+- [ADR 0005](docs/02-arquitetura/decisoes/0005-regras-puras-com-contexto-carregado.md): regra pura; controller monta RuleContext
+- [ADR 0006](docs/02-arquitetura/decisoes/0006-pior-decisao-vence-e-todas-as-regras-rodam.md): todas rodam, mais severa vence
+- [ADR 0007](docs/02-arquitetura/decisoes/0007-relogio-da-transacao.md): o relógio é o transaction_date
+- [ADR 0008](docs/02-arquitetura/decisoes/0008-parametros-de-regra-por-ambiente.md): parâmetros RULE_* em constants.py
+- [ADR 0009](docs/02-arquitetura/decisoes/0009-historico-append-only.md): histórico append-only, colunas + JSONB
+- [ADR 0010](docs/02-arquitetura/decisoes/0010-dinheiro-em-centavos.md): BIGINT em centavos
+- [ADR 0011](docs/02-arquitetura/decisoes/0011-uuid-key-publica.md): id interno, key UUID, id do Pix na consulta
+- [ADR 0012](docs/02-arquitetura/decisoes/0012-idempotencia-pelo-id-do-pix.md): idempotência pelo id do Pix
+- [ADR 0013](docs/02-arquitetura/decisoes/0013-contrato-em-json-schema.md): JSON Schema fechado
+- [ADR 0014](docs/02-arquitetura/decisoes/0014-repositorio-ai-friendly.md): AGENTS.md, .agents/skills, llms.txt
+- [ADR 0015](docs/02-arquitetura/decisoes/0015-changelog-e-adrs-no-lugar-da-rfc.md): CHANGELOG e ADRs no lugar da RFC
+
+## API
+
+- [Rotas](docs/03-api/rotas.md): POST e GET /pix/transaction, formato do metadata
+- [Erros](docs/03-api/erros.md): catálogo QIT e próximo código livre
+- [Exemplo de Pix](docs/03-api/exemplo-pix.json): payload do enunciado
+
+## Dados
+
+- [Modelo](docs/04-dados/modelo.md): pix_transaction, pix_analysis, pix_analysis_reason, analysis_status; índices de janela
+
+## Motor
+
+- [Motor de regras](docs/05-motor/motor-de-regras.md): peças, contrato da regra, passo a passo, sinais disponíveis
+- [Catálogo de regras](docs/05-motor/regras.md): regras, parâmetros, decisão, porquê, estado
+- [Decisão](docs/05-motor/decisao.md): severidade, quando sai 2FA, exemplos
+
+## Operação e testes
+
+- [Rodando localmente](docs/06-operacao/rodando-localmente.md): Makefile, variáveis, armadilhas
+- [Estratégia de testes](docs/07-testes/estrategia.md): black box, TDD por regra, histórico com datas escolhidas
+
+## Processo
+
+- [Contribuindo](docs/contribuindo.md): Clean Code, nomes, commits, CHANGELOG, checklist
+- [Trabalhando com IA](docs/trabalhando-com-ia.md): arquivos para agentes e regras de uso
+- [Skills](.agents/README.md): nova-regra, novo-erro, nova-decisao, registrar-mudanca, revisar-mudanca
+
+## Optional
+
+- [README original do Base Service](docs/referencia/base-service-readme.md): exemplo sample_entity e troubleshooting
+- [Como o projeto é organizado](docs/referencia/como-o-projeto-e-organizado.md): guia original das pastas
