@@ -160,5 +160,49 @@ class PixTransactionRepository:
             .scalar()
         )
 
+    def list_source_amounts_not_rejected_since(self, document: str, since: datetime, until: datetime, exclude_pix_id: str) -> tuple[int, ...]:
+        rows = (
+            self.session.query(PixTransaction.amount)
+            .join(PixAnalysis, PixAnalysis.pix_transaction_id == PixTransaction.id)
+            .join(AnalysisStatus, AnalysisStatus.id == PixAnalysis.status_id)
+            .filter(
+                PixTransaction.source_document_number == document,
+                PixTransaction.transaction_date >= since,
+                PixTransaction.transaction_date < until,
+                PixTransaction.pix_id != exclude_pix_id,
+                AnalysisStatus.enumerator != AnalysisStatus.REJECTED,
+            )
+            .all()
+        )
+        return tuple(int(amount) for (amount,) in rows)
+
+    def first_source_transaction_date(self, document: str, until: datetime, exclude_pix_id: str) -> datetime | None:
+        return (
+            self.session.query(func.min(PixTransaction.transaction_date))
+            .filter(
+                PixTransaction.source_document_number == document,
+                PixTransaction.transaction_date < until,
+                PixTransaction.pix_id != exclude_pix_id,
+            )
+            .scalar()
+        )
+
+    def last_source_geolocation(self, document: str, until: datetime, exclude_pix_id: str) -> tuple[float, float, datetime] | None:
+        row = (
+            self.session.query(PixTransaction.latitude, PixTransaction.longitude, PixTransaction.transaction_date)
+            .filter(
+                PixTransaction.source_document_number == document,
+                PixTransaction.latitude.isnot(None),
+                PixTransaction.longitude.isnot(None),
+                PixTransaction.transaction_date < until,
+                PixTransaction.pix_id != exclude_pix_id,
+            )
+            .order_by(PixTransaction.transaction_date.desc())
+            .first()
+        )
+        if row is None:
+            return None
+        return float(row.latitude), float(row.longitude), row.transaction_date
+
     def get_status(self, enumerator: str) -> AnalysisStatus:
         return self.session.query(AnalysisStatus).filter(AnalysisStatus.enumerator == enumerator).one()

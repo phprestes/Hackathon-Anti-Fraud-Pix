@@ -3,7 +3,13 @@ from datetime import datetime, timedelta
 
 from sqlalchemy.exc import IntegrityError
 
-from constants import RULE_SET_VERSION, RULE_VELOCITY_WINDOW_MINUTES
+from constants import (
+    RULE_POISSON_LOOKBACK_DAYS,
+    RULE_POISSON_WINDOW_MINUTES,
+    RULE_PROFILE_LOOKBACK_DAYS,
+    RULE_SET_VERSION,
+    RULE_VELOCITY_WINDOW_MINUTES,
+)
 from controllers.base_controller import BaseController
 from dtos import PixAnalysisDTO
 from errors import InvalidSchema, NotFoundPixTransaction, PixIdConflict
@@ -111,6 +117,7 @@ class PixTransactionController(BaseController):
         )
         repository = self.pix_transaction_repository
         source, pix_id = snapshot.source_document, snapshot.pix_id
+        poisson_start = t - timedelta(minutes=RULE_POISSON_WINDOW_MINUTES)
         return RuleContext(
             source_attempts_last_velocity_window=attempts,
             source_sum_last_24h_cents=sum_24h,
@@ -125,6 +132,15 @@ class PixTransactionController(BaseController):
             destination_distinct_other_sources_last_1h=repository.count_destination_other_sources_since(
                 snapshot.destination_document, source, t - timedelta(hours=1), t, pix_id
             ),
+            source_amounts_last_30d_cents=repository.list_source_amounts_not_rejected_since(
+                source, t - timedelta(days=RULE_PROFILE_LOOKBACK_DAYS), t, pix_id
+            ),
+            source_attempts_poisson_window=repository.count_source_attempts_since(source, poisson_start, t, pix_id),
+            source_attempts_poisson_lookback=repository.count_source_attempts_since(
+                source, t - timedelta(days=RULE_POISSON_LOOKBACK_DAYS), poisson_start, pix_id
+            ),
+            source_first_seen=repository.first_source_transaction_date(source, t, pix_id),
+            source_last_geolocation=repository.last_source_geolocation(source, t, pix_id),
         )
 
     @staticmethod
