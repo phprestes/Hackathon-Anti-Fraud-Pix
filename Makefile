@@ -6,7 +6,7 @@ COMPOSE := docker compose
 PYTHON_311 := $(shell command -v python3.11 2>/dev/null)
 
 .DEFAULT_GOAL := help
-.PHONY: help all up down stop reset rebuild ps logs shell install test test-cov lint check simulate events backtest parity clean
+.PHONY: help all up down stop reset rebuild ps logs shell install test test-cov lint check simulate events backtest parity calibrate calibrate-check clean
 
 help: ## Lista os comandos
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  \033[36m%-10s\033[0m %s\n", $$1, $$2}'
@@ -74,6 +74,15 @@ backtest: events ## Roda o backtest em memória sobre scripts/out/events.jsonl (
 parity: events ## Zera o banco e compara API (SQL) x backtest (memória) Pix a Pix
 	$(MAKE) reset
 	$(BIN)/python scripts/parity.py scripts/out/events.jsonl
+
+calibrate: install ## Grid de parametros sobre o backtest; grava scripts/out/calibration.md/.json (sem banco)
+	$(BIN)/python scripts/calibrate.py
+
+calibrate-check: install ## Trava de regressao: backtest com os padroes contra scripts/calibration-gate.json
+	$(BIN)/python scripts/calibrate.py --check
+
+
+
 
 clean: ## Remove containers, volume, .venv e caches
 	$(COMPOSE) down -v

@@ -1,0 +1,8 @@
+{
+  "events": {"seed": 42, "payers": 200, "days": 14},
+  "grid": {
+    "RULE_AMOUNT_DAILY_SUM_CENTS": [1000000, 2000000, 3000000],
+    "RULE_POISSON_TAIL_PPM": [1000, 100, 10],
+    "RULE_SPLITTING_MIN_SUM_CENTS": [500000, 1500000]
+  }
+}
