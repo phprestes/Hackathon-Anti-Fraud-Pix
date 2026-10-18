@@ -377,6 +377,107 @@ Captura por tipologia no mundo B (Pix de vítima acima do limiar):
 
 Conclusão: com o atraso real do MED (mediana de 2 dias, cauda de 17 dias) o modelo perde pouco no AUC (0,990 para 0,970) e algum recall (63,6% para 59,2%), mas o custo sobe cerca de 18% (R$ 58,68 para R$ 69,11 por 1.000 Pix). O dano cresce rápido com o atraso fixo: 7 dias já derruba o recall para 47% e 14 dias deixa o modelo quase cego (recall 6,5%), porque os positivos recentes, que são os mais parecidos com o tráfego de amanhã, viram "legítimos". Descartar os últimos 14 dias não recuperou nada (custo R$ 82,64): com um mundo de 30 dias, joga fora metade dos positivos. Na prática, retreinar com frequência e esperar a cauda do MED antes de usar o rótulo importa mais do que corrigir o prior.
 
+<!-- pixsim:feedback:start -->
+
+### Retroalimentação pelo MED
+
+Regerar: `make feedback` (só no backtest: API, banco e `ACTIVE_RULES` não mudam). O mundo B é reproduzido em ordem de `transaction_date`; cada fraude de vítima reportada gera um desfecho em `transaction_date + report_delay_days`, aplicado ao histórico quando o relógio dos dados o alcança. Pix que o motor reprova não liquida e não gera desfecho (viés de seleção); com 2FA, a fração `two_factor_escape_rate` (10%) passa e gera desfecho, sorteada por hash do id do Pix, igual em todos os cenários. Só o Pix de vítima (`victim_to_mule`) vira desfecho: o MED é o reporte da vítima, e a dispersão da mula e o cash-out ficam sem rótulo, como nas seções anteriores. Fraude nunca reportada não gera desfecho.
+
+Peças (todas em `scripts/feedback_core.py`): heap de desfechos pendentes; regra `COUNTERPARTY_CONFIRMED_FRAUD` (destino que recebeu, de outro pagador, Pix com fraude confirmada antes do instante t), registrada só no backtest com `build_rules() + [regra]`; LightGBM instalado (treinado no mundo A) como regra extra (score ≥ limiar → `two_factor_required`); retreino a cada 7 dias com os hiperparâmetros fixos de `--source pixsim`, em pool formado pelas linhas do mundo A (com os rótulos conhecidos no fim do A, a história anterior) mais as linhas do mundo B já passadas: positivo = desfecho já chegado, negativo = Pix com mais de 7 dias sem desfecho (mais novos ficam fora). O desafiante treinado na virada da semana k roda em sombra na semana k+1 e é promovido se o custo ponderado dessa semana, com a decisão final (regras + modelo), for menor que o do campeão.
+
+Decisão do sinal escolhida no mundo A (para não usar o B na escolha): 2FA custa R$ 130,14 por 1,000 Pix e reprovar custa R$ 268,06; usado: `two_factor_required`,
+
+| cenário | custo ponderado por 1.000 Pix | captura ponderada | captura bruta | fricção em legítimos | AUC médio do campeão | fraudes sem desfecho possível | escapes confirmados |
+|---|---|---|---|---|---|---|---|
+| a) regras, sem retroalimentação | R$ 157,60 | 38,4% | 38,4% | 3,8% | 0,990 | 36,2% | 763 (R$ 925.935,28) |
+| b) + sinal de fraude confirmada | R$ 144,87 | 59,7% | 59,7% | 4,0% | 0,990 | 54,8% | 512 (R$ 634.533,40) |
+| c) + modelo campeão fixo | R$ 127,74 | 78,2% | 78,2% | 4,3% | 0,990 | 71,6% | 271 (R$ 221.213,65) |
+| d) + retreino semanal, campeão/desafiante | R$ 127,74 | 78,2% | 78,2% | 4,3% | 0,990 | 71,6% | 271 (R$ 221.213,65) |
+| d') como d, pool só do mundo B | R$ 127,74 | 78,2% | 78,2% | 4,3% | 0,990 | 71,6% | 271 (R$ 221.213,65) |
+
+O AUC é o do LightGBM instalado ou promovido, calculado por semana sobre os Pix de vítima e legítimos (rótulo verdadeiro) e tirado a média; nos cenários a e b o modelo não decide, só é medido. "Fraudes sem desfecho possível" é o peso das fraudes de vítima reprovadas, com 2FA que barrou ou nunca reportadas, sobre o peso total das fraudes.
+
+**Custo ponderado por 1.000 Pix, semana a semana**
+
+| semana | a | b | c | d | d' |
+|---|---|---|---|---|---|
+| 0 | R$ 203,44 | R$ 190,11 | R$ 170,09 | R$ 170,09 | R$ 170,09 |
+| 1 | R$ 165,11 | R$ 148,12 | R$ 127,62 | R$ 127,62 | R$ 127,62 |
+| 2 | R$ 144,49 | R$ 134,78 | R$ 116,09 | R$ 116,09 | R$ 116,09 |
+| 3 | R$ 119,79 | R$ 111,80 | R$ 99,19 | R$ 99,19 | R$ 99,19 |
+| 4 | R$ 142,26 | R$ 120,24 | R$ 114,40 | R$ 114,40 | R$ 114,40 |
+
+**Captura ponderada de vítimas, semana a semana**
+
+| semana | a | b | c | d | d' |
+|---|---|---|---|---|---|
+| 0 | 42,9% | 54,9% | 80,1% | 80,1% | 80,1% |
+| 1 | 37,6% | 63,0% | 82,4% | 82,4% | 82,4% |
+| 2 | 42,1% | 61,3% | 79,6% | 79,6% | 79,6% |
+| 3 | 31,8% | 56,6% | 70,1% | 70,1% | 70,1% |
+| 4 | 33,6% | 70,1% | 78,5% | 78,5% | 78,5% |
+
+**AUC do campeão, semana a semana**
+
+| semana | a | b | c | d | d' |
+|---|---|---|---|---|---|
+| 0 | 0,991 | 0,991 | 0,991 | 0,991 | 0,991 |
+| 1 | 0,993 | 0,993 | 0,993 | 0,993 | 0,993 |
+| 2 | 0,990 | 0,990 | 0,990 | 0,990 | 0,990 |
+| 3 | 0,989 | 0,989 | 0,989 | 0,989 | 0,989 |
+| 4 | 0,989 | 0,989 | 0,989 | 0,989 | 0,989 |
+
+A semana 4 tem só 2 dias de dados (o mundo B tem 30 dias de avaliação).
+
+```mermaid
+xychart-beta
+    title "Custo ponderado por 1.000 Pix (R$) por semana: a, b, c, d"
+    x-axis [0, 1, 2, 3, 4]
+    y-axis "R$ por 1.000 Pix" 0 --> 213
+    line [203.4, 165.1, 144.5, 119.8, 142.3]
+    line [190.1, 148.1, 134.8, 111.8, 120.2]
+    line [170.1, 127.6, 116.1, 99.2, 114.4]
+    line [170.1, 127.6, 116.1, 99.2, 114.4]
+```
+
+Linhas, na ordem: a, b, c, d.
+
+**Promoções, cenário d) + retreino semanal, campeão/desafiante**
+
+| semana avaliada | linhas do treino | positivos no treino | custo do campeão | custo do desafiante | promovido |
+|---|---|---|---|---|---|
+| 1 | 126958 | 1142 | R$ 127,62 | R$ 142,52 | não |
+| 2 | 157995 | 1212 | R$ 116,09 | R$ 117,30 | não |
+| 3 | 187817 | 1287 | R$ 99,19 | R$ 124,35 | não |
+| 4 | 217366 | 1369 | R$ 114,40 | R$ 148,42 | não |
+
+**Promoções, cenário d') como d, pool só do mundo B**
+
+| semana avaliada | linhas do treino | positivos no treino | custo do campeão | custo do desafiante | promovido |
+|---|---|---|---|---|---|
+| 1 | 60 | 59 | R$ 127,62 | R$ 1.995,17 | não |
+| 2 | 31097 | 129 | R$ 116,09 | R$ 265,86 | não |
+| 3 | 60919 | 204 | R$ 99,19 | R$ 356,73 | não |
+| 4 | 90468 | 286 | R$ 114,40 | R$ 139,26 | não |
+
+**Monitoramento semanal, cenário d) + retreino semanal, campeão/desafiante**
+
+| semana | escapes confirmados na semana | valor dos escapes | 2FA: precisão real | 2FA: precisão observada | reprovação: precisão real | reprovação: precisão observada | reprovações (% dos Pix) | fraudes sem desfecho possível |
+|---|---|---|---|---|---|---|---|---|
+| 0 | 38 | R$ 28.022,03 | 0,13% | 0,01% | 0,19% | 0,00% | 0,1% | 71,0% |
+| 1 | 54 | R$ 51.267,34 | 0,13% | 0,01% | 0,48% | 0,00% | 0,0% | 76,8% |
+| 2 | 56 | R$ 42.273,06 | 0,15% | 0,01% | 1,19% | 0,00% | 0,0% | 72,9% |
+| 3 | 64 | R$ 51.200,97 | 0,18% | 0,01% | 0,18% | 0,00% | 0,0% | 65,7% |
+| 4 | 59 | R$ 48.450,25 | 0,20% | 0,03% | 0,48% | 0,00% | 0,1% | 72,0% |
+
+Precisão real usa o rótulo do simulador; a observada é o que o banco enxergaria: desfechos chegados na semana (só dos Pix com 2FA que escaparam, 10%) sobre os Pix com 2FA; ambas com o peso de importância. Escapes e valores são contagens brutas (a fraude está superamostrada). Reprovação nunca gera desfecho, então a precisão observada é 0 por construção.
+
+Tempo e pico de memória por cenário (um processo por cenário, `ulimit -v 2500000`): a: 64 s, pico 373 MB; b: 63 s, pico 372 MB; c: 64 s, pico 373 MB; d: 80 s, pico 544 MB; d-b: 66 s, pico 441 MB.
+
+<!-- pixsim:feedback:end -->
+
+Conclusão: (1) o sinal de destino com fraude confirmada, só depois do reporte do MED (mediana de 2 dias), tira o custo ponderado de R$ 157,60 para R$ 144,87 por 1.000 Pix e leva a captura de 38,4% para 59,7%, com 2FA como decisão (escolhida no mundo A: R$ 130,14 contra R$ 268,06 de reprovar). (2) O campeão fixo soma mais (R$ 127,74; captura 78,2%) ao custo de fricção maior (4,3% contra 3,8%). (3) O retreino semanal nunca superou o campeão: dos 4 desafiantes, nenhum custou menos na semana de sombra, e o cenário d fica idêntico ao c; sem a semente do mundo A (d') os desafiantes são bem piores. O mundo é estacionário (mesmo gerador, sem deriva), então o retreino não tem o que acompanhar, e os rótulos maduros vêm censurados pelo próprio motor: fraude barrada vira "legítima" no pool. (4) Viés de seleção: 36% das fraudes (ponderadas) já não geram desfecho só pelo desenho do MED, e 72% quando o motor também barra; a precisão do 2FA vista pelos desfechos (0,01%) é cerca de dez vezes menor que a real (0,13%) e a de reprovação é zero por construção, então monitorar só por rótulo subestima o que o motor acerta. (5) Limites: 4 retreinos em 30 dias, fraude superamostrada (peso médio ~0,007) e custo semanal ruidoso; a escolha do sinal e a regra de promoção são decisões de backtest, não calibração de produção.
+
 ## Deriva das features
 
 O PSI usa o nosso gerador (seed 42, 14 dias) como base. Boa parte do desvio é artefato de construção, não de realismo: as features de geolocalização (`km_since_last_geolocation`, `speed_kmh_since_last_geolocation`, PSI 8,3) mudam porque o PixSim não tem geolocalização, e as de histórico (`source_history_size`, `history_30d_*`, `hours_since_first_seen`) mudam porque o PixSim tem 30 dias de burn-in e 30 de janela contra 14 dias no nosso. O que sobra de informação real: `amount` e `log_amount` (PSI 0,74), `source_age_days` (0,87) e, na fraude, `destination_age_days` (4,39, coerente com o `COUNTERPARTY_NEW_ACCOUNT` zerado: no nosso gerador o destino da fraude é conta nova, no PixSim não).
