@@ -11,6 +11,23 @@ COMPONENTS = ("fraud_approved", "fraud_2fa_escape", "legit_2fa", "legit_rejected
 DECISION_SCORE = {"rejected": 1.0, "two_factor_required": 0.5, "approved": 0.0}
 
 
+DISPERSAL_ROLES = {"fraudster_seed", "mule_forward", "cash_out"}
+
+
+def group_of(event):
+    """PixSim view of a labelled event: legit, victim (payer to mule) or dispersal (mule side)."""
+    if event["label"] == "legit":
+        return "legit"
+    return "dispersal" if event.get("role") in DISPERSAL_ROLES else "victim"
+
+
+def weighted_per_1000(legit_parts, fraud_parts, legit_pix, fraud_pix, weight):
+    """Cost per 1,000 Pix when each fraud Pix counts `weight` of a legitimate one (PixSim importance weight)."""
+    total = sum(legit_parts.values()) + weight * sum(fraud_parts.values())
+    effective = legit_pix + weight * fraud_pix
+    return round(total * 1000 / effective) if effective else 0
+
+
 def load_cost_model(path=COST_MODEL_PATH):
     with open(path, encoding="utf-8") as handle:
         return {name: item["value"] for name, item in json.load(handle).items()}

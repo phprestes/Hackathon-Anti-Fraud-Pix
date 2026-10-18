@@ -1,9 +1,9 @@
 from tests.utils import DEFAULT_AT, PayloadGenerator, RandomGenerator, RequestGenerator, shifted
 
 
-def _history(document: str, amount: int = 2985001):
+def _history(document: str, amount: int = 4485001, destination: str = None):
     RequestGenerator.POST_pix(PayloadGenerator.pix(
-        payer_document=document, amount=amount, device_id=f"dvc-{document}", at=shifted(DEFAULT_AT, hours=-1)
+        payer_document=document, destination_document=destination, amount=amount, device_id=f"dvc-{document}", at=shifted(DEFAULT_AT, hours=-1)
     ))
 
 
@@ -28,10 +28,12 @@ class TestDecision:
     def test_post_two_factor_and_rejected_rules_returns_rejected_ordered(self):
         """ADR 0006: a pior decisão vence e os motivos saem do mais grave ao menos."""
         document = RandomGenerator.generate_cpf()
-        _history(document)
+        destination = RandomGenerator.generate_cpf()
+        _history(document, destination=destination)
 
         _, body = RequestGenerator.POST_pix(PayloadGenerator.pix(
             payer_document=document,
+            destination_document=destination,
             device_id=f"dvc-{document}",
             amount=100001,
             destination_opening_date=shifted(DEFAULT_AT, days=-1),

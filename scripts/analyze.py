@@ -1,13 +1,14 @@
-"""Statistical analyses over simulator data (no API, no database); writes docs/05-motor/analises.md."""
+"""Statistical analyses on the PixSim worlds A and B (streaming, no API, no database); writes docs/05-motor/analises.md."""
 import argparse
+import json
 import math
 import os
 import random
 import statistics
-import subprocess
 import sys
 import time
 from bisect import bisect_left
+from array import array
 from collections import Counter, defaultdict
 from datetime import datetime
 
@@ -15,14 +16,13 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(HERE, "..", "src"))
 
-from backtest import run_backtest  # noqa: E402
-from replay import load_events  # noqa: E402
-from rules import build_rules  # noqa: E402
+from calibrate import Runner  # noqa: E402
+from replay import iter_events  # noqa: E402
+from rules import PARAMETERS  # noqa: E402
 from rules.features import FEATURE_NAMES  # noqa: E402
 
-OUT_DIR = os.path.join(HERE, "out")
+PIXSIM = os.path.join(HERE, "out", "pixsim")
 DOC_PATH = os.path.join(HERE, "..", "docs", "05-motor", "analises.md")
-PAYERS, DAYS = 300, 14
 MIN_PIX = 10
 QUANTILE_POINTS = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
 PSI_BINS = 10
@@ -33,23 +33,6 @@ SWEEPS = {
     "RULE_PROFILE_Z_2FA_TENTHS": [25, 30, 35, 45, 55],
 }
 STATUSES = ["approved", "two_factor_required", "rejected"]
-
-
-def generate(name, seed, variant="default"):
-    path = os.path.join(OUT_DIR, f"analyze-{name}-events.jsonl")
-    os.makedirs(OUT_DIR, exist_ok=True)
-    command = [
-        sys.executable, os.path.join(HERE, "simulate.py"), "--generate-only", "--events", path,
-        "--seed", str(seed), "--payers", str(PAYERS), "--days", str(DAYS), "--fraud-variant", variant,
-    ]
-    subprocess.run(command, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    return path
-
-
-def backtest(path):
-    events = load_events(path)
-    run_backtest(events, build_rules())
-    return events
 
 
 def payer_key(event):
@@ -91,11 +74,28 @@ def pct(part, total, digits=1):
     return pt(100 * part / total, digits) if total else "n/a"
 
 
-def analyze_amount(events):
-    by_payer = defaultdict(list)
-    for event in events:
-        if event["label"] == "legit" and event["payload"]["amount"] > 0:
-            by_payer[payer_key(event)].append(math.log(event["payload"]["amount"]))
+def collect_legit(path):
+    """One streaming pass: log(amount) and per-hour/per-day counts of each payer's legitimate Pix (burn-in included)."""
+    logs, hourly, daily = defaultdict(list), defaultdict(Counter), defaultdict(Counter)
+    first = last = None
+    for event in iter_events(path):
+        if event["label"] != "legit":
+            continue
+        payload = event["payload"]
+        key = payer_key(event)
+        if payload["amount"] > 0:
+            logs[key].append(math.log(payload["amount"]))
+        moment = datetime.fromisoformat(payload["transaction_date"])
+        hour = int(moment.timestamp() // 3600)
+        hourly[key][hour] += 1
+        daily[key][moment.toordinal()] += 1
+        first = hour if first is None else min(first, hour)
+        last = hour if last is None else max(last, hour)
+    return {"logs": logs, "hourly": hourly, "daily": daily, "hours": (first, last)}
+
+
+def analyze_amount(collected):
+    by_payer = collected["logs"]
     eligible = {key: values for key, values in by_payer.items() if len(values) >= MIN_PIX}
     skews, kurts, z_pooled, z_robust = [], [], [], []
     for values in eligible.values():
@@ -125,6 +125,8 @@ def analyze_amount(events):
 
 
 def poisson_sample(rng, lam):
+    if lam > 500:
+        return max(0, round(rng.gauss(lam, math.sqrt(lam))))
     limit, k, p = math.exp(-lam), 0, 1.0
     while True:
         p *= rng.random()
@@ -133,62 +135,65 @@ def poisson_sample(rng, lam):
         k += 1
 
 
-def dispersion_indices(counts_by_payer, grid):
+def dispersion_indices(counts_by_payer, slots):
     indices = []
     for counts in counts_by_payer.values():
-        series = [counts.get(slot, 0) for slot in grid]
-        mean = sum(series) / len(series)
+        total = sum(counts.values())
+        mean = total / slots
         if mean > 0:
-            indices.append((mean, statistics.variance(series) / mean))
+            sumsq = sum(c * c for c in counts.values())
+            indices.append((mean, (sumsq - slots * mean * mean) / (slots - 1) / mean))
     return indices
 
 
-def analyze_dispersion(events):
-    legit = [e for e in events if e["label"] == "legit"]
-    per_payer = Counter(payer_key(e) for e in legit)
+def analyze_dispersion(collected):
+    per_payer = {key: sum(c.values()) for key, c in collected["hourly"].items()}
     eligible = {key for key, n in per_payer.items() if n >= MIN_PIX}
-    hourly, daily = defaultdict(Counter), defaultdict(Counter)
-    for event in legit:
-        key = payer_key(event)
-        if key not in eligible:
-            continue
-        moment = datetime.fromisoformat(event["payload"]["transaction_date"])
-        hourly[key][int(moment.timestamp() // 3600)] += 1
-        daily[key][moment.toordinal()] += 1
-    stamps = [datetime.fromisoformat(e["payload"]["transaction_date"]) for e in events]
-    first_hour, last_hour = int(min(stamps).timestamp() // 3600), int(max(stamps).timestamp() // 3600)
-    grids = {
-        "hora": range(first_hour, last_hour + 1),
-        "dia": range(min(stamps).toordinal(), max(stamps).toordinal() + 1),
+    first_hour, last_hour = collected["hours"]
+    days = [min(day for c in collected["daily"].values() for day in c), max(day for c in collected["daily"].values() for day in c)]
+    series = {
+        "hora": ({k: c for k, c in collected["hourly"].items() if k in eligible}, last_hour - first_hour + 1),
+        "dia": ({k: c for k, c in collected["daily"].items() if k in eligible}, days[1] - days[0] + 1),
     }
     rng = random.Random(42)
     result = {"payers": len(eligible)}
-    for name, counts in (("hora", hourly), ("dia", daily)):
-        grid = grids[name]
-        observed = dispersion_indices(counts, grid)
+    for name, (counts, slots) in series.items():
+        observed = dispersion_indices(counts, slots)
         reference_counts = {}
-        for key, series in counts.items():
-            mean = sum(series.values()) / len(grid)
-            reference_counts[key] = Counter({slot: poisson_sample(rng, mean) for slot in grid})
-        reference = dispersion_indices(reference_counts, grid)
+        for key, per_slot in counts.items():
+            draws = poisson_sample(rng, sum(per_slot.values()))
+            reference_counts[key] = Counter(rng.randrange(slots) for _ in range(draws))
+        reference = dispersion_indices(reference_counts, slots)
         ratios = [ratio for _, ratio in observed]
         result[name] = {
-            "slots": len(grid), "mean_rate": statistics.mean(m for m, _ in observed),
+            "slots": slots, "mean_rate": statistics.mean(m for m, _ in observed),
             "median_index": statistics.median(ratios), "p90_index": sorted(ratios)[int(0.9 * len(ratios))],
-            "over": sum(1 for r in ratios if r > 1.5), "n": len(ratios),
+            "over": sum(1 for r in ratios if r > 1.5),
+            "n": len(ratios),
             "reference_over": sum(1 for _, r in reference if r > 1.5),
             "ratios": ratios,
         }
     return result
 
 
-def feature_rows(events):
-    rows = []
-    for event in events:
-        moment = datetime.fromisoformat(event["payload"]["transaction_date"])
-        rows.append((moment, event["label"], event["response"]["metadata"]["features"]))
-    rows.sort(key=lambda row: row[0])
-    return rows
+def load_features(path):
+    """Streams a features export into compact per-feature arrays: all rows, legit rows and fraud rows (label 1)."""
+    columns = {name: array("d") for name in FEATURE_NAMES}
+    fraud = {name: array("d") for name in FEATURE_NAMES}
+    legit_rows = 0
+    legit_flags = []
+    for line in open(path, encoding="utf-8"):
+        row = json.loads(line)
+        features = row["features"]
+        is_fraud = row["label"] == 1
+        legit_flags.append(not is_fraud)
+        legit_rows += not is_fraud
+        for name in FEATURE_NAMES:
+            value = float(features.get(name) or 0)
+            columns[name].append(value)
+            if is_fraud:
+                fraud[name].append(value)
+    return {"columns": columns, "fraud": fraud, "legit": legit_flags, "legit_rows": legit_rows}
 
 
 def psi(base, other):
@@ -216,39 +221,47 @@ def flag(value):
     return "drift" if value > 0.25 else "atenção" if value > 0.1 else "estável"
 
 
-def analyze_psi(train_rows, perturbed_rows):
-    legit = [row for row in train_rows if row[1] == "legit"]
-    middle = len(legit) // 2
-    first, second = legit[:middle], legit[middle:]
-    train_fraud = [row for row in train_rows if row[1] != "legit"]
-    perturbed_fraud = [row for row in perturbed_rows if row[1] != "legit"]
+def analyze_psi(world_a, world_b):
+    middle = world_a["legit_rows"] // 2
     table = []
     for name in FEATURE_NAMES:
-        half = psi([r[2][name] for r in first], [r[2][name] for r in second])
-        every = psi([r[2][name] for r in train_rows], [r[2][name] for r in perturbed_rows])
-        fraud = psi([r[2][name] for r in train_fraud], [r[2][name] for r in perturbed_fraud])
+        legit = [v for v, keep in zip(world_a["columns"][name], world_a["legit"]) if keep]
+        half = psi(legit[:middle], legit[middle:])
+        every = psi(world_a["columns"][name], world_b["columns"][name])
+        fraud = psi(world_a["fraud"][name], world_b["fraud"][name])
         table.append({"name": name, "half": half[0], "all": every[0], "fraud": fraud[0], "bins": half[1]})
-    return {"table": table, "first": len(first), "second": len(second),
-            "train": len(train_rows), "perturbed": len(perturbed_rows),
-            "train_fraud": len(train_fraud), "perturbed_fraud": len(perturbed_fraud)}
+    return {"table": table, "first": middle, "second": world_a["legit_rows"] - middle,
+            "a": len(world_a["legit"]), "b": len(world_b["legit"]),
+            "a_fraud": len(world_a["fraud"][FEATURE_NAMES[0]]), "b_fraud": len(world_b["fraud"][FEATURE_NAMES[0]])}
 
 
-def run_scenario(events, overrides):
-    run_backtest(events, build_rules(overrides))
-    legit = Counter(e["response"]["status"] for e in events if e["label"] == "legit")
-    fraud = [e for e in events if e["label"] != "legit"]
-    barred = sum(1 for e in fraud if e["response"]["status"] != "approved")
-    legit_total = sum(legit.values())
+def scenario(runner, path, name, value):
+    row = runner.run(path, {name: value})
+    if row is None:
+        return None
+    m = row["metrics"]
+    legit_total = m["legit"]["pix"]
+    victim = m["victim"]
     return {
-        "legit": {s: 100 * legit[s] / legit_total for s in STATUSES},
-        "barred": 100 * barred / len(fraud), "fraud_total": len(fraud),
+        "legit": {s: 100 * m["legit"][s] / legit_total for s in STATUSES},
+        "barred": 100 * (victim["two_factor_required"] + victim["rejected"]) / victim["pix"],
+        "cost": victim["cost_per_1000_cents"] / 100, "fraud_total": victim["pix"],
     }
 
 
-def analyze_sensitivity(events):
-    result = {"baseline": run_scenario(events, {}), "params": {}}
+def analyze_sensitivity(path, budget):
+    """Cost, friction and capture around the current defaults, one parameter at a time, on PixSim world A."""
+    runner = Runner(budget, False)
+    result = {"params": {}}
     for name, values in SWEEPS.items():
-        result["params"][name] = [(value, run_scenario(events, {name: value})) for value in values]
+        runs = []
+        for value in values:
+            outcome = scenario(runner, path, name, value)
+            if outcome is None:
+                return None
+            runs.append((value, outcome))
+        result["params"][name] = runs
+    result["baseline"] = scenario(runner, path, "RULE_AMOUNT_DAILY_SUM_CENTS", PARAMETERS["RULE_AMOUNT_DAILY_SUM_CENTS"])
     return result
 
 
@@ -262,9 +275,9 @@ def render(amount, dispersion, drift, sensitivity, meta):
     out = [
         "---",
         "title: Análises estatísticas",
-        "summary: Quatro análises sobre o simulador (log-normalidade do valor por pagador, dispersão das contagens, PSI entre janelas, sensibilidade de limiar) que sustentam z robusto, Poisson-Gamma e os parâmetros.",
-        "related: [regras.md, calibracao.md, motor-de-regras.md, ../../scripts/analyze.py]",
-        "sources: [scripts/analyze.py, scripts/simulate.py (seed 42 e 7), src/rules/features.py, Pesquisa QITech (análises 1, 2, 6 e 7)]",
+        "summary: Quatro análises no PixSim, simulador de terceiros (log-normalidade do valor por pagador, dispersão das contagens, PSI entre os mundos A e B, sensibilidade de limiar com custo) que sustentam z robusto, Poisson-Gamma e os parâmetros.",
+        "related: [regras.md, calibracao.md, validacao-pixsim.md, motor-de-regras.md, ../../scripts/analyze.py]",
+        "sources: [scripts/analyze.py, scripts/calibrate.py, scripts/pixsim_adapter.py, src/rules/features.py, Pesquisa QITech (análises 1, 2, 6 e 7)]",
         "---",
         "",
         "# Análises estatísticas",
@@ -273,15 +286,15 @@ def render(amount, dispersion, drift, sensitivity, meta):
         ">",
         "> **Responde a:** o valor do Pix por pagador é log-normal (vale o z robusto)? as contagens são Poisson ou super-dispersas (vale a Poisson–Gamma)? as features derivam entre janelas? o quanto cada limiar mexe em fricção e em fraude barrada?",
         "",
-        "**Aviso: os dados são sintéticos.** Vêm do simulador ([ADR 0020](../02-arquitetura/decisoes/0020-simulador-para-calibracao.md)), que sorteia valores log-normais e chegadas Poisson; confirmar essas formas nele é verificar a consistência do motor com o gerador, não a realidade do Pix. Os números provam o método e a sensibilidade dos parâmetros; com dado real, a mesma rotina deve ser rerodada.",
+        "**Métricas no PixSim, simulador de terceiros.** O PixSim ([validação](validacao-pixsim.md)) não é Pix real e foi gerado por quem não somos: as formas que ele sorteia (valores, chegadas) não foram escolhidas por nós para o motor passar. Os números provam o método e a sensibilidade dos parâmetros neste mundo; com dado real, a mesma rotina deve ser rerodada. O nosso simulador (`scripts/simulate.py`) é só fixture de CI e não entra nestas análises.",
         "",
-        f"Gerado por `make analyze` ([scripts/analyze.py](../../scripts/analyze.py)), sem API e sem banco: "
-        f"{meta['train']} Pix de treino (seed 42, {PAYERS} pagadores, {DAYS} dias) e {meta['perturbed']} Pix de teste perturbado (seed 7). "
+        f"Gerado por `make analyze` ([scripts/analyze.py](../../scripts/analyze.py)), sem API e sem banco, em leitura por streaming: "
+        f"mundo A ({meta['a']} Pix de features, escolha) e mundo B ({meta['b']}, confirmação), ambos de `scripts/out/pixsim/`. "
         "Pagadores com menos de 10 Pix ficam fora das análises 1 e 2.",
         "",
         "## 1. `log(amount)` por pagador",
         "",
-        f"**Medido.** Só Pix legítimos de {amount['payers']} pagadores com ao menos {MIN_PIX} Pix ({amount['pix']} Pix; "
+        f"**Medido.** No mundo A, só Pix legítimos (burn-in incluído) de {amount['payers']} pagadores com ao menos {MIN_PIX} Pix ({amount['pix']} Pix; "
         f"{amount['payers_total']} pagadores no total). Para cada um, assimetria e curtose em excesso de `log(amount)`; depois o QQ: "
         "os valores viram z-score dentro do pagador (média e desvio, e também mediana e MAD×1,4826, a escala da regra) e seus quantis são lidos contra os da normal.",
         "",
@@ -304,7 +317,7 @@ def render(amount, dispersion, drift, sensitivity, meta):
         "",
         "## 2. Dispersão das contagens",
         "",
-        f"**Medido.** Contagem de Pix legítimos por pagador ({dispersion['payers']} pagadores) em cada hora e em cada dia da janela, com zeros incluídos. "
+        f"**Medido.** No mundo A, contagem de Pix legítimos por pagador ({dispersion['payers']} pagadores, burn-in incluído) em cada hora e em cada dia da janela, com zeros incluídos. "
         "Índice de dispersão = variância / média (1 para Poisson, > 1 para super-dispersão, que é o que a binomial negativa modela). "
         "A coluna de referência repete o cálculo com contagens Poisson sorteadas com a mesma média de cada pagador (seed 42), para mostrar quanto de ruído amostral cabe acima de 1,5 sem super-dispersão real.",
         "",
@@ -340,14 +353,14 @@ def render(amount, dispersion, drift, sensitivity, meta):
         "",
         "**Medido.** Population Stability Index de cada feature de `FEATURE_NAMES`, com 10 bins por quantil da amostra-base (bins repetidos por valores discretos são fundidos; o PSI usa piso de 0,0001 por bin). "
         "Leitura: < 0,1 estável, 0,1 a 0,25 atenção, > 0,25 drift. Três comparações: "
-        f"(a) primeira × segunda metade do período, só legítimos ({drift['first']} × {drift['second']} Pix), a deriva natural; "
-        f"(b) treino × teste perturbado, todos os Pix ({drift['train']} × {drift['perturbed']}); "
-        f"(c) o mesmo, só Pix de fraude ({drift['train_fraud']} × {drift['perturbed_fraud']}), onde a perturbação (`--fraud-variant perturbed`) age.",
+        f"(a) primeira × segunda metade do mundo A, só legítimos ({drift['first']} × {drift['second']} Pix), a deriva natural; "
+        f"(b) mundo A × mundo B, todos os Pix avaliados ({drift['a']} × {drift['b']}), mesma população gerada com outra semente; "
+        f"(c) o mesmo, só Pix de fraude ({drift['a_fraud']} × {drift['b_fraud']}).",
         "",
     ]
     ordered = sorted(drift["table"], key=lambda r: -(r["half"] or 0))
     out += md_table(
-        ["Feature", "PSI metade × metade (legítimos)", "Leitura", "PSI treino × perturbado (todos)", "PSI treino × perturbado (fraude)", "Leitura (fraude)"],
+        ["Feature", "PSI metade × metade (legítimos)", "Leitura", "PSI A × B (todos)", "PSI A × B (fraude)", "Leitura (fraude)"],
         [[r["name"], pt(r["half"], 3), flag(r["half"]), pt(r["all"], 3), pt(r["fraud"], 3), flag(r["fraud"])] for r in ordered])
     attention = [r["name"] for r in drift["table"] if (r["half"] or 0) > 0.1]
     drifted_fraud = [r["name"] for r in drift["table"] if (r["fraud"] or 0) > 0.25]
@@ -356,27 +369,29 @@ def render(amount, dispersion, drift, sensitivity, meta):
         "",
         f"**Conclusão.** Entre as metades do período, {len(attention)} de {len(FEATURE_NAMES)} features passam de 0,1"
         + (f" ({', '.join(attention)}), todas efeito de aquecimento do histórico em memória (o histórico cresce com o tempo), não de mudança de comportamento" if attention else "")
-        + f". Treino × perturbado: {len(drifted_all)} features em drift considerando todos os Pix (a fraude é minoria) e {len(drifted_fraud)} considerando só a fraude"
+        + f". A × B: {len(drifted_all)} features em drift considerando todos os Pix (a fraude é minoria) e {len(drifted_fraud)} considerando só a fraude"
         + (f" ({', '.join(drifted_fraud)})" if drifted_fraud else "")
-        + ". O PSI isola a perturbação nas features de fraude e serve de alarme para recalibrar ou retreinar os modelos em shadow.",
+        + ". Dois mundos da mesma população devem ficar estáveis; o PSI serve de alarme para recalibrar ou retreinar os modelos em shadow quando a população muda.",
         "",
         "## 4. Sensibilidade de limiar",
         "",
-        f"**Medido.** Backtest em lote com `--set`, um parâmetro por vez, os demais nos padrões, sobre os Pix de treino. "
-        "Em legítimos: % aprovado / 2FA / reprovado (fricção). Em fraude: % de Pix barrados (2FA ou reprovação). "
+        "**Medido.** Passada em streaming pelo mundo A com um parâmetro por vez e os demais nos padrões atuais, a mesma avaliação da "
+        "[calibração](calibracao.md). Em legítimos: % aprovado / 2FA / reprovado (fricção). Em fraude: % de Pix pagador→mula barrados (2FA ou reprovação). "
+        "Custo: esperado por 1.000 Pix na visão do pagador, com a fraude ponderada pelo peso de importância do PixSim "
+        "([`scripts/cost-model.json`](../../scripts/cost-model.json)); a dispersão (lado da mula) não entra. "
         f"Padrão de cada parâmetro marcado com `*`. Linha de base: legítimos {pt(sensitivity['baseline']['legit']['approved'])}% aprovados, "
-        f"fraude barrada {pt(sensitivity['baseline']['barred'])}% ({sensitivity['baseline']['fraud_total']} Pix de fraude).",
+        f"fraude barrada {pt(sensitivity['baseline']['barred'])}% ({sensitivity['baseline']['fraud_total']} Pix pagador→mula), "
+        f"custo R$ {pt(sensitivity['baseline']['cost'])} por 1.000 Pix.",
         "",
     ]
-    defaults = {"RULE_AMOUNT_DAILY_SUM_CENTS": 3_000_000, "RULE_POISSON_TAIL_PPM": 100, "RULE_PROFILE_Z_2FA_TENTHS": 35}
     for name, runs in sensitivity["params"].items():
         out += [f"### `{name}`", ""]
         rows = []
         for value, r in runs:
-            mark = "*" if value == defaults[name] else ""
+            mark = "*" if value == PARAMETERS[name] else ""
             rows.append([f"{fmt_value(name, value)}{mark}", pt(r["legit"]["approved"]), pt(r["legit"]["two_factor_required"]),
-                         pt(r["legit"]["rejected"]), pt(r["barred"])])
-        out += md_table(["Valor", "Legítimos aprovados %", "Legítimos 2FA %", "Legítimos reprovados %", "Fraude barrada %"], rows)
+                         pt(r["legit"]["rejected"]), pt(r["barred"]), pt(r["cost"])])
+        out += md_table(["Valor", "Legítimos aprovados %", "Legítimos 2FA %", "Legítimos reprovados %", "Fraude barrada %", "Custo R$/1.000 Pix"], rows)
         labels = [f'"{v // 100 if name == "RULE_AMOUNT_DAILY_SUM_CENTS" else v}"' for v, _ in runs]
         friction = [100 - r["legit"]["approved"] for _, r in runs]
         unit = " Eixo x em reais." if name == "RULE_AMOUNT_DAILY_SUM_CENTS" else ""
@@ -384,37 +399,46 @@ def render(amount, dispersion, drift, sensitivity, meta):
         out += xychart(name, labels, [("line", friction), ("line", [r["barred"] for _, r in runs])], "%", 100)
         span_fraud = max(r["barred"] for _, r in runs) - min(r["barred"] for _, r in runs)
         span_friction = max(friction) - min(friction)
-        out += ["", f"Amplitude ao varrer o parâmetro: {pt(span_friction)} p.p. de fricção e {pt(span_fraud)} p.p. de fraude barrada.", ""]
+        span_cost = max(r["cost"] for _, r in runs) - min(r["cost"] for _, r in runs)
+        out += ["", f"Amplitude ao varrer o parâmetro: {pt(span_friction)} p.p. de fricção, {pt(span_fraud)} p.p. de fraude barrada e R$ {pt(span_cost)} de custo.", ""]
     spans = {}
     for name, runs in sensitivity["params"].items():
         spans[name] = (max(r["barred"] for _, r in runs) - min(r["barred"] for _, r in runs),
-                       max(100 - r["legit"]["approved"] for _, r in runs) - min(100 - r["legit"]["approved"] for _, r in runs))
-    most = max(spans, key=lambda n: spans[n][0] + spans[n][1])
-    least = min(spans, key=lambda n: spans[n][0] + spans[n][1])
+                       max(100 - r["legit"]["approved"] for _, r in runs) - min(100 - r["legit"]["approved"] for _, r in runs),
+                       max(r["cost"] for _, r in runs) - min(r["cost"] for _, r in runs))
+    most = max(spans, key=lambda n: spans[n][2])
+    least = min(spans, key=lambda n: spans[n][2])
     out += [
-        f"**Conclusão.** `{most}` é o parâmetro mais sensível ({pt(spans[most][1])} p.p. de fricção, {pt(spans[most][0])} p.p. de fraude) "
-        f"e `{least}` o menos sensível ({pt(spans[least][1])} e {pt(spans[least][0])} p.p.) na faixa varrida. "
+        f"**Conclusão.** `{most}` é o parâmetro de maior efeito no custo (R$ {pt(spans[most][2])} na faixa varrida; {pt(spans[most][1])} p.p. de fricção, {pt(spans[most][0])} p.p. de fraude) "
+        f"e `{least}` o de menor (R$ {pt(spans[least][2])}; {pt(spans[least][1])} e {pt(spans[least][0])} p.p.). "
         "Onde a fraude barrada não muda com a fricção, o limiar está num platô e a escolha é por custo de falso positivo; onde as duas curvas sobem juntas, há troca real. "
-        "Os padrões em uso foram escolhidos na [calibração](calibracao.md); esta tabela só mede o entorno deles, com o mesmo conjunto sintético.",
+        "Os padrões em uso foram escolhidos na [calibração](calibracao.md); esta tabela só mede o entorno deles, no mesmo mundo.",
         "",
     ]
     return "\n".join(out)
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Statistical analyses -> docs/05-motor/analises.md")
+    parser = argparse.ArgumentParser(description="Statistical analyses on PixSim -> docs/05-motor/analises.md")
+    parser.add_argument("--events", default=os.path.join(PIXSIM, "events.jsonl"), help="PixSim world A")
+    parser.add_argument("--events-b", default=os.path.join(PIXSIM, "events-b.jsonl"), help="PixSim world B")
+    parser.add_argument("--features", default=os.path.join(PIXSIM, "features-a.jsonl"))
+    parser.add_argument("--features-b", default=os.path.join(PIXSIM, "features-b.jsonl"))
+    parser.add_argument("--budget-seconds", type=int, default=0, help="stop before a sensitivity run that would pass this; exit 75, resume from the cache")
     parser.add_argument("--out", default=DOC_PATH)
     args = parser.parse_args()
     started = time.perf_counter()
-    train = backtest(generate("train", 42))
-    perturbed = backtest(generate("perturbed", 7, "perturbed"))
-    print(f"data ready in {time.perf_counter() - started:.1f} s", file=sys.stderr)
-    train_rows, perturbed_rows = feature_rows(train), feature_rows(perturbed)
-    amount = analyze_amount(train)
-    dispersion = analyze_dispersion(train)
-    drift = analyze_psi(train_rows, perturbed_rows)
-    sensitivity = analyze_sensitivity(train)
-    document = render(amount, dispersion, drift, sensitivity, {"train": len(train), "perturbed": len(perturbed)})
+    collected = collect_legit(args.events)
+    amount = analyze_amount(collected)
+    dispersion = analyze_dispersion(collected)
+    del collected
+    print(f"analyses 1 and 2 in {time.perf_counter() - started:.1f} s", file=sys.stderr)
+    drift = analyze_psi(load_features(args.features), load_features(args.features_b))
+    sensitivity = analyze_sensitivity(args.events, args.budget_seconds)
+    if sensitivity is None:
+        print("budget reached; run again to continue (progress is cached)", file=sys.stderr)
+        return 75
+    document = render(amount, dispersion, drift, sensitivity, {"a": drift["a"], "b": drift["b"]})
     with open(args.out, "w", encoding="utf-8") as handle:
         handle.write(document)
     print(f"wrote {os.path.relpath(args.out)} in {time.perf_counter() - started:.1f} s", file=sys.stderr)

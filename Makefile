@@ -6,7 +6,7 @@ COMPOSE := docker compose
 PYTHON_311 := $(shell command -v python3.11 2>/dev/null)
 
 .DEFAULT_GOAL := help
-.PHONY: help all up down stop reset rebuild ps logs shell install test test-cov lint check simulate events backtest parity calibrate calibrate-check train-models-mock pixsim-datasets train-graphsage train-hmm clean pixsim validate-pixsim pixsim-parity delayed-labels feedback
+.PHONY: help all up down stop reset rebuild ps logs shell install test test-cov lint check simulate events backtest parity calibrate calibrate-check calibrate-pixsim train-models-mock pixsim-datasets train-graphsage train-hmm clean pixsim validate-pixsim pixsim-parity delayed-labels feedback
 
 help: ## Lista os comandos
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  \033[36m%-10s\033[0m %s\n", $$1, $$2}'
@@ -119,8 +119,13 @@ clean: ## Remove containers, volume, .venv e caches
 	$(COMPOSE) down -v
 	rm -rf $(VENV) .pytest_cache .coverage htmlcov
 
-analyze: install ## Gera docs/05-motor/analises.md (log-normalidade, dispersao, PSI, sensibilidade; sem API e sem banco)
-	$(BIN)/python scripts/analyze.py
+analyze: install ## Gera docs/05-motor/analises.md no PixSim (log-normalidade, dispersao, PSI A x B, sensibilidade com custo; sem API e sem banco)
+	test -f $(PIXSIM_DIR)/features-b.jsonl || $(MAKE) pixsim-datasets
+	ulimit -v 2500000; $(BIN)/python scripts/analyze.py
+
+calibrate-pixsim: install ## Grid de parametros pelo custo ponderado no PixSim: escolhe no mundo A, confirma no B; grava scripts/out/calibration-pixsim.md/.json (cache retoma)
+	test -f $(PIXSIM_DIR)/features-b.jsonl || $(MAKE) pixsim-datasets
+	ulimit -v 2500000; $(BIN)/python scripts/calibrate.py --events $(PIXSIM_DIR)/events.jsonl --events-b $(PIXSIM_DIR)/events-b.jsonl --objective cost
 
 calibrate-cost: install ## Grid de parametros pelo custo assimetrico (scripts/cost-model.json); grava scripts/out/calibration.md/.json (sem banco)
 	$(BIN)/python scripts/calibrate.py --objective cost

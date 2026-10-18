@@ -35,7 +35,7 @@ class TestTypologySplittingRule:
     def test_post_fifth_small_pix_returns_two_factor_required(self):
         """TYPOLOGY_SPLITTING: 5 Pix pequenos (mais um grande) acima do teto não dispara."""
         payer = RandomGenerator.generate_cpf()
-        _send(payer, amount=2500000, hours_ago=5)
+        _send(payer, amount=3700000, hours_ago=5)
         for hours_ago in range(4, 0, -1):
             _send(payer, hours_ago=hours_ago)
 

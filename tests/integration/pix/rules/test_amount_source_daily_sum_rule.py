@@ -13,9 +13,9 @@ def _current(document: str):
 
 class TestAmountSourceDailySumRule:
     def test_post_daily_sum_at_limit_returns_approved(self):
-        """AMOUNT_SOURCE_DAILY_SUM: soma exatamente R$ 30.000,00 não dispara."""
+        """AMOUNT_SOURCE_DAILY_SUM: soma exatamente R$ 45.000,00 não dispara."""
         document = RandomGenerator.generate_cpf()
-        _post(document, 2985000)
+        _post(document, 4485000)
 
         body = _current(document)
 
@@ -24,15 +24,15 @@ class TestAmountSourceDailySumRule:
     def test_post_daily_sum_above_limit_returns_two_factor_required(self):
         """AMOUNT_SOURCE_DAILY_SUM: R$ 0,01 acima do teto pede 2FA."""
         document = RandomGenerator.generate_cpf()
-        _post(document, 2985001)
+        _post(document, 4485001)
 
         body = _current(document)
 
         assert body["status"] == "two_factor_required"
         assert body["metadata"]["reasons"][0]["rule"] == "AMOUNT_SOURCE_DAILY_SUM"
         assert body["metadata"]["signals"]["AMOUNT_SOURCE_DAILY_SUM"] == {
-            "sum_24h_cents": 3000001,
-            "limit_cents": 3000000,
+            "sum_24h_cents": 4500001,
+            "limit_cents": 4500000,
         }
 
     def test_post_previous_pix_older_than_24h_returns_approved(self):
@@ -57,7 +57,7 @@ class TestAmountSourceDailySumRule:
     def test_post_cnpj_above_cpf_limit_returns_approved(self):
         """ADR 0021: CNPJ tem teto próprio de R$ 50.000,00."""
         document = RandomGenerator.generate_cnpj()
-        _post(document, 2985001)
+        _post(document, 4485001)
 
         body = _current(document)
 

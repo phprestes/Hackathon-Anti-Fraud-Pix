@@ -1,65 +1,95 @@
 ---
 title: Calibração
-summary: Como os parâmetros das regras foram escolhidos com o simulador — metas, experimentos, configuração final, números e limites da evidência.
-related: [regras.md, ../02-arquitetura/decisoes/0020-simulador-para-calibracao.md, ../../scripts/calibration-results.md]
-sources: [scripts/simulate.py (seed 42), scripts/calibration-results.md]
+summary: Como os parâmetros das regras foram escolhidos no PixSim (custo ponderado, mundo A para escolher e mundo B para confirmar), a configuração final, o que ficou de fora de propósito e a trava de regressão do CI.
+related: [regras.md, analises.md, validacao-pixsim.md, ../02-arquitetura/decisoes/0020-simulador-para-calibracao.md, ../../scripts/calibration-results.md]
+sources: [scripts/calibrate.py, scripts/calibration-grid-pixsim.json, scripts/costs.py, scripts/cost-model.json, scripts/out/calibration-pixsim.md, scripts/calibration-gate.json]
 ---
 
 # Calibração
 
 > [Índice](../README.md) › Motor › Calibração
 >
-> **Responde a:** por que cada parâmetro tem o valor que tem? quanta fricção o motor gera? quanta fraude simulada ele barra? quanto isso vale como evidência?
+> **Responde a:** por que cada parâmetro tem o valor que tem? quanto custa, em fricção e em fraude barrada, mudar um parâmetro? quanto isso vale como evidência?
+
+**Métricas no PixSim, simulador de terceiros.** O PixSim ([validação](validacao-pixsim.md)) não é Pix real, mas as tipologias e o tráfego não foram desenhados por nós. O nosso simulador (`scripts/simulate.py`) é só fixture de CI e não justifica nenhum parâmetro desta página.
+
+Regerar: `make calibrate-pixsim` (cerca de 20 passadas de 1 min; o cache em `scripts/out/pixsim/calibration-cache.json` retoma uma execução interrompida).
 
 ## Como foi medido
 
-[`scripts/simulate.py`](../../scripts/simulate.py) (seed 42) gera 200 pagadores por 14 dias: 5.062 Pix, sendo 4.926 legítimos e 136 de fraude em 22 sequências de 5 tipologias (conta tomada, mula, fracionamento, sequestro noturno, fazenda de contas). Tudo vai pelo `POST /pix/transaction` em ordem cronológica, e o simulador compara a decisão com o rótulo que só ele conhece ([ADR 0020](../02-arquitetura/decisoes/0020-simulador-para-calibracao.md)). A tabela completa dos experimentos está em [`scripts/calibration-results.md`](../../scripts/calibration-results.md).
+- **Dados.** Mundo A (`scripts/out/pixsim/events.jsonl`, seed 20260910) para escolher; mundo B (`events-b.jsonl`, seed 20261017) para confirmar. Cada um tem 5.025 contas, 30 dias avaliados depois de 30 de burn-in, 125 mil Pix legítimos e 986 eventos de fraude.
+- **Objetivo.** Menor custo esperado por 1.000 Pix na visão do pagador (legítimo mais fraude `victim_to_mule`), com o [modelo de custo](../../scripts/cost-model.json) e a fraude multiplicada pelo peso de importância do PixSim (0,0071), que desfaz a superamostragem. Empates: menos legítimos reprovados, depois mais sequências barradas. A dispersão (lado da mula) é reportada à parte e não entra no objetivo.
+- **Grid.** Um parâmetro por vez a partir da linha de base (os padrões anteriores, fixados em `scripts/calibration-grid-pixsim.json`), mais a combinação dos melhores valores de cada parâmetro: 21 combinações no mundo A. O mundo B confirma a linha de base, a vencedora e as próximas colocadas.
+- **Parâmetros varridos:** teto diário, cauda da Poisson, corte do fracionamento, z do perfil, valor mínimo de aparelho novo, valor mínimo de primeiro Pix para um destino e limite noturno. São os do grid antigo mais as regras que mais disparam no PixSim.
 
-**Metas, nesta ordem:**
+**Metas, nesta ordem:** (1) legítimos reprovados perto de zero; (2) custo mínimo; (3) 2FA em legítimos abaixo de 5% quando o custo empata.
 
-1. Nenhum legítimo reprovado.
-2. Toda sequência de fraude com pelo menos um Pix barrado.
-3. 2FA em legítimos o mais baixo possível (meta ≤ 5%).
+## Experimentos no mundo A
 
-Os dados são sintéticos, então a busca parou na primeira configuração razoável, sem tuning fino.
+Efeito de cada parâmetro sozinho sobre a linha de base (custo R$ 143,58 por 1.000 Pix; 3,50% de 2FA em legítimos; 36,1% dos Pix de vítima barrados; 383 de 986 eventos com algum Pix barrado):
 
-## Experimentos
+| Mudança | Custo R$/1.000 | 2FA legítimos | Pix de vítima barrados | Eventos barrados |
+|---|---|---|---|---|
+| `FIRST_TIME_MIN_AMOUNT_CENTS` R$ 3.000 → **R$ 1.000** | **135,72** | 4,16% | 52,2% | 577 |
+| `LIMIT_NIGHT_AMOUNT_CENTS` R$ 1.000 → R$ 2.000 (não aplicado, ver abaixo) | 139,01 | 3,18% | 34,4% | 365 |
+| `POISSON_TAIL_PPM` 100 → **30** | 142,30 | 3,30% | 33,3% | 368 |
+| `PROFILE_Z_2FA_TENTHS` 35 → **45** | 142,33 | 3,35% | 35,2% | 376 |
+| `NEW_DEVICE_MIN_AMOUNT_CENTS` R$ 500 → **R$ 200** | 142,91 | 3,50% | 38,8% | 413 |
+| `AMOUNT_DAILY_SUM_CENTS` R$ 30.000 → **R$ 45.000** | 143,11 | 3,47% | 36,1% | 383 |
+| `POISSON_TAIL_PPM` 100 → 1.000 | 166,48 | 5,03% | 42,0% | 426 |
+| `SPLITTING_MIN_SUM_CENTS` R$ 15.000 → R$ 5.000 | 250,23 | 5,91% | 36,2% | 384 |
+| `LIMIT_NIGHT_AMOUNT_CENTS` R$ 1.000 → R$ 500 | 152,77 | 4,10% | 40,9% | 434 |
 
-| # | Mudança | Legítimos: aprovado / 2FA / reprovado | Sequências barradas | Escape de fracionamento | P95 |
-|---|---|---|---|---|---|
-| 0 | Linha de base (`2026.10.17-f4`) | 90,4% / 8,3% / **1,3%** (66 por `TYPOLOGY_SPLITTING`) | 22/22 | 21% | 52 ms |
-| 1 | `TYPOLOGY_SPLITTING` passa a contar só destinos **novos** | 89,8% / 10,0% / 0,2% | 22/22 | 21% | 57 ms |
-| 2 | Teto diário R$ 10 mil → R$ 30 mil | 94,3% / 5,7% / 0,0% | 22/22 | 32% | 57 ms |
-| 3 | Corte da Poisson 1.000 → 100 ppm | 96,2% / 3,8% / 0,0% | 22/22 | 40% | 56 ms |
-| 4 | Fracionamento com corte próprio de R$ 5 mil (desacoplado do teto diário) | 95,7% / 3,8% / 0,5% | 22/22 | 32% | 55 ms |
-| **5** | **Corte do fracionamento R$ 15 mil** | **≈ 96% / 3,8% / 0,04%** (2 Pix) | **22/22** | 34% | 55 ms |
+Leituras: o valor mínimo do primeiro Pix para um destino é o parâmetro de maior efeito no custo; o corte do fracionamento a R$ 5 mil é o pior ponto do grid (reprova 0,13% dos legítimos); acima de R$ 45 mil o teto diário não muda nada (R$ 45 mil e R$ 60 mil empatam). A tabela completa, com a visão de dispersão, fica em `scripts/out/calibration-pixsim.md`.
 
-Alternativas medidas e descartadas:
+## Configuração final (`2026.10.18-pixsim`)
 
-- Poisson a 10 ppm: 3,0% de 2FA, mas 58% de escape no fracionamento.
-- Fracionamento com corte de R$ 10 mil: 0,2% de legítimos reprovados.
-- Mínimo de 5 destinos novos: 0,3% de legítimos reprovados.
+Cinco parâmetros mudam juntos. O ganho da combinação (R$ 11,92) é menor que a soma dos ganhos isolados (R$ 15,4): os efeitos se sobrepõem, porque os parâmetros barram em parte os mesmos Pix.
 
-## Configuração final (`2026.10.18-calib3`)
-
-| Parâmetro | Antes | Depois | Por quê |
+| Parâmetro | Antes | Depois | Por quê (PixSim) |
 |---|---|---|---|
-| `RULE_AMOUNT_DAILY_SUM_CENTS` | R$ 10.000 | **R$ 30.000** | Respondia por 266 dos 347 casos de 2FA em legítimos: pagador intenso passa de R$ 10 mil por dia sem ser fraude. Acima de R$ 30 mil o 2FA quase só aparece em fraude |
-| `RULE_POISSON_TAIL_PPM` | 1.000 | **100** | A 0,001 a regra pedia 2FA a 143 legítimos; a 0,0001 sobram 47, e todas as rajadas simuladas continuam improváveis o bastante para disparar |
-| `RULE_SPLITTING_MIN_SUM_CENTS` | (usava o teto diário) | **R$ 15.000** | Desacoplar a tipologia do teto diário mantém o fracionamento visível mesmo com o teto em R$ 30 mil; R$ 15 mil é o menor corte com reprovação de legítimos ≈ 0 |
+| `RULE_FIRST_TIME_MIN_AMOUNT_CENTS` | R$ 3.000 | **R$ 1.000** | Maior queda de custo isolada (143,58 → 135,72); o Pix de vítima para destino novo passa a ser barrado a partir de R$ 1.000 (Pix de vítima barrados: 36,1% → 52,2%). Custo: +0,66 p.p. de 2FA em legítimos |
+| `RULE_NEW_DEVICE_MIN_AMOUNT_CENTS` | R$ 500 | **R$ 200** | Barra mais Pix de vítima (36,1% → 38,8%) sem mexer na fricção (3,50%) |
+| `RULE_POISSON_TAIL_PPM` | 100 | **30** | Menos 2FA em legítimos (3,50% → 3,30%) por um escape pequeno; 1.000 ppm é o pior ponto do eixo (5,03% de 2FA, custo 166,48) |
+| `RULE_PROFILE_Z_2FA_TENTHS` | 35 | **45** (z > 4,5) | Menos 2FA em legítimos (3,35%) com a captura praticamente igual (35,2%); z 2,5 custa 149,66 |
+| `RULE_AMOUNT_DAILY_SUM_CENTS` | R$ 30.000 | **R$ 45.000** | Platô: R$ 45 mil e R$ 60 mil custam o mesmo; fica o menor valor do platô, a maior sensibilidade. O ganho isolado é pequeno (R$ 0,47) |
+
+Resultado da combinação, linha de base → final:
+
+| Mundo | Custo R$/1.000 Pix | 2FA em legítimos | Legítimos reprovados | Pix de vítima barrados | Eventos com Pix barrado | Custo da dispersão R$/1.000 |
+|---|---|---|---|---|---|---|
+| A (escolha) | 143,58 → **131,66** (−8,3%) | 3,50% → 3,81% | 0,01% → 0,01% | 36,1% → 51,7% | 383 → 591 de 986 | 237,54 → 229,18 |
+| B (confirmação) | 157,60 → **149,24** (−5,3%) | 3,74% → 4,13% | 0,03% → 0,03% | 38,4% → 51,8% | 427 → 622 de 986 | 263,19 → 259,51 |
+
+A melhora aparece nos dois mundos, com 2FA em legítimos ainda abaixo de 5% e sem reprovar mais legítimos. O ganho em B é menor que em A (o grid foi escolhido em A); essa diferença é a melhor estimativa do quanto a escolha é específica de um mundo.
+
+### Mantido de propósito: limite noturno
+
+`RULE_LIMIT_NIGHT_AMOUNT_CENTS` fica em **R$ 1.000**, mantido por âncora regulatória (BCB), apesar de o grid preferir R$ 2.000. R$ 1.000 é o limite noturno padrão de pessoa física do Banco Central (Res. 142/2021); subir o corte pararia de pedir 2FA abaixo do teto que o regulador associa ao risco de sequestro relâmpago. O custo medido dessa escolha no PixSim, com os outros cinco parâmetros já aplicados: R$ 131,66 contra R$ 127,07 no mundo A (+R$ 4,59 por 1.000 Pix) e R$ 149,24 contra R$ 144,44 no mundo B (+R$ 4,80). O parâmetro está fixado como `pinned` no grid: é medido, nunca escolhido.
+
+### Não mudou
+
+`RULE_SPLITTING_MIN_SUM_CENTS` (R$ 15.000): o único valor testado abaixo dele piorou o custo e a reprovação de legítimos. Os limites de PJ e os demais parâmetros não foram varridos; não há evidência para movê-los.
 
 ## O que os números dizem e o que não dizem
 
-**Medem bem:**
-- **Fricção:** cerca de 4% dos Pix legítimos pedem 2FA e praticamente nenhum é reprovado.
-- **Latência:** P95 de 55 ms com as 17 regras e cerca de 15 consultas por Pix.
-- **Coerência:** cada regra dispara onde o catálogo diz.
+**Medem bem:** o efeito relativo de cada parâmetro sobre fricção, captura e custo ponderado em dois mundos de uma população que não desenhamos.
 
-**Não medem:** eficácia contra fraude real. As fraudes foram desenhadas por nós e as regras procuram exatamente esses padrões, então a calibração é **circular**. Ainda escapam 34% dos Pix de fracionamento e 24% dos de fazenda de contas, mas em toda sequência pelo menos um Pix é barrado. Medir a eficácia exigiria backtest com rótulos reais (MED, contestações); o caminho está na [ADR 0017](../02-arquitetura/decisoes/0017-ml-fora-do-prazo-e-do-hot-path.md).
+**Não medem:**
+- **Eficácia em produção.** O PixSim é sintético; os níveis absolutos de captura (≈ 52% dos Pix de vítima) não valem como previsão.
+- **O custo absoluto.** Depende das premissas de [`cost-model.json`](../../scripts/cost-model.json) e do peso de importância; o que se compara é a diferença entre configurações.
+- **Independência total.** Escolhi em A e confirmei em B, mas os dois mundos vêm do mesmo gerador; B não é dado novo no sentido de outra população.
+- **Fraude de dispersão.** É reportada, não otimizada.
+
+## Trava de regressão no CI
+
+`make calibrate-check` roda o backtest com os padrões sobre o nosso simulador (seed 42, 200 pagadores, 14 dias) e compara com [`scripts/calibration-gate.json`](../../scripts/calibration-gate.json): legítimos reprovados ≤ 0,1%, 2FA em legítimos ≤ 7,0% e 100% das sequências com algum Pix barrado. É uma **trava contra regressão**, não a meta: o fixture não tem valor estatístico e não justifica parâmetro.
+
+Com os parâmetros novos a trava mediu 0,04% de reprovados, 6,59% de 2FA (o primeiro Pix mais baixo para destino novo pede mais 2FA no fixture) e 100% das sequências. O teto de 2FA subiu de 5,0% para 7,0%, o valor medido com folga; os outros dois ficaram. Os experimentos antigos feitos no fixture estão em [`scripts/calibration-results.md`](../../scripts/calibration-results.md), só como histórico.
 
 ## Como recalibrar
 
-1. `make reset && make simulate` para ter a linha de base.
-2. Mudar um padrão em `src/constants.py` (ou exportar a variável `RULE_*` no ambiente da `api`).
-3. `make reset && make simulate` de novo; comparar.
-4. Ficou melhor: atualizar `RULE_SET_VERSION`, esta página, o [catálogo](regras.md), o README e o CHANGELOG.
+1. `make calibrate-pixsim` (precisa dos mundos A e B; `make pixsim-datasets` gera).
+2. Mudar os padrões escolhidos em `src/constants.py` (ou exportar `RULE_*` no ambiente da `api`), atualizar `RULE_SET_VERSION`.
+3. `make reset check`, `make calibrate-check` e `make analyze`; se a trava falhar, ajustar o teto em `scripts/calibration-gate.json` para o valor medido e registrar aqui.
+4. Atualizar esta página, o [catálogo](regras.md), o README e o CHANGELOG.

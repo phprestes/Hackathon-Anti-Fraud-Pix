@@ -24,22 +24,22 @@ class TestProfileNewDeviceRule:
         assert "PROFILE_NEW_DEVICE" not in _rules(body)
 
     def test_post_new_device_at_minimum_amount_returns_two_factor_required(self):
-        """PROFILE_NEW_DEVICE: pagador com histórico, device novo e R$ 500,00 pede 2FA."""
+        """PROFILE_NEW_DEVICE: pagador com histórico, device novo e R$ 200,00 pede 2FA."""
         document = RandomGenerator.generate_cpf()
         _first_pix(document, "dvc-old")
 
-        body = _post(document, 50000)
+        body = _post(document, 20000)
 
         assert body["status"] == "two_factor_required"
         assert "PROFILE_NEW_DEVICE" in _rules(body)
-        assert body["metadata"]["signals"]["PROFILE_NEW_DEVICE"] == {"history_size": 1, "amount_cents": 50000}
+        assert body["metadata"]["signals"]["PROFILE_NEW_DEVICE"] == {"history_size": 1, "amount_cents": 20000}
 
     def test_post_new_device_below_minimum_amount_returns_approved(self):
-        """PROFILE_NEW_DEVICE: R$ 499,99 não dispara."""
+        """PROFILE_NEW_DEVICE: R$ 199,99 não dispara."""
         document = RandomGenerator.generate_cpf()
         _first_pix(document, "dvc-old")
 
-        body = _post(document, 49999)
+        body = _post(document, 19999)
 
         assert body["status"] == "approved"
 

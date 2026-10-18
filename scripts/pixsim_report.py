@@ -13,7 +13,7 @@ sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(HERE, "..", "src"))
 
 from analyze import psi  # noqa: E402
-from costs import DECISION_SCORE, KS, expected_cost, precision_at_k  # noqa: E402
+from costs import DECISION_SCORE, KS, expected_cost, group_of, precision_at_k  # noqa: E402
 from in_memory_history import InMemoryHistory  # noqa: E402
 from rules import build_rules, engine  # noqa: E402
 from rules.features import FEATURE_NAMES  # noqa: E402
@@ -24,13 +24,6 @@ DOC = os.path.join(HERE, "..", "docs", "05-motor", "validacao-pixsim.md")
 OURS = os.path.join(HERE, "out", "train-events.jsonl")
 START_MARK, END_MARK = "<!-- pixsim:tables:start -->", "<!-- pixsim:tables:end -->"
 STATUSES = ("approved", "two_factor_required", "rejected")
-DISPERSAL_ROLES = {"fraudster_seed", "mule_forward", "cash_out"}
-
-
-def group_of(event):
-    if event["label"] == "legit":
-        return "legit"
-    return "dispersal" if event.get("role") in DISPERSAL_ROLES else "victim"
 
 
 def light(event, status, shadow):
@@ -249,11 +242,11 @@ def render(pix, ours, psi_rows, extra):
     L += ["### Tamanho avaliado", "",
           table(["Conjunto", "Pix totais", "Burn-in (histórico)", "Legítimos avaliados", "Fraude pagador→mula", "Fraude dispersão"],
                 [["PixSim", str(pix["n_total"]), str(pix["n_burn_in"]), str(c["legit"]), str(c["victim"]), str(c["dispersal"])],
-                 ["Nosso simulador (seed 42)", str(ours["n_total"]), "0", str(ours["counts"]["legit"]),
+                 ["Fixture do CI, sem valor estatístico (seed 42)", str(ours["n_total"]), "0", str(ours["counts"]["legit"]),
                   str(ours["counts"]["victim"]), "n/a"]]), ""]
     L += ["### Fricção em legítimos", "",
           table(["Conjunto", "Legítimos", "approved", "2FA", "rejected"],
-                [["PixSim", *status_row(Counter(pix["friction"]))], ["Nosso simulador", *status_row(Counter(ours["friction"]))]]), ""]
+                [["PixSim", *status_row(Counter(pix["friction"]))], ["Fixture do CI, sem valor estatístico", *status_row(Counter(ours["friction"]))]]), ""]
     L += ["### Captura por tipologia do PixSim", "",
           "Pagador→mula é o Pix que a vítima faz (a fraude contra o nosso cliente). `fraudster_seed` é o Pix semente do golpe do Pix errado, "
           "enviado pelo fraudador à vítima. Dispersão (`mule_forward`, `cash_out`) é a mula movendo o dinheiro: o nosso motor só a veria "
@@ -276,7 +269,7 @@ def render(pix, ours, psi_rows, extra):
     rows = []
     for name, data in (("PixSim, visão pagador (legítimo + pagador→mula)", pix["cost"]["victim"]),
                        ("PixSim, visão dispersão (legítimo + dispersão)", pix["cost"]["dispersal"]),
-                       ("Nosso simulador", ours["cost"]["victim"])):
+                       ("Fixture do CI, sem valor estatístico", ours["cost"]["victim"])):
         w = data["weighted_components_per_1000"]
         rows.append([name, brl(data["raw_per_1000_cents"]), brl(data["weighted_per_1000_cents"]), brl(w["fraud_approved"] + w["fraud_2fa_escape"]),
                      brl(w["legit_2fa"] + w["legit_rejected"])])
@@ -285,7 +278,7 @@ def render(pix, ours, psi_rows, extra):
     L += ["### P@k diário (V1)", "", "Média diária da precisão nos k Pix mais bem ranqueados (fraude superamostrada: a precisão é inflada na mesma proporção do peso).", ""]
     rows = []
     for name, data in (("PixSim, visão pagador", pix["p_at_k"]["victim"]), ("PixSim, visão dispersão", pix["p_at_k"]["dispersal"]),
-                       ("Nosso simulador", ours["p_at_k"]["victim"])):
+                       ("Fixture do CI, sem valor estatístico", ours["p_at_k"]["victim"])):
         for label, key in (("regras", "rules"), ("regras + LightGBM", "rules_lightgbm")):
             rows.append([f"{name}, {label}", *[pct(data[key][k]) for k in KS]])
     L += [table(["Conjunto, ranking", *[f"P@{k}" for k in KS]], rows), ""]
@@ -295,7 +288,7 @@ def render(pix, ours, psi_rows, extra):
     rows = [[n, pct(pix["rule_rates"]["legit"].get(n, 0)), pct(pix["rule_rates"]["victim"].get(n, 0)),
              pct(pix["rule_rates"]["dispersal"].get(n, 0)), pct(ours["rule_rates"]["legit"].get(n, 0)),
              pct(ours["rule_rates"]["victim"].get(n, 0))] for n in names]
-    L += [table(["Regra", "PixSim legítimo", "PixSim pagador→mula", "PixSim dispersão", "Nosso legítimo", "Nosso fraude"], rows), ""]
+    L += [table(["Regra", "PixSim legítimo", "PixSim pagador→mula", "PixSim dispersão", "Fixture do CI legítimo", "Fixture do CI fraude"], rows), ""]
     L += ["### Modelos em shadow (treinados no nosso simulador)", "",
           "AUC é pontuação do modelo na fraude contra o legítimo; recall e fricção usam o limiar do próprio modelo. "
           "No \"Nosso simulador\" os modelos foram treinados nesse mesmo gerador (seed 42): é desempenho dentro da distribuição.", ""]

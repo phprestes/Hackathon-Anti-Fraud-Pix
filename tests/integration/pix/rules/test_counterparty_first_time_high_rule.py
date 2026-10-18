@@ -13,7 +13,7 @@ def _payer_with_history(destination: str = None, amount: int = 15000):
     return document
 
 
-def _post(document: str, destination: str = None, amount: int = 300001):
+def _post(document: str, destination: str = None, amount: int = 100001):
     _, body = RequestGenerator.POST_pix(PayloadGenerator.pix(
         payer_document=document, destination_document=destination, amount=amount, device_id=f"dvc-{document}"
     ))
@@ -26,7 +26,7 @@ def _rules(body: dict) -> list:
 
 class TestCounterpartyFirstTimeHighRule:
     def test_post_new_destination_above_limit_returns_two_factor_required(self):
-        """COUNTERPARTY_FIRST_TIME_HIGH: histórico + destino novo + R$ 3.000,01 pede 2FA."""
+        """COUNTERPARTY_FIRST_TIME_HIGH: histórico + destino novo + R$ 1.000,01 pede 2FA."""
         document = _payer_with_history()
 
         body = _post(document)
@@ -35,10 +35,10 @@ class TestCounterpartyFirstTimeHighRule:
         assert "COUNTERPARTY_FIRST_TIME_HIGH" in _rules(body)
 
     def test_post_new_destination_at_limit_returns_approved(self):
-        """COUNTERPARTY_FIRST_TIME_HIGH: exatamente R$ 3.000,00 não dispara."""
+        """COUNTERPARTY_FIRST_TIME_HIGH: exatamente R$ 1.000,00 não dispara."""
         document = _payer_with_history()
 
-        body = _post(document, amount=300000)
+        body = _post(document, amount=100000)
 
         assert "COUNTERPARTY_FIRST_TIME_HIGH" not in _rules(body)
 

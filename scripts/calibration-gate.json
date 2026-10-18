@@ -1,6 +1,6 @@
 {
   "events": {"seed": 42, "payers": 200, "days": 14},
   "max_legit_rejected_pct": 0.1,
-  "max_legit_2fa_pct": 5.0,
+  "max_legit_2fa_pct": 7.0,
   "min_fraud_sequences_barred_pct": 100
 }
