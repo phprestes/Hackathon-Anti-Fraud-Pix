@@ -30,6 +30,7 @@ Versão entregue ao Hackathon QI Tech 2026: 15 regras que decidem, 5 modelos em 
 | Documentado | Atualização das imagens PNG dos diagramas C4 em `docs/02-arquitetura/diagramas/` sincronizadas com as fontes PlantUML atualizadas | `docs/02-arquitetura/diagramas/*.png` | Diagramas visuais renderizados a partir das fontes C4-PlantUML alinhadas à arquitetura final | agente (Antigravity) |
 | Corrigido | Dois rótulos dos `.puml` que o PlantUML renderizava errado (`--set, --disable` saía tachado; `__init__.py` saía sublinhado): trocados por texto sem marcação | `docs/02-arquitetura/diagramas/c4-backtest.puml`, `c4-componentes-motor.puml`, `docs/02-arquitetura/c4.md` | Renderização limpa | agente (Claude Code) |
 | Documentado | Diagrama C4 da retroalimentação pelo MED (containers do replay, fila de desfechos, destinos confirmados, base de treino, retreino e monitoramento, com passos numerados) e diagrama de sequência do ciclo; seção 7 do `c4.md` | `docs/02-arquitetura/diagramas/c4-retroalimentacao.puml`, `seq-retroalimentacao.puml`, `docs/02-arquitetura/c4.md` | O ciclo de feedback não aparecia nos diagramas | agente (Claude Code) |
+| Documentado | Diagramas da retroalimentação (C4 e sequência, PNG da Laura) incluídos no relatório como figuras 6 e 7 (seção 6.8) e no `c4.md`; legenda da figura 4 atualizada (modelos; mesmo código em produção e no backtest); PDF com 43 páginas | `docs/relatorio/`, `docs/02-arquitetura/c4.md`, `README.md` | Ciclo de feedback visível no relatório | agente (Claude Code) |
 
 ### 2026-10-17
 

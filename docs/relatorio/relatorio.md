@@ -257,7 +257,7 @@ Os diagramas abaixo (PlantUML em `docs/02-arquitetura/diagramas/`) mostram o sis
 
 ![Componentes da API: camadas do Base Service mais o motor (C4, nível 3).](../02-arquitetura/diagramas/c4-componentes-API.png){ height=18cm }
 
-![Componentes do motor: regras, sinais e estatística (C4, nível 3).](../02-arquitetura/diagramas/c4-componentes-motor.png){ height=16cm }
+![Componentes do motor: regras, sinais, estatística e modelos; o mesmo código em produção e no backtest (C4, nível 3).](../02-arquitetura/diagramas/c4-componentes-motor.png){ height=16cm }
 
 ![Backtest em lote e treino, que reutilizam o mesmo motor (visão offline).](../02-arquitetura/diagramas/c4-backtest.png){ width=95% }
 
@@ -706,6 +706,10 @@ O corte de treino $T$ é o fim do mundo A; uma fraude só vira positiva se `tran
 ## Retroalimentação pelo MED
 
 Simulada **só no backtest** (a API, o banco e as regras ativas não mudam; ADR 0032). O mundo B é reproduzido em ordem de `transaction_date`; cada fraude de vítima reportada gera um desfecho em `transaction_date` + atraso de reporte, aplicado ao histórico quando o relógio dos dados o alcança. Pix reprovado não liquida e não gera desfecho (viés de seleção); com 2FA, 10% escapam e geram desfecho. Peças: regra `COUNTERPARTY_CONFIRMED_FRAUD` (destino que recebeu fraude confirmada de outro pagador antes de $t$, pedindo 2FA, escolhido no mundo A por custar R\$ 103,47 por 1.000 Pix contra R\$ 225,28 de reprovar), LightGBM instalado como regra extra e retreino a cada 7 dias com promoção *champion/challenger*.
+
+![Retroalimentação pelo MED no backtest: containers e passos numerados do ciclo.](../02-arquitetura/diagramas/c4-retroalimentacao.png){ height=17cm }
+
+![Sequência da retroalimentação: os desfechos vencidos são entregues antes de avaliar cada Pix, e Pix reprovado nunca gera desfecho.](../02-arquitetura/diagramas/seq-retroalimentacao.png){ width=100% }
 
 | Cenário | Custo R\$/1.000 | Captura | Fricção em legítimos | Fraudes sem desfecho possível | Escapes confirmados |
 |---|---|---|---|---|---|
