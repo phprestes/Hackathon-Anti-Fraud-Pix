@@ -1,0 +1,47 @@
+@startuml
+title Sequência: retroalimentação pelo MED no backtest (ADR 0032)
+
+actor "Time de risco" as risco
+participant "Replay\n(feedback.py)" as replay
+participant "Fila de desfechos\n(heap por data)" as queue
+participant "Destinos com fraude\nconfirmada" as book
+participant "Motor\n(15 regras + campeão\n+ CONFIRMED_FRAUD)" as engine
+participant "Base de treino\n(Pool)" as pool
+participant "Retreino semanal\n(LightGBM)" as retrain
+participant "Monitoramento\nsemanal" as monitor
+
+risco -> replay : make feedback
+replay -> pool : semente com o mundo A\n(rótulos conhecidos no fim dele)
+
+loop cada Pix do mundo B, em ordem de transaction_date (t)
+    replay -> queue : entregar desfechos com chegada <= t
+    queue --> book : marca o destino (pagador confirmado)
+    queue --> pool : Pix vira positivo conhecido
+
+    replay -> engine : avaliar Pix (contexto até t)
+    engine -> book : destino já marcado por outro pagador?
+    book --> engine : sim: CONFIRMED_FRAUD pede 2FA
+    engine --> replay : decisão (a mais severa vence)
+    replay -> pool : guarda features do Pix
+
+    alt fraude aprovada, ou 2FA que escapou (10%)
+        alt a vítima reporta ao MED
+            replay -> queue : desfecho com chegada em t + atraso de reporte
+        else nunca reportada
+            note right of replay : sem desfecho
+        end
+    else reprovada, ou 2FA que barrou
+        note right of replay : não liquida: nunca gera desfecho\n(viés de seleção)
+    end
+
+    opt virou a semana (7 dias)
+        replay -> monitor : fecha a semana: custo, escapes,\nprecisão do 2FA observada x real
+        replay -> retrain : semana do desafiante terminou?
+        retrain -> engine : promove o desafiante se custou menos que o campeão
+        retrain -> pool : treina novo desafiante\n(positivos reportados; negativos já maduros)
+        retrain --> engine : desafiante roda em sombra na semana seguinte
+    end
+end
+
+replay --> risco : tabelas por cenário e semana\n(validacao-pixsim.md)
+@enduml
