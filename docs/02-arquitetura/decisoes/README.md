@@ -45,5 +45,9 @@ Uma decisão por arquivo, sempre no mesmo formato: **Contexto → Decisão → A
 | [0026](0026-graphsage-e-hmm-no-worker.md) | GraphSAGE e HMM em numpy, só no worker, lidos em shadow | Motor | aceita |
 | [0027](0027-pipeline-de-calibracao-e-ci.md) | Pipeline de calibração (grid sobre o backtest) e CI com trava de regressão | Processo | aceita |
 | [0028](0028-peer-group-medido-e-descartado.md) | Peer group medido no PixSim e descartado (efeito nulo, +94 ms no pior caso) | Motor | aceita (regra fora) |
+| [0029](0029-pixsim-como-referencia.md) | PixSim como referência das métricas; o nosso simulador só para CI | Processo | aceita |
+| [0030](0030-custo-assimetrico-e-p-at-k.md) | Custo assimétrico em R$ e P@k como métricas de decisão | Motor | aceita |
+| [0031](0031-modelos-treinados-no-pixsim-e-rotulos-atrasados.md) | Modelos treinados no PixSim e treino só com rótulos já reportados | Motor | aceita |
+| [0032](0032-retroalimentacao-pelo-med-no-backtest.md) | Retroalimentação pelo MED simulada no backtest, não na API | Processo | aceita |
 
 Decisão nova: siga a [skill nova-decisao](../../../.agents/skills/nova-decisao/SKILL.md). Ela adiciona a linha aqui, no [`llms.txt`](../../../llms.txt) e no [CHANGELOG](../../../CHANGELOG.md).

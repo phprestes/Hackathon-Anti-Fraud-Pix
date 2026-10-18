@@ -52,6 +52,10 @@ Documentação em pt-BR; código, rotas, campos e códigos de regra em inglês. 
 - [ADR 0026](docs/02-arquitetura/decisoes/0026-graphsage-e-hmm-no-worker.md): GraphSAGE e HMM em numpy no worker, shadow
 - [ADR 0027](docs/02-arquitetura/decisoes/0027-pipeline-de-calibracao-e-ci.md): make calibrate, make calibrate-check e GitHub Actions
 - [ADR 0028](docs/02-arquitetura/decisoes/0028-peer-group-medido-e-descartado.md): peer group medido no PixSim e descartado
+- [ADR 0029](docs/02-arquitetura/decisoes/0029-pixsim-como-referencia.md): PixSim como referência das métricas; nosso simulador só para CI
+- [ADR 0030](docs/02-arquitetura/decisoes/0030-custo-assimetrico-e-p-at-k.md): custo assimétrico em R$ e P@k
+- [ADR 0031](docs/02-arquitetura/decisoes/0031-modelos-treinados-no-pixsim-e-rotulos-atrasados.md): modelos treinados no PixSim, rótulos atrasados
+- [ADR 0032](docs/02-arquitetura/decisoes/0032-retroalimentacao-pelo-med-no-backtest.md): retroalimentação pelo MED no backtest
 
 ## API
 
