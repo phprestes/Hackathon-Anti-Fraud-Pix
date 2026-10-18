@@ -20,7 +20,7 @@ A pesquisa coloca GNN e modelos de sequência fora do caminho síncrono: rodam e
 - **GraphSAGE**:
   - **Arquitetura:** 2 camadas com agregação por média e até 10 vizinhos amostrados (como na pesquisa), hidden 16.
   - **Treino:** em `scripts/models/train_graphsage.py`, com backprop escrito à mão e conferido contra gradiente numérico.
-  - **Grafo:** pagador → destino, em janelas de 72 h, com 7 features de nó (graus, valores, idade, fração de pagadores novos, dispersão). O rótulo de nó é "foi destino de fraude no simulador".
+  - **Grafo:** pagador → destino, em janelas de 72 h, com 7 features de nó (graus, valores, idade, fração de pagadores novos, dispersão). O rótulo de nó é "foi destino de fraude no simulador"; o modelo instalado foi retreinado com o `is_mule` do PixSim A ([ADR 0031](0031-modelos-treinados-no-pixsim-e-rotulos-atrasados.md)).
   - **Serviço:** a cada ciclo, o worker monta o subgrafo da janela via SQL, roda o forward e grava `account_risk_score` com `model='graphsage'`.
 - **HMM**:
   - **Modelo:** discreto, de 3 estados, com 12 símbolos por Pix (faixa de valor relativa ao próprio pagador × destino novo × noite).

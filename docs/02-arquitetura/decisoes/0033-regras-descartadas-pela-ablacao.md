@@ -33,7 +33,7 @@ Sai a regra com ablação negativa e nenhum dos três caminhos.
 | `COUNTERPARTY_FLAGGED` | contraparte | −11,76 | Só análoga ao art. 39-B, §1º, I (usa as nossas reprovações, não notificações de infração do DICT); 2FA em 0,72% dos legítimos com lift de 1,8x |
 | `AMOUNT_SOURCE_DAILY_SUM` | montante | −8,69 | Nenhum normativo conferido fixa soma diária de Pix; platô de custo entre R$ 30 mil e R$ 60 mil |
 
-Ficam, mesmo negativas: `COUNTERPARTY_NEW_ACCOUNT` (art. 39-B, §1º, II), `LIMIT_NIGHT_AMOUNT` (Res. BCB 142/2021 e IN BCB 512/2024), `PROFILE_AMOUNT_ROBUST_Z` (Iglewicz & Hoaglin; −R$ 1,45) e `TYPOLOGY_MULE` (art. 39-B, §1º, II + funil; −R$ 0,38).
+Ficam, mesmo negativas: `COUNTERPARTY_NEW_ACCOUNT` (art. 39-B, §1º, II), `LIMIT_NIGHT_AMOUNT` (Res. BCB 142/2021 e IN BCB 512/2024), `PROFILE_AMOUNT_ROBUST_Z` (Iglewicz & Hoaglin; −R$ 1,45 com 18 regras, −R$ 1,54 com 15) e `TYPOLOGY_MULE` (art. 39-B, §1º, II + funil; −R$ 0,38 com 18 regras, −R$ 0,39 com 15).
 
 Na ablação refeita com as 15 regras, `LIMIT_SINGLE_AMOUNT` passa de R$ 0,00 a −R$ 0,22 (nunca dispara em Pix de vítima; muda só o histórico de 28 legítimos). Fica: a diferença está abaixo de R$ 1 por 1.000 Pix, que nesta escala é ruído, e a regra é o único teto de exposição por Pix do motor.
 

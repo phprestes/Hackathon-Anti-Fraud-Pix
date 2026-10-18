@@ -28,7 +28,7 @@ sources: [Desafio Antifraude Pix, slides do hackathon, Projeto fase 1 (glossári
 | **id × key** | `id` é o SERIAL interno, nunca exposto. `key` é o UUID da análise. O `id` do Pix é de quem chama e serve de chave de consulta ([ADR 0011](02-arquitetura/decisoes/0011-uuid-key-publica.md)). |
 | **Idempotência** | Repetir o mesmo Pix (mesmo `id`, mesmo corpo) devolve a análise original sem reanalisar ([ADR 0012](02-arquitetura/decisoes/0012-idempotencia-pelo-id-do-pix.md)). |
 | **ISPB** | Código de 8 dígitos que identifica a instituição no sistema de pagamentos. É o `destination_account.participant`. |
-| **Janela** | Intervalo `[transaction_date − N, transaction_date)` usado por regras de velocity e montante ([ADR 0007](02-arquitetura/decisoes/0007-relogio-da-transacao.md)). |
+| **Janela** | Intervalo `[transaction_date − N, transaction_date)` usado por regras de velocity e perfil ([ADR 0007](02-arquitetura/decisoes/0007-relogio-da-transacao.md)). |
 | **MED** | Mecanismo Especial de Devolução do Pix: regras para devolver um Pix quando há fundada suspeita de fraude (Regulamento do Pix, cap. XI, seção II, arts. 41-B a 41-D). Fonte do rótulo atrasado ([Res. BCB 1/2020](https://www.bcb.gov.br/content/estabilidadefinanceira/pix/Pix_Regulation/Resolution_BCB_1.pdf), tradução oficial em inglês). |
 | **Motor de regras** | A peça que junta sinais e devolve decisão com motivo ([motor](05-motor/motor-de-regras.md)). |
 | **P@k** | Precisão nos k Pix mais bem ranqueados do dia: uma mesa de k analistas olhando os k piores. Inflada pela superamostragem de fraude do PixSim. |
@@ -37,7 +37,7 @@ sources: [Desafio Antifraude Pix, slides do hackathon, Projeto fase 1 (glossári
 | **QIT code** | Código único de cada erro da API (`QIT000001`…). Decisão `rejected` não é erro. |
 | **Regra** | Uma classe em `src/rules/` que olha um sinal e diz se dispara ([catálogo](05-motor/regras.md)). |
 | **`RuleContext`** | Objeto imutável com os agregados de histórico, montado pelo controller e lido pelas regras. |
-| **Rótulo atrasado** | A fraude só é confirmada dias depois (mediana de 2 dias no PixSim, p90 de 19,8), pelo reporte ao MED. O treino usa só o que já foi reportado ([ADR 0031](02-arquitetura/decisoes/0031-modelos-treinados-no-pixsim-e-rotulos-atrasados.md)). |
+| **Rótulo atrasado** | A fraude só é confirmada dias depois (mediana de 2,1 dias e p90 de 17,5 nos Pix de vítima do PixSim), pelo reporte ao MED. O treino usa só o que já foi reportado ([ADR 0031](02-arquitetura/decisoes/0031-modelos-treinados-no-pixsim-e-rotulos-atrasados.md)). |
 | **Severidade** | Ordem das decisões: `rejected` (2) > `two_factor_required` (1) > `approved` (0). A maior vence. |
 | **Shadow mode** | Modelo que calcula e grava em `metadata.shadow` o que decidiria, mas nunca muda a decisão ([ADR 0022](02-arquitetura/decisoes/0022-shadow-mode.md)). |
 | **Sinal** | Qualquer dado que ajuda a decidir: do payload (valor, hora, idade da conta, aparelho) ou do histórico. |

@@ -21,7 +21,7 @@ A pesquisa coloca gradient boosting no hot path (2–8 ms) e Isolation Forest co
   - LogReg com `class_weight` balanceado e calibração de Platt (a base tem cerca de 2,5% de fraude; Dal Pozzolo, 2015).
   - LightGBM com 100 árvores, 15 folhas e `scale_pos_weight`.
   - Isolation Forest treinado só com legítimos, sem rótulo.
-- **Exportação** para `src/rules/models/artifacts/*.json`: pesos e Platt; árvores como listas aninhadas; tamanho das folhas e `n_samples` do Isolation Forest. Cada arquivo traz `warning: "mock: synthetic labels"`.
+- **Exportação** para `src/rules/models/artifacts/*.json`: pesos e Platt; árvores como listas aninhadas; tamanho das folhas e `n_samples` do Isolation Forest. Cada arquivo traz `warning: "mock: synthetic labels"`. *Atualização:* a regressão logística e o LightGBM instalados foram retreinados no mundo A do PixSim, com `warning` "synthetic labels: PixSim simulator"; só o `iforest.json` segue o do simulador ([ADR 0031](0031-modelos-treinados-no-pixsim-e-rotulos-atrasados.md)).
 - **Inferência** em `src/rules/models/` só com `math`. O `make model-parity` compara com `predict_proba`/`decision_function` da biblioteca sobre 14.202 Pix do nosso simulador (seed 7, normal e perturbado), medido com os modelos instalados em 2026-10-18: diferença máxima de 1,1e-15 na regressão logística, 1,1e-16 no LightGBM e 1,7e-16 no score do Isolation Forest (5,3e-15 no comprimento de caminho). Tolerância do script: 1e-6.
 - As regras `MODEL_LOGREG`, `MODEL_LIGHTGBM` e `MODEL_IFOREST` são **shadow** ([ADR 0022](0022-shadow-mode.md)). Os arquivos são lidos uma vez, em `build_rules()`; se um faltar, a regra não é registrada e a API sobe.
 

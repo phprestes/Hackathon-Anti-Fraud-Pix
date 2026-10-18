@@ -20,7 +20,7 @@ O enunciado diz "Ponto de partida: o Base Service" e avalia "alinhamento com o B
 Copiar o `bootcamp-base-api` da Aula 1 para a raiz do repositório e construir em cima dele:
 
 - Camadas, `app.py`, middlewares (`X-Request-ID`, log, `INTERNAL-TOKEN`, sessão), `SchemaHandler`, erros `QIT000xxx` e a checagem de código duplicado no boot ficam como estão.
-- O exemplo `sample_entity` continua no código até a primeira rota `/pix/transaction` substituí-lo, para a suíte herdada seguir verde e servir de referência.
+- O exemplo `sample_entity` ficou no código até a primeira rota `/pix/transaction` substituí-lo, para a suíte herdada seguir verde e servir de referência; foi removido quando a rota do Pix entrou.
 - O README original vai para [`docs/referencia/base-service-readme.md`](../../referencia/base-service-readme.md); o guia de pastas, para [`docs/referencia/como-o-projeto-e-organizado.md`](../../referencia/como-o-projeto-e-organizado.md).
 
 ## Alternativas descartadas
@@ -38,4 +38,4 @@ Copiar o `bootcamp-base-api` da Aula 1 para a raiz do repositório e construir e
 ## Consequências
 
 - Mesma stack: Python 3.11, FastAPI, SQLAlchemy 2, PostgreSQL 16, jsonschema, Docker Compose.
-- Remover o `sample_entity` é um item explícito do [CHANGELOG](../../../CHANGELOG.md) quando acontecer, junto com os códigos `QIT001xxx`.
+- Remover o `sample_entity` foi registrado no [CHANGELOG](../../../CHANGELOG.md), junto com os códigos `QIT001xxx`.

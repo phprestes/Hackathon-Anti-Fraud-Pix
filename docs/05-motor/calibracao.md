@@ -28,7 +28,7 @@ Regerar: `make calibrate-pixsim` (cerca de 20 passadas de 1 min; o cache em `scr
 
 Efeito de cada parâmetro sozinho sobre a linha de base (custo R$ 143,58 por 1.000 Pix; 3,50% de 2FA em legítimos; 36,1% dos Pix de vítima barrados; 383 de 986 eventos com algum Pix barrado):
 
-**Duas bases para o mesmo eixo.** Esta tabela move um parâmetro por vez a partir dos valores de antes da calibração (por isso Poisson a 1.000 ppm custa R$ 166,48). A [análise de sensibilidade](analises.md) varre o mesmo eixo com os outros parâmetros já nos valores atuais, e lá 1.000 ppm custa R$ 155,90. Os dois números não se contradizem: a base é outra.
+**Duas bases para o mesmo eixo.** Esta tabela move um parâmetro por vez a partir dos valores de antes da calibração (por isso Poisson a 1.000 ppm custa R$ 166,48). A [análise de sensibilidade](analises.md) varre o mesmo eixo com os outros parâmetros já nos valores atuais, e lá 1.000 ppm custa R$ 134,12. Os dois números não se contradizem: a base é outra.
 
 | Mudança | Custo R$/1.000 | 2FA legítimos | Pix de vítima barrados | Eventos barrados |
 |---|---|---|---|---|
@@ -95,7 +95,7 @@ Com os parâmetros acima, a ablação mostrou que `TYPOLOGY_SPLITTING`, `COUNTER
 
 `make calibrate-check` roda o backtest com os padrões sobre o nosso simulador (seed 42, 200 pagadores, 14 dias) e compara com [`scripts/calibration/calibration-gate.json`](../../scripts/calibration/calibration-gate.json): legítimos reprovados ≤ 0,1%, 2FA em legítimos ≤ 7,0% e 100% das sequências com algum Pix barrado. É uma **trava contra regressão**, não a meta: o fixture não tem valor estatístico e não justifica parâmetro.
 
-Com os parâmetros novos a trava mediu 0,04% de reprovados, 6,59% de 2FA (o primeiro Pix mais baixo para destino novo pede mais 2FA no fixture) e 100% das sequências. O teto de 2FA subiu de 5,0% para 7,0%, o valor medido com folga; os outros dois ficaram. Os experimentos antigos no fixture foram descartados: eram circulares (as fraudes são nossas) e não justificam nenhum parâmetro.
+Com os parâmetros novos e as 18 regras a trava mediu 0,04% de reprovados, 6,59% de 2FA; com as 15 regras de hoje, 0% de reprovados e 6,6% de 2FA ([ADR 0033](../02-arquitetura/decisoes/0033-regras-descartadas-pela-ablacao.md)) (o primeiro Pix mais baixo para destino novo pede mais 2FA no fixture) e 100% das sequências. O teto de 2FA subiu de 5,0% para 7,0%, o valor medido com folga; os outros dois ficaram. Os experimentos antigos no fixture foram descartados: eram circulares (as fraudes são nossas) e não justificam nenhum parâmetro.
 
 ## Como recalibrar
 

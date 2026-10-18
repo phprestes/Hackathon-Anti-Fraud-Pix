@@ -11,7 +11,7 @@ sources: [Desafio Antifraude Pix (seções 3 e 4, critério 3), bootcamp-base-ap
 >
 > **Responde a:** quais tabelas existem? por que cada coluna? quais índices servem às regras?
 
-**Estado:** implementado em `database/database.sql`. As cinco primeiras tabelas são escritas pela API; `account_risk_score` e `payer_sequence_score` são escritas só pelo `worker` ([ADR 0025](../02-arquitetura/decisoes/0025-cold-path-worker.md)).
+**Estado:** implementado em `database/database.sql`. As quatro primeiras tabelas são da API (`analysis_status` é o domínio fixo dos status; as outras três recebem um `INSERT` por Pix); `account_risk_score` e `payer_sequence_score` são escritas só pelo `worker` ([ADR 0025](../02-arquitetura/decisoes/0025-cold-path-worker.md)).
 
 ## Diagrama
 

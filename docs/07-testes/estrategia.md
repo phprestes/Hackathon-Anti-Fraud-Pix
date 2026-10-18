@@ -62,9 +62,9 @@ Cada teste gera documentos e aparelhos aleatórios, para que o histórico de um 
 |---|---|
 | `request_generator.py` | Uma função por rota (`POST_…`, `GET_…`), já com `INTERNAL-TOKEN` |
 | `payload_generator.py` | Corpos válidos com valores aleatórios; o teste sobrescreve só o que importa |
-| `object_generator.py` | Cria cenários completos pela API |
 | `random_generator.py` | CPF válido, strings, números |
 | `db_utils.py` | Zera o banco; nunca monta cenário |
+| `worker.py` | Roda um ciclo do worker (`--once`) nos testes de score de grafo |
 
 ## Nomes
 

@@ -40,7 +40,7 @@ Documentação em pt-BR; código, rotas, campos e códigos de regra em inglês. 
 - [ADR 0014](docs/02-arquitetura/decisoes/0014-repositorio-ai-friendly.md): AGENTS.md, .agents/skills, llms.txt
 - [ADR 0015](docs/02-arquitetura/decisoes/0015-changelog-e-adrs-no-lugar-da-rfc.md): CHANGELOG e ADRs no lugar da RFC
 - [ADR 0016](docs/02-arquitetura/decisoes/0016-sinais-estatisticos-como-regras.md): z robusto, Poisson–Gamma e viagem impossível como regras
-- [ADR 0017](docs/02-arquitetura/decisoes/0017-ml-fora-do-prazo-e-do-hot-path.md): ML, GNN e LLM fora da entrega (roadmap)
+- [ADR 0017](docs/02-arquitetura/decisoes/0017-ml-fora-do-prazo-e-do-hot-path.md): modelo decidindo fora da entrega; em parte substituída por 0022, 0024–0026 (modelos em shadow)
 - [ADR 0018](docs/02-arquitetura/decisoes/0018-regras-compostas-por-tipologia.md): regras compostas por tipologia de golpe
 - [ADR 0019](docs/02-arquitetura/decisoes/0019-reputacao-de-contraparte-derivada.md): reputação de contraparte derivada do histórico
 - [ADR 0020](docs/02-arquitetura/decisoes/0020-simulador-para-calibracao.md): simulador de tráfego, hoje só fixture do CI (substituída em parte pela 0029)
@@ -66,7 +66,7 @@ Documentação em pt-BR; código, rotas, campos e códigos de regra em inglês. 
 
 ## Dados
 
-- [Modelo](docs/04-dados/modelo.md): pix_transaction, pix_analysis, pix_analysis_reason, analysis_status; índices de janela
+- [Modelo](docs/04-dados/modelo.md): pix_transaction, pix_analysis, pix_analysis_reason, analysis_status; account_risk_score e payer_sequence_score (worker); índices de janela
 
 ## Motor
 
@@ -75,7 +75,7 @@ Documentação em pt-BR; código, rotas, campos e códigos de regra em inglês. 
 - [Decisão](docs/05-motor/decisao.md): severidade, quando sai 2FA, exemplos
 - [Calibração](docs/05-motor/calibracao.md): calibração no PixSim pelo custo ponderado, configuração final, trava do CI e limites da evidência
 - [Análises estatísticas](docs/05-motor/analises.md): log-normalidade, dispersão Poisson, PSI, sensibilidade de limiar (dados sintéticos)
-- [Validação no PixSim](docs/05-motor/validacao-pixsim.md): motor sobre dois mundos do PixSim (5 mil contas, 30 dias): fricção de 3,8% de 2FA, 51,7% dos Pix de vítima barrados, contribuição de cada regra (ablação `make rule-ablation`), modelos treinados no PixSim, rótulos atrasados e retroalimentação pelo MED
+- [Validação no PixSim](docs/05-motor/validacao-pixsim.md): motor sobre dois mundos do PixSim (5 mil contas, 30 dias): fricção de 2,97% de 2FA, 50,7% dos Pix de vítima barrados (mundo A), contribuição de cada regra (ablação `make rule-ablation`), modelos treinados no PixSim, rótulos atrasados e retroalimentação pelo MED
 
 ## Operação e testes
 
@@ -86,10 +86,10 @@ Documentação em pt-BR; código, rotas, campos e códigos de regra em inglês. 
 
 - [Contribuindo](docs/contribuindo.md): Clean Code, nomes, commits, CHANGELOG, checklist
 - [Trabalhando com IA](docs/trabalhando-com-ia.md): arquivos para agentes e regras de uso
-- [Plano de implementação](docs/plano-de-implementacao.md): triagem da pesquisa, sugestões N1–N6, fases F0–F6 com time-box, riscos
-- [Plano de implementação 2](docs/plano-de-implementacao-2.md): backtest em lote, modelos síncronos em shadow, worker assíncrono (grafo, GraphSAGE, HMM), pipeline de calibração e CI
-- [Plano de implementação 3](docs/plano-de-implementacao-3.md): validação externa no PixSim, custo/P@k, peer group, rótulos atrasados, stacking
-- [Plano de implementação 4](docs/plano-de-implementacao-4.md): PixSim como referência; retroalimentação pelo MED no backtest
+- [Plano de implementação](docs/plano-de-implementacao.md): (histórico) triagem da pesquisa, sugestões N1–N6, fases F0–F6 com time-box, riscos
+- [Plano de implementação 2](docs/plano-de-implementacao-2.md): (histórico) backtest em lote, modelos síncronos em shadow, worker assíncrono (grafo, GraphSAGE, HMM), pipeline de calibração e CI
+- [Plano de implementação 3](docs/plano-de-implementacao-3.md): (histórico) validação externa no PixSim, custo/P@k, peer group, rótulos atrasados, stacking
+- [Plano de implementação 4](docs/plano-de-implementacao-4.md): (histórico) PixSim como referência; retroalimentação pelo MED no backtest
 - [Relatório técnico](docs/relatorio/relatorio.md): problema, fundamentos, arquitetura, metodologia e resultados no PixSim (PDF gerado por `make pdf`)
 - [Skills](.agents/README.md): nova-regra, novo-erro, nova-decisao, registrar-mudanca, revisar-mudanca
 
@@ -97,3 +97,4 @@ Documentação em pt-BR; código, rotas, campos e códigos de regra em inglês. 
 
 - [README original do Base Service](docs/referencia/base-service-readme.md): exemplo sample_entity e troubleshooting
 - [Como o projeto é organizado](docs/referencia/como-o-projeto-e-organizado.md): guia original das pastas
+- [Pesquisa QITech](<docs/pesquisa/Pesquisa QITech.pdf>): pesquisa do time que originou o plano (PDF)

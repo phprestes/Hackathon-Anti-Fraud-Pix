@@ -15,7 +15,7 @@ sources: [bootcamp-base-api (convenções), Aula 1 tarde, Aula 3 tarde (TDD), Pr
 
 - **Uma responsabilidade por camada** ([camadas](02-arquitetura/camadas.md)). `grep raise src/resources/` volta vazio; repository não decide; regra não consulta banco.
 - **Uma regra por classe, um sinal por regra.** Se o nome precisa de "e", são duas regras.
-- **Funções pequenas com nome de intenção.** Métodos privados do controller dizem o passo: `_find_replay`, `_build_context`, `_decide`. No repository, o nome diz a busca: `count_by_source_since`, `sum_by_source_since`.
+- **Funções pequenas com nome de intenção.** Métodos dizem o passo: `_find_replay` no controller, `build_context` e `evaluate` no motor (`src/rules/core/engine.py`). No repository, o nome diz a busca: `count_source_attempts_since`, `sum_source_not_rejected_since`.
 - **Erro é classe, não string**, com o próximo código livre ([erros](03-api/erros.md)).
 - **Sem número mágico.** Todo limite, janela e corte vem de `src/constants.py` ([ADR 0008](02-arquitetura/decisoes/0008-parametros-de-regra-por-ambiente.md)).
 - **Comentário explica o porquê, nunca o quê**, em uma ou duas linhas. Racional de parâmetro mora no [catálogo de regras](05-motor/regras.md), não no código.

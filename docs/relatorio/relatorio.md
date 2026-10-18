@@ -6,7 +6,7 @@
 
 **Solução.** Um motor de regras explícitas e explicáveis sobre o histórico que a própria API acumula (Python 3.11, FastAPI, PostgreSQL 16, Docker Compose). Cada Pix atravessa 15 regras (limite, velocidade, perfil, contraparte e tipologias de golpe), e a decisão final é a mais severa entre as que dispararam; todos os disparos vão para `metadata.reasons`, com os números usados em `metadata.signals`. Sinais estatísticos (z robusto de $\log(\text{valor})$, preditiva Poisson--Gamma, haversine) entram como regras comuns, em Python puro. Um segundo caminho, assíncrono (*cold path*), calcula a reputação de rede de cada conta de destino (funil, dispersão, vizinhança de dois saltos) e dois modelos aprendidos (GraphSAGE e HMM). Cinco modelos rodam em *shadow*: calculam, gravam e nunca mudam a decisão.
 
-**Como validamos.** O nosso simulador gera as fraudes que nós mesmos desenhamos, e as regras procuram exatamente esses padrões; sobre ele a captura chegava a cerca de 92%, o que é circular. Por isso toda métrica deste relatório vem do PixSim \[5\], um simulador de terceiros, aberto e calibrado com dados abertos do Banco Central. O nosso simulador ficou como *fixture* de CI. Os parâmetros foram escolhidos em um mundo do PixSim (A) pelo custo esperado ponderado e confirmados em outro (B).
+**Como validamos.** O nosso simulador gera as fraudes que nós mesmos desenhamos, e as regras procuram exatamente esses padrões; sobre ele a captura chegava a 98,5%, o que é circular. Por isso toda métrica deste relatório vem do PixSim \[5\], um simulador de terceiros, aberto e calibrado com dados abertos do Banco Central. O nosso simulador ficou como *fixture* de CI. Os parâmetros foram escolhidos em um mundo do PixSim (A) pelo custo esperado ponderado e confirmados em outro (B).
 
 **Números principais** (PixSim, mundo A, 30 dias avaliados, 125.518 Pix legítimos, 986 eventos de fraude; *fonte: `validacao-pixsim.md` e `calibracao.md`*):
 
@@ -64,20 +64,20 @@ Garantias que o time assumiu (`docs/01-contexto/problema.md`): todo Pix recebido
 
 # Fundamentos teóricos
 
-Cada subseção responde a três perguntas: o que é o método, por que serve aqui e qual é a limitação. As referências numeradas estão na seção "Referências"; os métodos clássicos de aprendizado de máquina (regressão logística, LightGBM, Isolation Forest, GraphSAGE, HMM) são descritos na pesquisa interna do time \[2\], que é a fonte consultada para este capítulo.
+Cada subseção responde a três perguntas: o que é o método, por que serve aqui e qual é a limitação. As referências numeradas estão na seção "Referências"; cada método cita a fonte primária (\[3\], \[14\] a \[20\]); a pesquisa interna do time \[2\] foi o ponto de partida, e as decisões e medições do projeto estão no próprio repositório \[13\].
 
 ## Detecção de fraude: regras $\times$ modelos e os níveis de Bolton & Hand
 
-**O que é.** Bolton e Hand \[3\] organizam a detecção estatística de fraude em níveis de comparação, que a pesquisa do time resume em quatro:
+**O que é.** Bolton e Hand \[3\] revisam a detecção estatística de fraude (métodos supervisionados e não supervisionados, *peer group analysis* e *break point analysis*); a pesquisa do time organiza essas ideias em quatro níveis de comparação:
 
 1. *individual*: o comportamento histórico do próprio cliente (valores típicos, locais frequentes);
 2. *grupo de pares* (*peer group analysis*): o cliente contra clientes semelhantes;
 3. *ponto de ruptura* (*break point*): o instante em que o padrão de uma conta muda abruptamente;
 4. *rótulos externos*: listas de entidades marcadas como suspeitas.
 
-**Por que serve aqui.** Sem rótulos, a abordagem é não supervisionada ou de limiar sobre desvio do perfil. O nível 1 vira `PROFILE_AMOUNT_ROBUST_Z` e `VELOCITY_POISSON_GAMMA`; o nível 3, a combinação de aparelho novo com valor atípico (tipologia de conta tomada); o nível 4, a reputação *derivada* do próprio histórico, sem lista externa, foi implementado como `COUNTERPARTY_FLAGGED` e descartado pela ablação (seção 4.2.7); a versão com desfecho confirmado pelo MED (`COUNTERPARTY_CONFIRMED_FRAUD`) existe só no backtest (seção 6.8). O nível 2 também foi implementado, medido e descartado (seção 6.9).
+**Por que serve aqui.** Sem rótulos, a abordagem é não supervisionada ou de limiar sobre desvio do perfil. O nível 1 vira `PROFILE_AMOUNT_ROBUST_Z` e `VELOCITY_POISSON_GAMMA`. O nível 3 aparece só por aproximação: `VELOCITY_POISSON_GAMMA` compara a rajada recente com a taxa histórica do próprio pagador, `PROFILE_NEW_DEVICE` reage a uma mudança brusca de aparelho e o HMM de sequência (em *shadow*) mede a improbabilidade da sequência recente; uma análise de ponto de ruptura formal (duas janelas ou CUSUM) não foi implementada, e a conta tomada é uma combinação de sinais (ADR 0018), não uma detecção de ruptura. o nível 4, a reputação *derivada* do próprio histórico, sem lista externa, foi implementado como `COUNTERPARTY_FLAGGED` e descartado pela ablação (seção 4.2.7); a versão com desfecho confirmado pelo MED (`COUNTERPARTY_CONFIRMED_FRAUD`) existe só no backtest (seção 6.8). O nível 2 também foi implementado, medido e descartado (seção 6.9).
 
-**Regras $\times$ modelos.** Regras são explícitas, auditáveis e dão um motivo por disparo, o que o enunciado exige; modelos de *gradient boosting* continuam o padrão da indústria em dados tabulares, mas precisam de rótulos. A pesquisa recomenda a pilha em camadas: regras e listas na primeira linha (0,5 a 2 ms), *ensembles* no caminho síncrono (2 a 8 ms), redes sequenciais e de grafos fora dele. Este projeto adota exatamente essa separação: regras decidem, modelos ficam em sombra.
+**Regras $\times$ modelos.** Regras são explícitas, auditáveis e dão um motivo por disparo, o que o enunciado exige; modelos de *gradient boosting* continuam o padrão da indústria em dados tabulares, mas precisam de rótulos. A pesquisa recomenda a pilha em camadas: regras e listas na primeira linha (0,5 a 2 ms), *ensembles* no caminho síncrono (2 a 8 ms), redes sequenciais e de grafos fora dele. Este projeto adota essa separação com uma diferença: as regras decidem e os modelos, inclusive os do caminho síncrono, ficam em sombra.
 
 **Limitação.** Regras codificam hipóteses nossas; sem rótulo real não se mede sua taxa de erro em produção, só sobre simuladores.
 
@@ -94,6 +94,8 @@ com piso de escala $s_{\min}=0{,}25$ (`RULE_PROFILE_MIN_SCALE_PERCENT = 25`) e h
 **Limitação.** Pagador sem histórico (menos de 5 Pix em 30 dias) não tem z; ele fica coberto pelas regras de payload e de velocidade fixa. O grupo de pares que o cobriria foi descartado por não render captura no PixSim.
 
 ## Contagens: Poisson, conjugada Gamma e a preditiva binomial negativa
+
+*Fonte primária: Gelman et al. \[20\] (conjugada Gamma--Poisson).*
 
 **O que é.** Se as chegadas de Pix de um pagador seguem um processo de Poisson de taxa $\lambda$ (por hora), a contagem em uma janela de $w$ horas é $N \mid \lambda \sim \mathrm{Poisson}(\lambda w)$. A taxa é incerta; com prior conjugado $\lambda \sim \mathrm{Gamma}(\alpha, \beta)$ (forma e taxa) e $n$ eventos observados em uma exposição de $E$ horas, a posteriori é $\mathrm{Gamma}(\alpha+n,\ \beta+E)$. A contagem futura na janela $w$ tem a *preditiva* binomial negativa:
 
@@ -115,19 +117,21 @@ $$ d = 2R \arcsin\sqrt{\sin^2\!\frac{\Delta\varphi}{2} + \cos\varphi_1 \cos\varp
 
 A velocidade implícita é $v = d / \max(\Delta t_{\text{h}},\ 1/60)$, com piso de um minuto para não dividir por zero quando dois Pix têm o mesmo instante.
 
-**Por que serve aqui.** Dois Pix com geolocalização a 50 km ou mais um do outro e velocidade implícita acima de 900 km/h (um avião comercial) indicam sessão em outro aparelho ou localização falsa.
+**Por que serve aqui.** Dois Pix com geolocalização a mais de 50 km um do outro e velocidade implícita acima de 900 km/h (um avião comercial) indicam sessão em outro aparelho ou localização falsa.
 
 **Limitação.** A geolocalização é opcional no contrato; sem ela, a regra não dispara. O PixSim não gera geolocalização, então ela não foi exercitada na validação externa.
 
 ## Tipologias de golpe e regras compostas
 
-**O que é.** Pizzolato et al. \[4\] fazem uma taxonomia de 15 metodologias de ataque no Pix no Brasil (revisão da literatura mais entrevistas), apontando autenticação multifator, monitoramento comportamental e detecção por IA como mitigações. Uma *tipologia* é a combinação de sinais que descreve um golpe conhecido.
+**O que é.** Pizzolato et al. \[4\] propõem uma taxonomia dos golpes de Pix no Brasil (metodologias de ataque, amplificação por IA e estratégias de defesa), descrevendo, entre outros, sequestro relâmpago, acesso remoto à conta da vítima, dispersão do dinheiro em segundos e limites dinâmicos pelo histórico do usuário. Uma *tipologia* é a combinação de sinais que descreve um golpe conhecido.
 
 **Por que serve aqui.** Sinais isolados (aparelho novo, valor alto, viagem) ocorrem com cliente bom e pedem 2FA; juntos, descrevem tomada de conta e justificam reprovar. Dois 2FA *não* somam uma reprovação: só uma tipologia explícita combina sinais (ADR 0018). Ativas: conta tomada e conta laranja (mula). O fracionamento (`TYPOLOGY_SPLITTING`) foi implementado e descartado pela ablação no PixSim (seção 4.2.7).
 
 **Limitação.** Cada tipologia é uma hipótese sobre como o golpe se parece; se o simulador ou o fraudador real desenha o golpe de outro jeito, a regra cai a zero (a mula do PixSim é uma conta antiga, não recém-aberta).
 
 ## Grafos: funil, dispersão, vizinhança de dois saltos e GraphSAGE
+
+*Fonte primária: Hamilton, Ying & Leskovec \[18\] (GraphSAGE).*
 
 **O que é.** O Pix forma um grafo dirigido pagador $\to$ destino. A pesquisa descreve dois padrões de conta laranja: *funil* (várias contas pagando quase ao mesmo tempo a uma conta centralizadora) e *dispersão* (a conta recebe e repassa logo em seguida a várias contas). Uma rede neural de grafos (GNN) atribui uma "reputação de rede" a cada conta, calculada fora do caminho síncrono e consultada já pronta.
 
@@ -149,6 +153,8 @@ Duas camadas, dimensão oculta 16, sete características de nó (log do grau de 
 
 ## Sequências: HMM discreto, Baum--Welch e verossimilhança como anomalia
 
+*Fonte primária: Rabiner \[19\] (HMM e Baum--Welch).*
+
 **O que é.** Um modelo oculto de Markov discreto tem estados latentes $s_t \in \{1,\dots,3\}$ com transição $A$, emissão $B$ sobre 12 símbolos e distribuição inicial $\pi$. O algoritmo *forward* com fatores de escala $c_t$ calcula
 
 $$ \alpha_1 = \pi \odot B_{\cdot, o_1}, \qquad \alpha_t = (\alpha_{t-1} A) \odot B_{\cdot, o_t}, \qquad \log P(o_{1:T}) = \sum_t \log c_t, $$
@@ -160,6 +166,8 @@ e o Baum--Welch (EM) estima $\pi, A, B$ maximizando essa verossimilhança. Cada 
 **Limitação.** Medido: o payload do Pix traz pouca sequência. No simulador nosso, o AUC cai de 0,652 (com o Pix atual) para 0,509 (só o que o caminho quente vê), praticamente aleatório (ADR 0026). O sinal de sequência só vale com eventos de sessão (login, troca de limite, cadastro de chave) que o enunciado não fornece. Por isso o HMM não foi avaliado no PixSim.
 
 ## Regressão logística, calibração de Platt, *gradient boosting* e Isolation Forest
+
+*Fontes primárias: Platt \[15\], Ke et al. \[16\] (LightGBM), Liu, Ting & Zhou \[17\] (Isolation Forest).*
 
 **Regressão logística e Platt.** Sobre características padronizadas $\tilde x_j = (x_j-\mu_j)/\sigma_j$, a margem é $m = \beta_0 + \sum_j \beta_j \tilde x_j$ e a probabilidade calibrada é $p = \sigma(A\,m + B)$, com $A, B$ ajustados em dados de validação (calibração de Platt). A calibração é necessária porque o desbalanceamento (pesos de classe ou subamostragem) desloca as probabilidades: com subamostragem das negativas a uma fração $\beta$, a probabilidade corrigida é $p = \beta p_s / (\beta p_s - p_s + 1)$ \[6\]. O projeto usa `class_weight` balanceado e Platt na validação, não subamostragem.
 
@@ -223,7 +231,7 @@ O projeto parte do `bootcamp-base-api` (ADR 0001), um serviço FastAPI em camada
 | DTOs | montar `{key, status, metadata}` | serializar `id` interno ou chave estrangeira |
 | Worker | jobs periódicos do *cold path*, cada um com o seu `commit` | ser chamado pela API; decidir um Pix |
 
-Quatro regras de projeto não se negociam: teste nunca importa de `src/` nem lê o banco (R1, *black box* por HTTP); um comando sobe tudo numa máquina limpa (R2, `make all`); decisão `rejected` não é erro, sai com status 201 (R3, ADR 0003); tabelas são *append-only* e todo Pix recebido é gravado, inclusive os reprovados (R4); o `id` interno do banco nunca sai, a saída tem `key` UUID (R5); dinheiro é `BIGINT` em centavos, nunca ponto flutuante (R6).
+Seis regras de projeto não se negociam: teste nunca importa de `src/` nem lê o banco (R1, *black box* por HTTP); um comando sobe tudo numa máquina limpa (R2, `make all`); decisão `rejected` não é erro, sai com status 201 (R3, ADR 0003); tabelas são *append-only* e todo Pix recebido é gravado, inclusive os reprovados (R4); o `id` interno do banco nunca sai, a saída tem `key` UUID (R5); dinheiro é `BIGINT` em centavos, nunca ponto flutuante (R6).
 
 ## *Hot path* $\times$ *cold path*
 
@@ -241,7 +249,7 @@ O *hot path* só **lê** o score pronto. O relógio do worker é o maior `transa
 
 ## Diagramas C4
 
-Os diagramas abaixo (PlantUML em `docs/02-arquitetura/diagramas/`) mostram o sistema em quatro níveis.
+Os diagramas abaixo (PlantUML em `docs/02-arquitetura/diagramas/`) mostram o sistema em três níveis, mais a visão offline.
 
 ![Contexto: quem fala com o motor (C4, nível 1).](../02-arquitetura/diagramas/c4-contexto-motor.png){ width=85% }
 
@@ -333,9 +341,9 @@ As janelas são relativas ao instante da transação. "R\$" abaixo é valor em r
 
 | Regra | Lógica | Parâmetros | Decisão | Justificativa |
 |-----------------------------|-------------------|------------|------|----------------------------------|
-| `VELOCITY_SOURCE_COUNT` | Tentativas do pagador em 10 min, contando as reprovadas | 2FA $\ge 5$; reprova $\ge 10$ | 2FA / reprova | Conta tomada é esvaziada em rajada; insistir depois de reprovado também conta (Pizzolato et al. \[4\]). Protege o pagador sem histórico. Limites do time, sem fonte externa |
+| `VELOCITY_SOURCE_COUNT` | Tentativas do pagador em 10 min, contando as reprovadas | 2FA $\ge 5$; reprova $\ge 10$ | 2FA / reprova | Conta tomada é esvaziada em rajada: transferências fraudulentas são executadas em segundos (Pizzolato et al. \[4\]); contar também as reprovadas é escolha do time (ADR 0021). Protege o pagador sem histórico. Limites do time, sem fonte externa |
 | `VELOCITY_DEVICE_SOURCES` | Pagadores distintos no mesmo aparelho em 24 h | reprova $> 3$ | reprova | Fazenda de contas ou golpista com credenciais de vítimas; "família no mesmo celular raramente passa de 3" é premissa do time, **não verificada** |
-| `VELOCITY_POISSON_GAMMA` | Cauda da preditiva Poisson--Gamma da rajada da última hora (seção 2.3), com $\ge 24$ h de exposição | ($\star$) cauda $< 30$ ppm; prior $\alpha=1$, $\beta=24$/h | 2FA | O "rápido demais" de cada um: conjugada Gamma--Poisson aplicada à comparação com o próprio histórico de Bolton & Hand \[3\]. Corte escolhido no PixSim |
+| `VELOCITY_POISSON_GAMMA` | Cauda da preditiva Poisson--Gamma da rajada da última hora (seção 2.3), com $\ge 24$ h de exposição | ($\star$) cauda $< 30$ ppm; prior $\alpha=1$, $\beta=24$ h | 2FA | O "rápido demais" de cada um: conjugada Gamma--Poisson aplicada à comparação com o próprio histórico de Bolton & Hand \[3\]. Corte escolhido no PixSim |
 
 ### Montante: "somou demais?"
 
@@ -385,7 +393,7 @@ Três regras saíram do motor na versão `2026.10.18-pixsim-2` (ADR 0033). O cri
 
 Cada uma, desligada sozinha no mundo A, também baixa o custo (`TYPOLOGY_SPLITTING` R\$ 115,69; `COUNTERPARTY_FLAGGED` R\$ 122,27; `AMOUNT_SOURCE_DAILY_SUM` R\$ 125,93). A trava do CI no nosso simulador continua passando (6,6% de 2FA em legítimos, nenhuma reprovação, 100% das sequências de fraude barradas; o fracionamento passa a ser barrado por 2FA em vez de reprovação). Ficam, mesmo com ablação negativa: `COUNTERPARTY_NEW_ACCOUNT` e `TYPOLOGY_MULE` (art. 39-B, §1º, II), `LIMIT_NIGHT_AMOUNT` (Res. BCB 142/2021) e `PROFILE_AMOUNT_ROBUST_Z` (Iglewicz & Hoaglin \[14\]). As características que as três liam continuam no contexto, porque os modelos em *shadow* as usam; o código e os testes delas estão no histórico do Git até o commit `0bb5df8`.
 
-**Ideias que não viraram regra.** Horário atípico por conta (a pesquisa indica que golpes de engenharia social acontecem em horário comercial, então um corte fixo não ajuda); distância entre `transaction_date` e o recebimento (depende de saber a hora real da chegada); IP compartilhado por muitos pagadores (sinal fraco, por NAT de operadora móvel); teste de Benford por conta (evidência fraca na pesquisa); grupo de pares (`PROFILE_PEER_AMOUNT`, implementado, medido e descartado; seção 6.9).
+**Ideias que não viraram regra.** Horário atípico por conta (a pesquisa indica que golpes de engenharia social acontecem em horário comercial, então um corte fixo não ajuda); distância entre `transaction_date` e o recebimento (depende de saber a hora real da chegada); IP compartilhado por muitos pagadores (sinal fraco, por NAT de operadora móvel); grupo de pares (`PROFILE_PEER_AMOUNT`, implementado, medido e descartado; seção 6.9).
 
 *(Fonte: `docs/05-motor/regras.md`, ADR 0033, `validacao-pixsim.md`.)*
 
@@ -453,7 +461,7 @@ Os scripts se importam pelo nome do módulo: cada um começa importando `scripts
 
 ## Por que o nosso simulador é só *fixture* de CI
 
-O primeiro simulador (`scripts/fixture/simulate.py`, ADR 0020) gera pagadores legítimos e injeta cinco tipologias de fraude que o próprio time desenhou (conta tomada, mula, fracionamento, golpe noturno e fazenda de contas). As regras foram escritas procurando exatamente esses padrões, logo a medição é **circular**: sobre ele, a captura de Pix de vítima chegava a cerca de 92% e metade do valor das vítimas era reprovada, enquanto no PixSim o mesmo motor barrou cerca de 36% dos Pix de vítima antes da calibração (ADR 0029; *fonte: `validacao-pixsim.md`, "O que se mantém e o que cai"*). Os modelos treinados nele também não generalizaram: o LightGBM obteve AUC 0,58 e a regressão logística 0,77 no PixSim (ADR 0031).
+O primeiro simulador (`scripts/fixture/simulate.py`, ADR 0020) gera pagadores legítimos e injeta cinco tipologias de fraude que o próprio time desenhou (conta tomada, mula, fracionamento, golpe noturno e fazenda de contas). As regras foram escritas procurando exatamente esses padrões, logo a medição é **circular**: sobre ele, a captura de Pix de vítima chegava a 98,5% e metade do valor das vítimas era reprovada, enquanto no PixSim o mesmo motor barrou cerca de 36% dos Pix de vítima antes da calibração (ADR 0029; *fonte: `validacao-pixsim.md`, "O que se mantém e o que cai"*). Os modelos treinados nele também não generalizaram: o LightGBM obteve AUC 0,58 e a regressão logística 0,77 no PixSim (ADR 0031).
 
 Decisão (ADR 0029): todo número de resultado vem do PixSim. O nosso simulador permanece porque é rápido, determinístico e roda em máquina limpa, e serve a duas coisas: os testes de paridade e a **trava de regressão** `make calibrate-check`, que roda o backtest com os padrões sobre o simulador (semente 42, 200 pagadores, 14 dias) e falha se passar de legítimos reprovados $\le$ 0,1%, 2FA em legítimos $\le$ 7,0% ou menos de 100% das sequências de fraude com algum Pix barrado. A trava não é meta e não justifica nenhum parâmetro. Medido com as 15 regras: nenhuma reprovação, 6,6% de 2FA, 100% das sequências (*fonte: ADR 0033*).
 
@@ -542,7 +550,7 @@ O resumo do artigo cita um escorer sintético com AUC de 0,82. Esse número **n�
 
 ## Vazamento de dados e vieses do gerador
 
-Um AUC de 0,99 pede a pergunta: o modelo está vendo a resposta? Checamos o vazamento de dados (*data leakage*) em quatro frentes e separamos o que é vazamento do que é viés do gerador.
+Um AUC de 0,99 pede a pergunta: o modelo está vendo a resposta? Checamos o vazamento de dados (*data leakage*) em quatro frentes e separamos o que é vazamento do que é viés do gerador. Medição *ad hoc* de 18/10/2026 sobre as features exportadas dos mundos A e B (scripts de verificação não versionados; os dados de entrada saem de `make pixsim-datasets`).
 
 **Sem vazamento de rótulo.** O adaptador só passa ao motor os campos do contrato do enunciado. Os campos do PixSim que entregariam a resposta (`label`, `role`, `ring_id`, `is_mule`, `is_new_counterparty`, `hop_depth`, `sender_balance_before`) ficam fora do payload. As características vêm só do histórico *anterior* ao Pix: a paridade API $\times$ backtest (seção 4.5) deu 0 divergências, o que confirma que o backtest não olha o futuro, já que a API não tem como olhar. O score de grafo nunca entra no backtest (o worker não roda lá).
 
@@ -774,7 +782,7 @@ Réplica do experimento S7 do PixSim sobre os modelos que já temos, sem retrein
 | 8 | 0,873 | R\$ 246,64 | 10,6% | R\$ 123,73 |
 | 12 | 0,788 | R\$ 414,65 | 19,0% | R\$ 127,81 |
 
-*(Fonte: `validacao-pixsim.md`, "Sensibilidade à qualidade do scorer".)* O AUC de 0,82 corresponde a $\sigma \approx 10{,}3$ para o LightGBM (e $\approx 7{,}2$ para a logística). Nesse ponto, com o limiar reajustado, o custo é R\$ 127,08 (LightGBM) e R\$ 122,93 (logística): **sem ganho sobre as regras** (R\$ 118,82); com o limiar original do modelo, a fricção em legítimos vai a 15,7% e 16,8%. O ganho do modelo (cerca de $-$16% sem ruído) só existe enquanto o AUC fica acima de aproximadamente 0,9; um escorer de 0,82 não paga a fricção que causa. Ressalva: o ruído é gaussiano e independente do Pix, o que degrada o score de forma mais uniforme do que um modelo treinado com características piores.
+*(Fonte: `validacao-pixsim.md`, "Sensibilidade à qualidade do scorer".)* O AUC de 0,82 corresponde a $\sigma \approx 10{,}3$ para o LightGBM (e $\approx 7{,}2$ para a logística). Nesse ponto, com o limiar reajustado, o custo é R\$ 127,08 (LightGBM) e R\$ 122,93 (logística): **sem ganho sobre as regras** (R\$ 118,82); com o limiar original do modelo, a fricção em legítimos vai a 15,7% e 16,8%. O ganho do modelo (cerca de $-$16% sem ruído) só existe enquanto o AUC fica acima de cerca de 0,93; um escorer de 0,82 não paga a fricção que causa. Ressalva: o ruído é gaussiano e independente do Pix, o que degrada o score de forma mais uniforme do que um modelo treinado com características piores.
 
 \newpage
 
@@ -797,7 +805,7 @@ Réplica do experimento S7 do PixSim sobre os modelos que já temos, sem retrein
 **Trabalhos futuros.**
 
 1. **Rota de desfechos do MED.** `POST /pix/transaction/{id}/outcome` e uma tabela `pix_outcome` fecham o ciclo de aprendizado em produção (ADR 0032); saem do contrato do enunciado e por isso foram simuladas só no backtest. O sinal de fraude confirmada é o primeiro candidato a ir para a API.
-2. **Feature store em escala.** O histórico por SQL com índices escala até algumas centenas de milhares de Pix; em dezenas de milhares de Pix por segundo a pesquisa aponta *streaming* (padrão Scarff \[10\]: Kafka, Flink e Redis) para manter janelas deslizantes.
+2. **Feature store em escala.** O histórico por SQL com índices escala até algumas centenas de milhares de Pix; em dezenas de milhares de Pix por segundo a pesquisa aponta *streaming* (o SCARFF \[10\] usa Kafka, Spark Streaming e Cassandra; a ADR 0025 cita Kafka, Flink e Redis como alternativa) para manter janelas deslizantes.
 3. **Escala do banco.** Particionamento por data e consultas de grupo vazio (+94 ms) pedem tratamento antes de volumes reais.
 4. **Rótulos reais.** Substituir o PixSim por desfechos do MED e contestações transforma o mesmo processo de backtest em backtest real e permite calibrar o prior, o limiar e o custo de verdade.
 5. **Eventos de sessão.** Login, troca de limite e cadastro de chave dariam sentido ao HMM ou a uma rede recorrente.
@@ -919,7 +927,7 @@ Mesma perspectiva (banco pagador), mesmos positivos (Pix de vítima), mesmo peso
 Replicamos o experimento de ruído do artigo (logit + ruído gaussiano). Com AUC 0,82, o LightGBM com limiar reajustado custa R\$ 127,08 contra R\$ 118,82 das regras: sem ganho. O modelo só paga a fricção que causa com AUC acima de cerca de 0,93.
 
 **Como o motor protege contra engenharia social, se a própria vítima faz o Pix e pode confirmar o 2FA?**
-Em boa parte, não protege: é o ponto mais fraco. Na engenharia social nenhum Pix de vítima é reprovado; 46,9% recebem 2FA e 53,1% passam. O custo assume que só 10% das vítimas coagidas confirmam o 2FA, premissa sem fonte. Com 30% o custo vai a R\$ 139,88; acima de ~40% o motor custa mais do que aprovar tudo (R\$ 151,29). O que ajuda hoje: primeiro Pix alto para destino novo, rajada fora do ritmo, limite noturno e, depois do fato, MED, bloqueio cautelar e o sinal de destino com fraude confirmada. O que ajudaria mais: 2FA como alerta específico, retenção do primeiro Pix alto para destino novo, teto para destinatário novo e o lado do recebedor (DICT, art. 39-B).
+Em boa parte, não protege: é o ponto mais fraco. Na engenharia social nenhum Pix de vítima é reprovado; no mundo A, 46,9% recebem 2FA e 53,1% passam. O custo assume que só 10% das vítimas coagidas confirmam o 2FA, premissa sem fonte. Com 30% o custo vai a R\$ 139,88; acima de ~40% o motor custa mais do que aprovar tudo (R\$ 151,29). O que ajuda hoje: primeiro Pix alto para destino novo, rajada fora do ritmo, limite noturno e, depois do fato, MED, bloqueio cautelar e o sinal de destino com fraude confirmada. O que ajudaria mais: 2FA como alerta específico, retenção do primeiro Pix alto para destino novo, teto para destinatário novo e o lado do recebedor (DICT, art. 39-B).
 
 ## Modelos e retroalimentação
 
@@ -953,7 +961,7 @@ Para a decisão ser reproduzível: o mesmo Pix com o mesmo histórico sempre rec
 O mesmo `id` com o mesmo payload devolve a análise gravada (200). O mesmo `id` com payload diferente é conflito (409, QIT002002). Todo Pix é gravado, inclusive os reprovados; as tabelas são *append-only* e dinheiro é inteiro em centavos.
 
 **Como testam?**
-113 testes *black box* pela API, sem importar `src/` nem ler o banco: cada regra tem um teste que não dispara e um que dispara, mais cenários, contrato e idempotência. O CI roda lint, testes, paridade e a trava de calibração.
+113 testes *black box* pela API, sem importar `src/` nem ler o banco: cada regra tem um teste que não dispara e um que dispara, mais cenários, contrato e idempotência. O CI roda os testes, a paridade e a trava de calibração; o lint roda no `make check` antes de cada commit.
 
 ## Próximos passos e processo
 
@@ -974,9 +982,9 @@ Como ferramenta de engenharia, com regras explícitas no repositório: `AGENTS.m
 
 \[4\] Pizzolato et al. (2025). *A Taxonomy of Pix Fraud in Brazil*. arXiv:2511.20902. <https://arxiv.org/abs/2511.20902>
 
-\[5\] Zeimarani, B.; Khatib, A.; Mousavinasr, S.; Figueiredo, C. M. S. (2026). *PixSim: a calibrated open-source simulator of instant-payment fraud, recovery and interdiction under analyst capacity constraints*. arXiv:2609.30684. Código: <https://github.com/BashirZeimarani/pixsim_public> (Apache-2.0; commit `7fdfc90013960f46df60c3ea01838e768e7a420a`).
+\[5\] Zeimarani, B.; Khatib, A.; Mousavinasr, S.; Figueiredo, C. M. S. (2026). *PixSim: a calibrated open-source simulator of instant-payment fraud, recovery and interdiction under analyst capacity constraints*. Identificador arXiv ainda não publicado (TODO no `CITATION.cff` do repositório; não verificado). Código: <https://github.com/BashirZeimarani/pixsim_public> (Apache-2.0; commit `7fdfc90013960f46df60c3ea01838e768e7a420a`).
 
-\[6\] Dal Pozzolo, A.; Caelen, O.; Johnson, R. A.; Bontempi, G. (2015). *Calibrating Probability with Undersampling for Unbalanced Classification*. IEEE CIDM.
+\[6\] Dal Pozzolo, A.; Caelen, O.; Johnson, R. A.; Bontempi, G. (2015). *Calibrating Probability with Undersampling for Unbalanced Classification*. IEEE SSCI 2015.
 
 \[7\] Dal Pozzolo, A. et al. (2018). *Credit card fraud detection: a realistic modeling and a novel learning strategy*. IEEE Transactions on Neural Networks and Learning Systems, 29(8).
 
@@ -986,10 +994,22 @@ Como ferramenta de engenharia, com regras explícitas no repositório: `AGENTS.m
 
 \[10\] Carcillo, F. et al. (2018). *Scarff: a scalable framework for streaming credit card fraud detection with Spark*. Information Fusion 41, 182-194. doi:10.1016/j.inffus.2017.09.005
 
-\[11\] Banco Central do Brasil. Resolução BCB nº 142/2021, art. 2º, I (limite noturno de R\$ 1.000, 20h às 6h, pessoa física), hoje consolidado na Resolução BCB nº 512/2024, art. 3º, §3º e §7º, II.
+\[11\] Banco Central do Brasil. Resolução BCB nº 142/2021, art. 2º, I (limite noturno de R\$ 1.000, 20h às 6h, pessoa física), hoje consolidado na Instrução Normativa BCB nº 512/2024, art. 3º, §3º e §7º, II.
 
 \[12\] Banco Central do Brasil. Regulamento do Pix, arts. 37 e 39-B, §1º, I a V (fatores de avaliação de suspeita, como tempo desde a abertura da conta e recorrência; o 39-B trata do PSP do recebedor).
 
 \[13\] Documentação e decisões do projeto: `docs/02-arquitetura/decisoes/` (ADRs 0001 a 0033), `docs/05-motor/` (regras, calibração, validação no PixSim, análises) e `scripts/backtest/cost-model.json`.
 
 \[14\] Iglewicz, B.; Hoaglin, D. C. (1993). *How to Detect and Handle Outliers*. ASQC Quality Press (escore z modificado com mediana e MAD; resumo no NIST/SEMATECH e-Handbook, seção 1.3.5.17).
+
+\[15\] Platt, J. C. (1999). *Probabilistic outputs for support vector machines and comparisons to regularized likelihood methods*. Em *Advances in Large Margin Classifiers*, 61-74.
+
+\[16\] Ke, G. et al. (2017). *LightGBM: a highly efficient gradient boosting decision tree*. NeurIPS 30, 3146-3154.
+
+\[17\] Liu, F. T.; Ting, K. M.; Zhou, Z.-H. (2008). *Isolation forest*. IEEE ICDM, 413-422. doi:10.1109/ICDM.2008.17
+
+\[18\] Hamilton, W. L.; Ying, R.; Leskovec, J. (2017). *Inductive representation learning on large graphs*. NeurIPS 30, 1024-1034.
+
+\[19\] Rabiner, L. R. (1989). *A tutorial on hidden Markov models and selected applications in speech recognition*. Proceedings of the IEEE 77(2), 257-286.
+
+\[20\] Gelman, A.; Carlin, J. B.; Stern, H. S.; Dunson, D. B.; Vehtari, A.; Rubin, D. B. (2013). *Bayesian Data Analysis*, 3ª ed. CRC Press.

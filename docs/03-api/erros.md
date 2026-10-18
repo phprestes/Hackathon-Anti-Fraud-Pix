@@ -20,7 +20,7 @@ O corpo de todo erro é `{title, description, translation, code}`. Os códigos s
 | Faixa | Uso | Onde |
 |---|---|---|
 | `QIT000xxx` | Genéricos da infraestrutura | `src/errors/base_error.py` (herdado) |
-| `QIT001xxx` | Exemplo `sample_entity` do Base Service | `src/errors/custom_errors.py`; saem com o exemplo e não são reutilizados |
+| `QIT001xxx` | Exemplo `sample_entity` do Base Service | Removidos com o exemplo; códigos não reutilizados |
 | `QIT002xxx` | Domínio do Pix | `src/errors/custom_errors.py` |
 
 ## Genéricos (herdados)

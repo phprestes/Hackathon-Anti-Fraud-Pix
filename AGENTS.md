@@ -14,14 +14,14 @@ A documentação é a fonte da verdade. Comece por [docs/README.md](docs/README.
 
 ```bash
 make                # lista os alvos
-make all            # sobe api/db (espera healthy), cria .venv 3.11 e roda pytest -v
+make all            # sobe api/db/worker (espera healthy), cria .venv 3.11 e roda pytest -v
 make up             # só sobe
 make test           # só testa (precisa do make up)
 make lint           # flake8 src tests; precisa sair limpo
 make check          # lint + test
 make reset          # depois de mudar database/database.sql
 make rebuild        # depois de mudar requirements.txt
-make logs           # log da api
+make logs           # log da api e do worker
 make simulate       # fixture do CI, sem valor estatístico (~3 min); suja o banco, rode make reset depois
 make validate-pixsim   # adaptador, backtest e relatório no PixSim (atualiza docs/05-motor/validacao-pixsim.md)
 make calibrate-pixsim  # grid de parâmetros pelo custo ponderado no PixSim (mundo A escolhe, B confirma)

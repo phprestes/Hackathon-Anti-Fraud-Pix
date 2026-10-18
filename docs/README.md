@@ -61,6 +61,7 @@ sources: [Desafio Antifraude Pix, bootcamp-base-api, Projeto fase 1]
 | [referencia/enunciado/](referencia/enunciado/) | PDFs originais do desafio e dos slides |
 | [referencia/base-service-readme.md](referencia/base-service-readme.md) | README original do Base Service (exemplo `sample_entity`, troubleshooting) |
 | [referencia/como-o-projeto-e-organizado.md](referencia/como-o-projeto-e-organizado.md) | Guia original das pastas do Base Service |
+| [pesquisa/Pesquisa QITech.pdf](<pesquisa/Pesquisa QITech.pdf>) | Pesquisa do time que originou o plano (literatura e indústria) |
 
 ## Datas
 

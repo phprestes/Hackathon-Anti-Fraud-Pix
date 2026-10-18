@@ -9,7 +9,7 @@ sources: [bootcamp-base-api (camadas), Desafio Antifraude Pix (seção 2.1 "Hist
 
 > [Índice](../../README.md) › [Decisões](README.md) › 0005
 
-**Status:** aceita
+**Status:** aceita; a montagem do contexto passou para `engine.build_context` sobre o `HistoryPort` ([ADR 0023](0023-motor-extraido-e-history-port.md))
 
 ## Contexto
 

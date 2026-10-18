@@ -6,7 +6,7 @@ Motor antifraude de Pix do Hackathon QI Tech 2026: uma API que recebe um Pix e r
 
 > **Em números:** 15 regras que decidem, 5 modelos em shadow, 113 testes black box, CI verde. No PixSim (simulador de terceiros, mundo A, [validação](docs/05-motor/validacao-pixsim.md)): 3,0% de 2FA em legítimos, nenhum reprovado, 51% dos Pix de vítima barrados (conta tomada: 99% dos eventos com ao menos um Pix barrado) e custo ponderado de R$ 109,61 por 1.000 Pix; no mundo B de confirmação, R$ 118,82, contra R$ 127,26 com os parâmetros anteriores à [calibração](docs/05-motor/calibracao.md) e R$ 153,51 com as 18 regras anteriores ao [descarte](docs/02-arquitetura/decisoes/0033-regras-descartadas-pela-ablacao.md) (mesmo modelo de custo: reprovar legítimo custa R$ 50 mais 2% do valor). O backtest em memória avalia um Pix em P95 de 0,60 ms (2,7 mil Pix/s). Histórico no [CHANGELOG](CHANGELOG.md).
 
-> **Relatório técnico** (PDF de 41 páginas, para quem nunca viu o repositório: do problema e da base teórica à implementação e aos resultados, mais as perguntas prováveis da banca): [docs/relatorio/relatorio.pdf](docs/relatorio/relatorio.pdf), fonte em [relatorio.md](docs/relatorio/relatorio.md).
+> **Relatório técnico** (PDF de 42 páginas, para quem nunca viu o repositório: do problema e da base teórica à implementação e aos resultados, mais as perguntas prováveis da banca): [docs/relatorio/relatorio.pdf](docs/relatorio/relatorio.pdf), fonte em [relatorio.md](docs/relatorio/relatorio.md).
 
 ## Como o motor de decisão funciona
 

@@ -9,7 +9,7 @@ sources: [Desafio Antifraude Pix (seção 2.3 e "Toda decisão sai com um motivo
 
 > [Índice](../../README.md) › [Decisões](README.md) › 0006
 
-**Status:** aceita
+**Status:** aceita; quem roda as regras hoje é `engine.evaluate`, chamado pelo controller ([ADR 0023](0023-motor-extraido-e-history-port.md))
 
 ## Contexto
 

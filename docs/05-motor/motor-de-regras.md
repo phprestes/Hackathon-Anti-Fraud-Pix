@@ -21,7 +21,7 @@ O controller carrega o histórico relevante uma vez, passa o Pix e esse contexto
 
 | Peça | Onde | Faz |
 |---|---|---|
-| `PixTransactionController.analyze` | `src/controllers/pix_transaction_controller.py` | Idempotência → `_build_snapshot` → `_build_context` → roda as regras → `_decide` → grava e dá o `commit` |
+| `PixTransactionController.analyze` | `src/controllers/pix_transaction_controller.py` | Idempotência (`_find_replay`) → `engine.build_context` → `engine.evaluate` → grava e dá o `commit` |
 | `PixTransactionRepository` | `src/repositories/pix_transaction_repository.py` | Busca por `pix_id`; um método por agregado de janela; insere Pix, análise e motivos |
 | `PixSnapshot` | `src/rules/core/pix_snapshot.py` | O Pix já parseado (datas com fuso), com `is_self_transfer` e `is_legal_entity_source` |
 | `RuleContext` | `src/rules/core/rule_context.py` | Dataclass imutável com os agregados de histórico (tabela abaixo) |

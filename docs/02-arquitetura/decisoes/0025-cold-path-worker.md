@@ -17,7 +17,7 @@ A pesquisa separa o que cabe no hot path (regras, ensembles, milissegundos) do q
 
 ## Decisão
 
-- **Container `worker`**, com a mesma imagem e o mesmo código da `api` e o comando `python -m worker`. Recalcula a cada `WORKER_INTERVAL_SECONDS` (30). Erro num ciclo é logado e o laço segue.
+- **Container `worker`**, com o mesmo código da `api` (imagem própria desde a [ADR 0026](0026-graphsage-e-hmm-no-worker.md): target `worker` do Dockerfile, com numpy) e o comando `python -m worker`. Recalcula a cada `WORKER_INTERVAL_SECONDS` (30). Erro num ciclo é logado e o laço segue.
 - **Relógio dos dados:** o ciclo usa o maior `transaction_date` da base como "agora", coerente com a [ADR 0007](0007-relogio-da-transacao.md). Um ciclo é pulado se nada mudou.
 - **Features de grafo em SQL**, para cada documento que foi destino nas últimas 72 h:
   - pagadores distintos em 24 h (funil);

@@ -19,7 +19,7 @@ sources: [Desafio Antifraude Pix (seção 2.3 e seção 6 "Como as regras viram 
 2. Cada regra devolve nada (não disparou) ou um disparo com `two_factor_required` ou `rejected`.
 3. A decisão final é a de maior severidade: `rejected` (2) > `two_factor_required` (1) > `approved` (0).
 4. Sem nenhum disparo, a decisão é `approved` com `reasons` vazia.
-5. `metadata.reasons` lista todos os disparos, ordenados por severidade e depois pela ordem de `ACTIVE_RULES` (limite → velocity → montante → perfil → contraparte → tipologia). `metadata.signals` traz os números de cada regra disparada.
+5. `metadata.reasons` lista todos os disparos, ordenados por severidade e depois pela ordem de `ACTIVE_RULES` (limite → velocity → perfil → contraparte → tipologia). `metadata.signals` traz os números de cada regra disparada.
 
 A ordem das regras **não** muda a decisão, só a ordem dos motivos.
 

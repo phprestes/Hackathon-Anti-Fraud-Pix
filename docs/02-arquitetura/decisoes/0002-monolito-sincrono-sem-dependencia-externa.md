@@ -9,7 +9,7 @@ sources: [Desafio Antifraude Pix (seção 2.1 "Tempo", seção 4 "Outras APIs")]
 
 > [Índice](../../README.md) › [Decisões](README.md) › 0002
 
-**Status:** aceita
+**Status:** aceita; o `worker` do cold path, fora do caminho da decisão, entrou pela [0025](0025-cold-path-worker.md)
 
 ## Contexto
 

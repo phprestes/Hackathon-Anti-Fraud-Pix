@@ -27,7 +27,7 @@ Docker com `docker compose`, Git e Python 3.11 (ou `uv`, que o `make install` us
 | `make check` | `lint` + `test` | antes de dizer que terminou |
 | `make reset` | apaga o volume e recria o banco | depois de mudar `database/database.sql` |
 | `make rebuild` | reconstrói a imagem sem cache | depois de mudar `requirements.txt` |
-| `make logs` | segue o log da `api` | para achar um `x-request-id` |
+| `make logs` | segue o log da `api` e do `worker` | para achar um `x-request-id` |
 | `make simulate` | fixture do CI, sem valor estatístico: tráfego do nosso simulador pela API (~3 min); suja o banco | medir latência da API |
 | `make events` / `make backtest` | gera eventos / roda o motor em lote, sem HTTP e sem banco | experimentos rápidos |
 | `make parity` | zera o banco e compara API × backtest Pix a Pix | depois de mexer em agregados |
