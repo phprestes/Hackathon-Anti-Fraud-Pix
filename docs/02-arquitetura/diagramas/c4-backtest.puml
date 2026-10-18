@@ -23,7 +23,7 @@ System_Boundary(prod_boundary, "api (produção)") {
 
 Container(parity, "Paridade", "scripts/backtest/parity.py", "Mesmo roteiro de Pix pela API e pelo backtest: status, regras e as 33 features iguais (0 divergências)")
 
-Rel(risco, runner, "roda com um conjunto de parâmetros", "--set, --disable")
+Rel(risco, runner, "roda com um conjunto de parâmetros", "opções set e disable")
 Rel(runner, arquivo, "lê")
 Rel(runner, core, "evaluate em todas as regras")
 Rel(runner, mem, "contexto e gravação")
