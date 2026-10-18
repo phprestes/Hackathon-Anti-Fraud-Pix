@@ -21,20 +21,20 @@ Um banco aprende com os desfechos: a fraude confirmada no MED marca o destino, a
   - Cada fraude reportada gera um desfecho em `transaction_date + atraso de reporte` (do PixSim).
   - Pix reprovado não liquida e não gera desfecho, o que reproduz o viés de seleção.
   - Pix com 2FA gera desfecho em 10% dos casos (`two_factor_escape_rate`).
-- **Sinal imediato** `COUNTERPARTY_CONFIRMED_FRAUD`, só no backtest: o destino que já teve fraude confirmada, de outro pagador, pede 2FA. 2FA foi escolhido no mundo A (R$ 130 contra R$ 268 por mil Pix se reprovasse).
+- **Sinal imediato** `COUNTERPARTY_CONFIRMED_FRAUD`, só no backtest: o destino que já teve fraude confirmada, de outro pagador, pede 2FA. 2FA foi escolhido no mundo A (R$ 103 contra R$ 225 por mil Pix se reprovasse).
 - **Retreino semanal com champion/challenger:** o LightGBM treina com os rótulos já chegados; o desafiante roda em shadow na semana seguinte e só é promovido se custar menos.
 - **Monitoramento semanal:** fraude aprovada e depois confirmada, precisão observada × real do 2FA e da reprovação, fração de fraude sem desfecho possível.
 
-## Resultados no PixSim (mundo B, custo ponderado por mil Pix)
+## Resultados no PixSim (mundo B, custo ponderado por mil Pix, 15 regras)
 
 | Cenário | Custo | Captura de vítimas |
 |---|---|---|
-| Só regras | R$ 158 | 38% |
-| + sinal de fraude confirmada | R$ 145 | 60% |
-| + LightGBM decidindo (só no backtest) | R$ 128 | 78% |
-| + retreino semanal | R$ 128 | 78%; nenhum desafiante promovido |
+| Só regras | R$ 119 | 51% |
+| + sinal de fraude confirmada | R$ 112 | 65% |
+| + LightGBM decidindo (só no backtest) | R$ 101 | 85% |
+| + retreino semanal | R$ 103 | 81%; dois desafiantes promovidos, ambos piores depois |
 
-O viés de seleção cresce com a eficácia: 72% das fraudes de vítima nunca geram desfecho no melhor cenário, e a precisão observada do 2FA fica cerca de 10 vezes abaixo da real.
+O viés de seleção cresce com a eficácia: 77% das fraudes de vítima nunca geram desfecho no melhor cenário, e a precisão observada do 2FA fica cerca de 10 vezes abaixo da real.
 
 ## Alternativas descartadas
 
@@ -47,6 +47,6 @@ O viés de seleção cresce com a eficácia: 72% das fraudes de vítima nunca ge
 
 ## Consequências
 
-- O sinal de fraude confirmada é o ganho mais barato (−8% de custo, +21 pontos de captura) e o primeiro candidato a ir para a API.
-- O retreino semanal não promoveu nenhum desafiante: o mundo do PixSim é estacionário e só cabem 4 retreinos em 30 dias. Retreinar compensa quando o padrão muda (drift); aqui não muda.
+- O sinal de fraude confirmada é o ganho mais barato (−6% de custo, +14 pontos de captura) e o primeiro candidato a ir para a API.
+- O retreino semanal promoveu dois desafiantes que ganharam na semana de sombra e perderam nas seguintes (R$ 103 contra R$ 101 do campeão fixo): uma semana com fraude superamostrada é pouco para separar desafiante melhor de sorte. O mundo do PixSim é estacionário e só cabem 4 retreinos em 30 dias; retreinar compensa quando o padrão muda (drift), e aqui não muda. Em produção, a promoção precisaria de mais de uma semana de sombra ou de uma margem mínima.
 - As fraudes barradas entram no treino como negativas (sem desfecho), o que provavelmente prejudica os desafiantes; corrigir isso exige saber o que teria acontecido, que é o problema clássico de inferência de rejeitados.

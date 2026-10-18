@@ -18,7 +18,7 @@ O LightGBM treinado no nosso gerador teve AUC de 0,58 no PixSim; ele tinha apren
 ## Decisão
 
 - **Treino no PixSim.** LogReg + Platt e LightGBM treinam no mundo A e são instalados se forem melhores no mundo B: AUC 0,99 contra 0,58–0,77 dos treinados no nosso gerador. O GraphSAGE treina com o `is_mule` do próprio PixSim como rótulo de nó (AUC 0,92 contra 0,52). Todos seguem em shadow ([ADR 0022](0022-shadow-mode.md)). O Isolation Forest ficou como estava (recall de 8% no PixSim).
-- **Rótulos atrasados.** O experimento usa o atraso de reporte do PixSim (mediana de 2,1 dias, p90 de 17,5 dias, 1,8% nunca reportado). Só com os rótulos já reportados, o LightGBM perde pouco (AUC 0,97 contra 0,99). Com um atraso fixo de 14 dias, despenca (0,64).
+- **Rótulos atrasados.** O experimento usa o atraso de reporte do PixSim (mediana de 2,1 dias, p90 de 17,5 dias, 1,8% nunca reportado). Só com os rótulos já reportados, o LightGBM perde pouco (AUC 0,97 contra 0,99). Com um atraso fixo de 14 dias, despenca (0,66).
 
 ## Alternativas descartadas
 

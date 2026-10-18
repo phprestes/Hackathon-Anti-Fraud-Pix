@@ -35,6 +35,8 @@ Sai a regra com ablação negativa e nenhum dos três caminhos.
 
 Ficam, mesmo negativas: `COUNTERPARTY_NEW_ACCOUNT` (art. 39-B, §1º, II), `LIMIT_NIGHT_AMOUNT` (Res. BCB 142/2021 e IN BCB 512/2024), `PROFILE_AMOUNT_ROBUST_Z` (Iglewicz & Hoaglin; −R$ 1,45) e `TYPOLOGY_MULE` (art. 39-B, §1º, II + funil; −R$ 0,38).
 
+Na ablação refeita com as 15 regras, `LIMIT_SINGLE_AMOUNT` passa de R$ 0,00 a −R$ 0,22 (nunca dispara em Pix de vítima; muda só o histórico de 28 legítimos). Fica: a diferença está abaixo de R$ 1 por 1.000 Pix, que nesta escala é ruído, e a regra é o único teto de exposição por Pix do motor.
+
 ## Resultado das três juntas desligadas
 
 Custo ponderado por 1.000 Pix (visão vítima), com os parâmetros calibrados de `2026.10.18-pixsim`:

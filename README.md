@@ -4,7 +4,7 @@
 
 Motor antifraude de Pix do Hackathon QI Tech 2026: uma API que recebe um Pix e responde `approved`, `two_factor_required` ou `rejected`, sempre com o motivo. Feito a partir do [`bootcamp-base-api`](docs/referencia/base-service-readme.md). Stack: Python 3.11, FastAPI, PostgreSQL 16, Docker. Enunciado completo em [docs/01-contexto/enunciado.md](docs/01-contexto/enunciado.md).
 
-> **Em números:** 15 regras que decidem, 5 modelos em shadow, 113 testes black box, CI verde. No PixSim (simulador de terceiros, mundo A, [validação](docs/05-motor/validacao-pixsim.md)): 3,8% de 2FA em legítimos, 0,01% reprovados, 52% dos Pix de vítima barrados (conta tomada: 99% dos eventos com ao menos um Pix barrado) e custo ponderado de R$ 132,13 por 1.000 Pix; no mundo B de confirmação, R$ 153,51 contra R$ 161,87 antes da [calibração](docs/05-motor/calibracao.md) (mesmo modelo de custo: reprovar legítimo custa R$ 50 mais 2% do valor). O backtest em memória avalia um Pix em P95 de 0,63 ms (2,6 mil Pix/s). Histórico no [CHANGELOG](CHANGELOG.md).
+> **Em números:** 15 regras que decidem, 5 modelos em shadow, 113 testes black box, CI verde. No PixSim (simulador de terceiros, mundo A, [validação](docs/05-motor/validacao-pixsim.md)): 3,0% de 2FA em legítimos, nenhum reprovado, 51% dos Pix de vítima barrados (conta tomada: 99% dos eventos com ao menos um Pix barrado) e custo ponderado de R$ 109,61 por 1.000 Pix; no mundo B de confirmação, R$ 118,82, contra R$ 127,26 com os parâmetros anteriores à [calibração](docs/05-motor/calibracao.md) e R$ 153,51 com as 18 regras anteriores ao [descarte](docs/02-arquitetura/decisoes/0033-regras-descartadas-pela-ablacao.md) (mesmo modelo de custo: reprovar legítimo custa R$ 50 mais 2% do valor). O backtest em memória avalia um Pix em P95 de 0,60 ms (2,7 mil Pix/s). Histórico no [CHANGELOG](CHANGELOG.md).
 
 ## Como o motor de decisão funciona
 
@@ -41,7 +41,7 @@ Fonte da verdade, com o porquê completo de cada parâmetro: [catálogo de regra
 
 **Descartadas** ([ADR 0033](docs/02-arquitetura/decisoes/0033-regras-descartadas-pela-ablacao.md)): `TYPOLOGY_SPLITTING`, `COUNTERPARTY_FLAGGED` e `AMOUNT_SOURCE_DAILY_SUM` custavam mais do que evitavam nos dois mundos do PixSim e não têm âncora regulatória verificada. Sem as três, o custo cai de R$ 132,13 para R$ 109,61 por 1.000 Pix no mundo A e de R$ 153,51 para R$ 118,82 no B. Fica a regra que contribui no PixSim, tem âncora do BCB ou cobre um sinal que o PixSim não gera.
 
-**Calibração no PixSim** (mundos A e B, 30 dias avaliados, 125 mil Pix legítimos e 986 eventos de fraude cada): no mundo A, 96,2% dos legítimos aprovados, 3,8% com 2FA, 0,01% reprovados, 51,7% dos Pix pagador→mula barrados e ao menos um Pix barrado em 591 dos 986 eventos de fraude (conta tomada 98,6%, engenharia social 57,3%, QR adulterado 29,4%, Pix errado 12,1%). No B: 4,1% de 2FA, 0,03% reprovados, 51,8% barrados. É simulador de terceiros, não Pix real: mede fricção e custo relativo entre configurações, não eficácia em produção ([calibração](docs/05-motor/calibracao.md), [validação](docs/05-motor/validacao-pixsim.md)). Nosso simulador (`scripts/fixture/simulate.py`) é só fixture do CI e alimenta a trava de regressão `make calibrate-check`.
+**Calibração no PixSim** (mundos A e B, 30 dias avaliados, 125 mil Pix legítimos e 986 eventos de fraude cada): no mundo A, 97,0% dos legítimos aprovados, 3,0% com 2FA, nenhum reprovado, 50,7% dos Pix pagador→mula barrados e ao menos um Pix barrado em 584 dos 986 eventos de fraude (conta tomada 98,6%, engenharia social 56,6%, QR adulterado 27,9%, Pix errado 9,9%). No B: 3,1% de 2FA, 0,002% reprovados, 51,1% barrados. É simulador de terceiros, não Pix real: mede fricção e custo relativo entre configurações, não eficácia em produção ([calibração](docs/05-motor/calibracao.md), [validação](docs/05-motor/validacao-pixsim.md)). Nosso simulador (`scripts/fixture/simulate.py`) é só fixture do CI e alimenta a trava de regressão `make calibrate-check`.
 
 ## Como as regras viram decisão
 
@@ -59,9 +59,9 @@ Sem rótulo real, nenhum modelo decide. Todos rodam em shadow: aparecem em `meta
 
 | Modelo | Onde roda | Como | Resultado (PixSim, treino em A, teste em B) |
 |---|---|---|---|
-| Regressão logística + Platt | hot path | Treino em `scripts/` (sklearn só em dev), pesos em JSON, inferência em Python puro | AUC 0,990 |
-| LightGBM | hot path | Árvores exportadas para JSON, avaliadas em Python puro (diferença máxima de 1,1e-16 contra a biblioteca; 1,1e-15 na logística e 1,7e-16 no Isolation Forest, em 14.202 Pix) | AUC 0,990. No mundo B, com as regras de antes da calibração, regras + LightGBM barrariam 70,8% dos Pix de vítima no limiar, contra 38,4% só com as regras (as regras atuais sozinhas barram 51,8%) |
-| Isolation Forest | hot path | Não supervisionado (só legítimos), árvores em JSON | Instalado o do simulador: AUC 0,788 no mundo B. O treinado no PixSim (AUC 0,846, captura só 8,5% no limiar p99) não atendeu ao critério de troca |
+| Regressão logística + Platt | hot path | Treino em `scripts/` (sklearn só em dev), pesos em JSON, inferência em Python puro | AUC 0,990, recall 64,7% com 0,8% de fricção |
+| LightGBM | hot path | Árvores exportadas para JSON, avaliadas em Python puro (diferença máxima de 1,1e-16 contra a biblioteca; 1,1e-15 na logística e 1,7e-16 no Isolation Forest, em 14.202 Pix) | AUC 0,989. No mundo B, regras + LightGBM barrariam 80,9% dos Pix de vítima no limiar, contra 51,1% só com as regras, e o custo ponderado cai de R$ 118,82 para R$ 99,42 por 1.000 Pix |
+| Isolation Forest | hot path | Não supervisionado (só legítimos), árvores em JSON | Instalado o do simulador: AUC 0,788 no mundo B. O treinado no PixSim (AUC 0,850, captura só 8,0% no limiar p99) não atendeu ao critério de troca |
 | GraphSAGE | worker | 2 camadas, até 10 vizinhos, numpy | AUC de nó 0,92 no mundo B, otimista: o rótulo `is_mule` é estático por conta |
 | HMM de sequência | worker | 3 estados, Baum-Welch, numpy | Instalado o do simulador; não avaliado no PixSim, onde a sequência de Pix sozinha diz pouco |
 

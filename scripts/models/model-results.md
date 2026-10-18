@@ -190,7 +190,7 @@ One-off `docker compose run --rm worker ... --once` takes about 2.3 s wall clock
 <!-- pixsim_models:start -->
 ## Modelos treinados no PixSim
 
-Treino no mundo A do PixSim (seed 20260910), teste no mundo B (seed 20261017) e no nosso simulador (seed 7). Mesmos hiperparâmetros fixos de `scripts/models/train_models.py`; fatia de ajuste = primeiros 75% do mundo A no tempo, validação = 25% finais (limiar por F1 máximo; Platt na validação). Linhas: 95173 de ajuste, 31725 de validação. Limiares: {"logreg": 0.1899, "lightgbm": 0.9404, "iforest": 0.5942}.
+Treino no mundo A do PixSim (seed 20260910), teste no mundo B (seed 20261017) e no nosso simulador (seed 7). Mesmos hiperparâmetros fixos de `scripts/models/train_models.py`; fatia de ajuste = primeiros 75% do mundo A no tempo, validação = 25% finais (limiar por F1 máximo; Platt na validação). Linhas: 95173 de ajuste, 31725 de validação. Limiares: {"logreg": 0.1933, "lightgbm": 0.8558, "iforest": 0.6035}.
 
 Positivo = Pix de vítima (`victim_to_mule`); legítimo = tráfego legítimo. A dispersão (`mule_forward`, `cash_out`) e a semente do Pix errado ficam fora do treino e da avaliação: o banco só a veria se a mula fosse cliente, e misturá-la como positivo ensinaria o modelo a pontuar o comportamento da mula, não o da vítima. Burn-in só alimenta o histórico. Custos e precisão usam o peso de importância do PixSim; AUC, recall e P@k são brutos.
 
@@ -204,90 +204,90 @@ Positivo = Pix de vítima (`victim_to_mule`); legítimo = tráfego legítimo. A 
 
 | decisor | nosso → PixSim B | PixSim A → PixSim B | PixSim A → nosso | nosso → nosso (referência) |
 |---|---|---|---|---|
-| logreg | 0,770 | 0,990 | 0,901 | 0,978 |
-| lightgbm | 0,580 | 0,990 | 0,674 | 0,990 |
-| iforest | 0,788 | 0,846 | 0,926 | 0,866 |
-| rules | 0,738 | 0,738 | 0,968 | 0,968 |
-| rules+lightgbm | 0,716 | 0,987 | 0,955 | 0,992 |
+| logreg | 0,770 | 0,990 | 0,919 | 0,978 |
+| lightgbm | 0,580 | 0,989 | 0,775 | 0,990 |
+| iforest | 0,788 | 0,850 | 0,911 | 0,866 |
+| rules | 0,740 | 0,740 | 0,965 | 0,965 |
+| rules+lightgbm | 0,718 | 0,987 | 0,958 | 0,992 |
 
 **Recall no limiar**
 
 | decisor | nosso → PixSim B | PixSim A → PixSim B | PixSim A → nosso | nosso → nosso (referência) |
 |---|---|---|---|---|
-| logreg | 8,0% | 65,0% | 62,8% | 68,3% |
-| lightgbm | 27,5% | 63,6% | 14,4% | 83,9% |
-| iforest | 38,9% | 8,5% | 67,8% | 25,6% |
-| rules | 51,8% | 51,8% | 97,2% | 97,2% |
-| rules+lightgbm | 60,5% | 75,1% | 98,3% | 98,3% |
+| logreg | 8,0% | 64,7% | 68,9% | 68,3% |
+| lightgbm | 27,5% | 73,0% | 22,2% | 83,9% |
+| iforest | 38,9% | 8,0% | 54,4% | 25,6% |
+| rules | 51,1% | 51,1% | 96,7% | 96,7% |
+| rules+lightgbm | 60,2% | 80,9% | 97,8% | 98,3% |
 
 **Precisão ponderada**
 
 | decisor | nosso → PixSim B | PixSim A → PixSim B | PixSim A → nosso | nosso → nosso (referência) |
 |---|---|---|---|---|
-| logreg | 0,1% | 0,6% | 28,3% | 93,2% |
-| lightgbm | 0,0% | 1,1% | 14,2% | 95,0% |
-| iforest | 0,0% | 0,1% | 34,0% | 39,7% |
-| rules | 0,1% | 0,1% | 27,3% | 27,3% |
-| rules+lightgbm | 0,0% | 0,1% | 25,0% | 27,4% |
+| logreg | 0,1% | 0,7% | 30,9% | 93,2% |
+| lightgbm | 0,0% | 0,6% | 13,1% | 95,0% |
+| iforest | 0,0% | 0,0% | 28,5% | 39,7% |
+| rules | 0,1% | 0,1% | 27,4% | 27,4% |
+| rules+lightgbm | 0,1% | 0,2% | 24,0% | 27,5% |
 
 **Fricção em legítimos**
 
 | decisor | nosso → PixSim B | PixSim A → PixSim B | PixSim A → nosso | nosso → nosso (referência) |
 |---|---|---|---|---|
-| logreg | 0,8% | 0,8% | 4,1% | 0,1% |
-| lightgbm | 7,3% | 0,5% | 2,3% | 0,1% |
-| iforest | 8,9% | 1,4% | 3,4% | 1,0% |
-| rules | 4,2% | 4,2% | 6,7% | 6,7% |
-| rules+lightgbm | 10,5% | 4,3% | 7,7% | 6,8% |
+| logreg | 0,8% | 0,8% | 4,0% | 0,1% |
+| lightgbm | 7,3% | 1,0% | 3,8% | 0,1% |
+| iforest | 8,9% | 1,4% | 3,6% | 1,0% |
+| rules | 3,1% | 3,1% | 6,7% | 6,7% |
+| rules+lightgbm | 9,5% | 3,6% | 8,0% | 6,7% |
 
 **Custo ponderado por 1.000 Pix**
 
 | decisor | nosso → PixSim B | PixSim A → PixSim B | PixSim A → nosso | nosso → nosso (referência) |
 |---|---|---|---|---|
-| logreg | R$ 156,12 | R$ 53,44 | R$ 24.872,61 | R$ 29.799,46 |
-| lightgbm | R$ 254,61 | R$ 58,68 | R$ 50.786,57 | R$ 10.228,05 |
-| iforest | R$ 253,11 | R$ 158,33 | R$ 15.725,87 | R$ 33.790,64 |
-| rules | R$ 153,51 | R$ 153,51 | R$ 3.704,79 | R$ 3.704,79 |
-| rules+lightgbm | R$ 271,02 | R$ 131,41 | R$ 3.489,48 | R$ 3.472,30 |
+| logreg | R$ 155,96 | R$ 53,39 | R$ 23.441,61 | R$ 29.799,46 |
+| lightgbm | R$ 254,61 | R$ 59,12 | R$ 44.766,59 | R$ 10.228,05 |
+| iforest | R$ 253,14 | R$ 157,88 | R$ 19.900,85 | R$ 33.790,64 |
+| rules | R$ 118,82 | R$ 118,82 | R$ 3.851,57 | R$ 3.851,57 |
+| rules+lightgbm | R$ 237,81 | R$ 99,42 | R$ 3.644,71 | R$ 3.497,64 |
 
 **P@k diário** (fraude superamostrada: a precisão do PixSim é inflada na proporção do peso)
 
 | cenário | decisor | P@5 | P@10 | P@25 | P@50 |
 |---|---|---|---|---|---|
-| nosso → PixSim B | logreg | 11,3% | 12,3% | 11,6% | 9,3% |
+| nosso → PixSim B | logreg | 11,3% | 12,3% | 11,7% | 9,3% |
 | nosso → PixSim B | lightgbm | 27,3% | 16,0% | 7,2% | 3,7% |
 | nosso → PixSim B | iforest | 6,0% | 6,7% | 9,9% | 8,0% |
-| nosso → PixSim B | rules | 12,0% | 9,7% | 15,7% | 19,5% |
-| nosso → PixSim B | rules+lightgbm | 30,0% | 18,7% | 9,1% | 4,7% |
-| PixSim A → PixSim B | logreg | 88,7% | 83,3% | 67,2% | 52,6% |
-| PixSim A → PixSim B | lightgbm | 100,0% | 97,7% | 80,1% | 59,7% |
-| PixSim A → PixSim B | iforest | 2,7% | 3,0% | 5,6% | 6,3% |
-| PixSim A → PixSim B | rules | 12,0% | 9,7% | 15,7% | 19,5% |
-| PixSim A → PixSim B | rules+lightgbm | 80,7% | 85,7% | 76,8% | 58,9% |
-| PixSim A → nosso | logreg | 52,9% | 46,4% | 30,6% | 19,3% |
-| PixSim A → nosso | lightgbm | 21,4% | 15,7% | 11,4% | 7,7% |
-| PixSim A → nosso | iforest | 57,1% | 48,6% | 33,4% | 20,3% |
-| PixSim A → nosso | rules | 61,4% | 49,3% | 31,1% | 22,6% |
-| PixSim A → nosso | rules+lightgbm | 55,7% | 47,9% | 31,4% | 18,3% |
+| nosso → PixSim B | rules | 15,3% | 13,3% | 21,2% | 21,3% |
+| nosso → PixSim B | rules+lightgbm | 34,7% | 19,7% | 8,9% | 4,6% |
+| PixSim A → PixSim B | logreg | 81,3% | 78,3% | 65,6% | 52,5% |
+| PixSim A → PixSim B | lightgbm | 98,0% | 96,3% | 77,5% | 58,1% |
+| PixSim A → PixSim B | iforest | 2,0% | 3,0% | 5,3% | 5,8% |
+| PixSim A → PixSim B | rules | 15,3% | 13,3% | 21,2% | 21,3% |
+| PixSim A → PixSim B | rules+lightgbm | 96,7% | 96,0% | 77,2% | 57,9% |
+| PixSim A → nosso | logreg | 52,9% | 49,3% | 34,6% | 20,6% |
+| PixSim A → nosso | lightgbm | 25,7% | 19,3% | 11,4% | 10,4% |
+| PixSim A → nosso | iforest | 54,3% | 44,3% | 28,9% | 19,0% |
+| PixSim A → nosso | rules | 61,4% | 48,6% | 30,6% | 22,4% |
+| PixSim A → nosso | rules+lightgbm | 55,7% | 48,6% | 32,0% | 19,7% |
 
 **Captura por tipologia do PixSim em PixSim B** (Pix de vítima acima do limiar do modelo, ou fora de `approved` nas regras)
 
 | tipologia | logreg (nosso) | lightgbm (nosso) | iforest (nosso) | logreg (PixSim A) | lightgbm (PixSim A) | iforest (PixSim A) | regras |
 |---|---|---|---|---|---|---|---|
-| account_takeover | 11,5% | 45,5% | 63,1% | 91,9% | 84,9% | 11,2% | 72,6% |
-| pix_errado | 3,7% | 1,9% | 14,8% | 16,7% | 11,1% | 3,7% | 11,1% |
-| qr_substitution | 2,5% | 10,0% | 15,0% | 28,7% | 25,0% | 2,5% | 31,2% |
-| social_engineering | 7,4% | 23,6% | 33,1% | 60,7% | 61,7% | 8,2% | 48,0% |
+| account_takeover | 11,5% | 45,5% | 63,1% | 91,9% | 84,6% | 9,5% | 71,8% |
+| pix_errado | 3,7% | 1,9% | 14,8% | 16,7% | 27,8% | 3,7% | 9,3% |
+| qr_substitution | 2,5% | 10,0% | 15,0% | 28,7% | 38,8% | 1,2% | 30,0% |
+| social_engineering | 7,4% | 23,6% | 33,1% | 60,3% | 74,1% | 8,2% | 47,5% |
 
 **Captura por tipologia do nosso simulador (modelos do PixSim A)**
 
 | tipologia | logreg | lightgbm | iforest | rules | rules+lightgbm |
 |---|---|---|---|---|---|
-| account_takeover | 43,8% | 6,2% | 43,8% | 100,0% | 100,0% |
-| device_farm | 40,7% | 0,0% | 0,0% | 96,3% | 96,3% |
-| mule | 62,7% | 0,0% | 84,0% | 100,0% | 100,0% |
+| account_takeover | 43,8% | 25,0% | 50,0% | 100,0% | 100,0% |
+| device_farm | 40,7% | 7,4% | 0,0% | 96,3% | 96,3% |
+| mule | 77,3% | 0,0% | 50,7% | 100,0% | 100,0% |
 | night_kidnapping | 66,7% | 0,0% | 33,3% | 100,0% | 100,0% |
-| splitting | 78,6% | 44,6% | 89,3% | 92,9% | 96,4% |
+| splitting | 78,6% | 60,7% | 89,3% | 91,1% | 94,6% |
 
 <!-- pixsim_models:end -->
 
