@@ -1,0 +1,29 @@
+---
+title: "Motor antifraude de Pix: relatório técnico"
+subtitle: "Hackathon QI Tech 2026 · Risk Solutions"
+author:
+  - Pedro H. S. Prestes
+  - Laura Pazini Medeiros
+date: "18 de outubro de 2026"
+lang: pt-BR
+documentclass: article
+classoption: [a4paper, 11pt]
+geometry: [a4paper, margin=2.5cm]
+mainfont: FreeSerif
+sansfont: DejaVu Sans
+monofont: DejaVu Sans Mono
+monofontoptions: [Scale=0.82]
+linkcolor: blue
+urlcolor: blue
+colorlinks: true
+toc-title: "Sumário"
+header-includes:
+  - \usepackage{etoolbox}
+  - \AtBeginEnvironment{longtable}{\footnotesize}
+  - \usepackage{booktabs}
+  - \setlength{\parindent}{0pt}
+  - \setlength{\parskip}{0.5em}
+  - \usepackage{float}
+  - \usepackage{fvextra}
+  - \DefineVerbatimEnvironment{Highlighting}{Verbatim}{breaklines,commandchars=\\\{\}}
+---

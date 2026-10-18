@@ -44,7 +44,9 @@ Efeito de cada parâmetro sozinho sobre a linha de base (custo R$ 143,58 por 1.0
 
 Leituras: o valor mínimo do primeiro Pix para um destino é o parâmetro de maior efeito no custo; o corte do fracionamento a R$ 5 mil é o pior ponto do grid (reprova 0,13% dos legítimos); acima de R$ 45 mil o teto diário não muda nada (R$ 45 mil e R$ 60 mil empatam). A tabela completa, com a visão de dispersão, fica em `scripts/out/calibration-pixsim.md`.
 
-## Configuração final (`2026.10.18-pixsim`)
+## Configuração calibrada (`2026.10.18-pixsim`, ainda com 18 regras)
+
+> O conjunto em vigor é `2026.10.18-pixsim-2`: os mesmos valores, menos as três regras descartadas e o `RULE_AMOUNT_DAILY_SUM_CENTS` ([seção abaixo](#depois-da-calibração-três-regras-descartadas)).
 
 Cinco parâmetros mudam juntos. O ganho da combinação (R$ 11,92) é menor que a soma dos ganhos isolados (R$ 15,4): os efeitos se sobrepõem, porque os parâmetros barram em parte os mesmos Pix.
 
