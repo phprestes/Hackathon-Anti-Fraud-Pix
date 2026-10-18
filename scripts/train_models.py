@@ -345,7 +345,8 @@ def main():
         pickle.dump(libraries, handle)
     thresholds = {m: models[m]["threshold"] for m in MODELS}
 
-    lines = ["# Model results (mock: synthetic labels)", "",
+    lines = ["# Model results (mock: synthetic labels)", "", "**Fixture do CI, sem valor estatístico.** Rótulos e gerador são nossos; "
+             "os resultados com valor estatístico estão em docs/05-motor/validacao-pixsim.md.", "",
              "Fixed simple hyperparameters, no search. Labels come from the simulator, so these numbers prove the "
              "pipeline fits the hot path; they say nothing about real fraud. Regenerate with `make train-models`.", "",
              f"Train: {len(y)} Pix ({int(y.sum())} fraud); fit slice {split}, validation slice {len(y) - split} "

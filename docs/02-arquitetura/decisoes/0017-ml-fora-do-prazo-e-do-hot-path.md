@@ -2,7 +2,7 @@
 title: "ADR 0017: Machine learning, grafos e LLM ficam fora desta entrega"
 summary: Isolation Forest, LightGBM, GNN, RNN/HMM e avaliação semântica por LLM viram roadmap; nada disso roda no caminho síncrono do Pix neste hackathon.
 related: [0016-sinais-estatisticos-como-regras.md, 0002-monolito-sincrono-sem-dependencia-externa.md, ../../plano-de-implementacao.md]
-sources: [Pesquisa QITech (M2, M3, GNN, RNN, JEV), Dal Pozzolo et al. (2015, 2018), Pizzolato et al. (2025)]
+sources: [Pesquisa QITech (M2, M3, GNN, RNN, JEV), Dal Pozzolo, Caelen, Johnson & Bontempi (2015), Calibrating probability with undersampling for unbalanced classification, IEEE SSCI 2015, https://ieeexplore.ieee.org/document/7376606; Dal Pozzolo, Boracchi, Caelen, Alippi & Bontempi (2018), Credit card fraud detection: a realistic modeling and a novel learning strategy, IEEE Transactions on Neural Networks and Learning Systems 29(8), https://re.public.polimi.it/handle/11311/1044896, Pizzolato, Lopes, Schepke & Kreutz (2025), A Taxonomy of Pix Fraud in Brazil, arXiv:2511.20902, https://arxiv.org/abs/2511.20902]
 ---
 
 # ADR 0017: Machine learning, grafos e LLM ficam fora desta entrega

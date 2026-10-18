@@ -20,7 +20,7 @@ A primeira calibração foi manual: editar `src/constants.py`, `make reset`, sim
 - **`make calibrate`**: `scripts/calibration-grid.json` lista os parâmetros e os valores. O script gera os eventos uma vez e roda o backtest em lote ([ADR 0023](0023-motor-extraido-e-history-port.md)) para cada combinação: 18 combinações em cerca de 12 s.
   - **Função objetivo** (lexicográfica): menos legítimos reprovados; mais sequências de fraude barradas; menos 2FA em legítimos; menos fraude aprovada.
   - **Saída:** tabela, vencedora e fronteira não dominada em `scripts/out/`. O script nunca altera `src/constants.py`: a escolha final é do time.
-- **`make calibrate-check`**: roda o backtest com os padrões atuais e falha se passar de `scripts/calibration-gate.json` (legítimos reprovados ≤ 0,1%, 2FA ≤ 5%, 100% das sequências de fraude barradas). Leva cerca de 1 s.
+- **`make calibrate-check`**: roda o backtest com os padrões atuais e falha se passar de `scripts/calibration-gate.json` (legítimos reprovados ≤ 0,1%, 2FA ≤ 7,0% (era 5%; subiu depois da [calibração no PixSim](../../05-motor/calibracao.md), que mediu 6,59% no fixture), 100% das sequências de fraude barradas). Leva cerca de 1 s.
 - **CI** (`.github/workflows/ci.yml`), em push e pull request: `make all` (sobe do zero e roda os testes), `make parity` (API × backtest) e `make calibrate-check`. Leva cerca de 1m40s.
 
 ## Alternativas descartadas

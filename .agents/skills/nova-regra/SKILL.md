@@ -7,7 +7,7 @@ description: Use ao criar, mudar ou calibrar uma regra antifraude do motor (limi
 
 Contrato e arquitetura: [motor de regras](../../../docs/05-motor/motor-de-regras.md), ADRs [0004](../../../docs/02-arquitetura/decisoes/0004-motor-de-regras-em-codigo.md) a [0008](../../../docs/02-arquitetura/decisoes/0008-parametros-de-regra-por-ambiente.md).
 
-1. **Catálogo primeiro.** Escreva ou ajuste a linha em [docs/05-motor/regras.md](../../../docs/05-motor/regras.md): código `<FAMILIA>_<SINAL>`, lógica, parâmetros com unidade, decisão e **porquê**. Sem porquê, pare e pergunte ao time: não invente calibragem.
+1. **Catálogo primeiro.** Escreva ou ajuste a linha em [docs/05-motor/regras.md](../../../docs/05-motor/regras.md): código `<FAMILIA>_<SINAL>`, lógica, parâmetros com unidade, decisão, **fonte verificada** (normativo do BCB com artigo, ou literatura com autor, ano e link; o que não der para verificar fica marcado "não verificado") e **evidência no PixSim** (disparo, precisão e ablação: `make rule-ablation`). Sem porquê, pare e pergunte ao time: não invente calibragem. Parâmetro só muda com evidência do PixSim, nunca do simulador local (fixture do CI).
 2. **Teste vermelho** em `tests/integration/pix/rules/test_<codigo_minusculo>.py`:
    - um teste no limite que **não** dispara (`approved`, regra ausente de `metadata.reasons`);
    - um teste logo depois do limite que dispara (`status` e `rule` em `metadata.reasons`);

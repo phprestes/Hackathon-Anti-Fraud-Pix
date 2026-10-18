@@ -2,7 +2,7 @@
 title: "ADR 0032: Retroalimentação pelo MED simulada no backtest, não na API"
 summary: O desfecho do MED volta para o motor só no backtest — reputação de destino com fraude confirmada, retreino semanal com champion/challenger e monitoramento —; a API mantém o contrato do enunciado e a rota de desfechos fica desenhada como próximo passo.
 related: [0031-modelos-treinados-no-pixsim-e-rotulos-atrasados.md, 0019-reputacao-de-contraparte-derivada.md, 0022-shadow-mode.md, ../../05-motor/validacao-pixsim.md]
-sources: [PixSim (report_delay, reported), Dal Pozzolo et al. (2018), scripts/feedback.py]
+sources: [PixSim (report_delay, reported), Dal Pozzolo, Boracchi, Caelen, Alippi & Bontempi (2018), Credit card fraud detection: a realistic modeling and a novel learning strategy, IEEE Transactions on Neural Networks and Learning Systems 29(8), https://re.public.polimi.it/handle/11311/1044896, scripts/feedback.py]
 ---
 
 # ADR 0032: Retroalimentação pelo MED simulada no backtest, não na API

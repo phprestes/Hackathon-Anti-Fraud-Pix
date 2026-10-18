@@ -275,11 +275,13 @@ def render(pix, ours, psi_rows, extra):
                      brl(w["legit_2fa"] + w["legit_rejected"])])
     L += [table(["Visão", "Bruto por 1.000 Pix", "Ponderado por 1.000 Pix", "Parte fraude (pond.)", "Parte fricção (pond.)"], rows),
           f"\nPeso médio de importância da fraude no PixSim: {num(pix['cost']['victim']['weight'], 4)} (um evento de fraude vale {num(pix['cost']['victim']['weight'], 4)} de um real).", ""]
-    L += ["### P@k diário (V1)", "", "Média diária da precisão nos k Pix mais bem ranqueados (fraude superamostrada: a precisão é inflada na mesma proporção do peso).", ""]
+    L += ["### P@k diário (V1)", "", "Média diária da precisão nos k Pix mais bem ranqueados (fraude superamostrada: a precisão é inflada na mesma proporção do peso). "
+          "As linhas \"regras + LightGBM\" usam o LightGBM treinado no próprio mundo A: são otimistas; o resultado fora da amostra (mundo B) está em \"Modelos treinados no PixSim\".", ""]
     rows = []
     for name, data in (("PixSim, visão pagador", pix["p_at_k"]["victim"]), ("PixSim, visão dispersão", pix["p_at_k"]["dispersal"]),
                        ("Fixture do CI, sem valor estatístico", ours["p_at_k"]["victim"])):
-        for label, key in (("regras", "rules"), ("regras + LightGBM", "rules_lightgbm")):
+        tail = "dentro da amostra" if name.startswith("PixSim") else "treinado no PixSim A, aplicado ao fixture"
+        for label, key in (("regras", "rules"), (f"regras + LightGBM ({tail})", "rules_lightgbm")):
             rows.append([f"{name}, {label}", *[pct(data[key][k]) for k in KS]])
     L += [table(["Conjunto, ranking", *[f"P@{k}" for k in KS]], rows), ""]
     L += ["### Regras que disparam", "", "Parcela de cada grupo em que a regra disparou (qualquer decisão).", ""]
@@ -289,9 +291,11 @@ def render(pix, ours, psi_rows, extra):
              pct(pix["rule_rates"]["dispersal"].get(n, 0)), pct(ours["rule_rates"]["legit"].get(n, 0)),
              pct(ours["rule_rates"]["victim"].get(n, 0))] for n in names]
     L += [table(["Regra", "PixSim legítimo", "PixSim pagador→mula", "PixSim dispersão", "Fixture do CI legítimo", "Fixture do CI fraude"], rows), ""]
-    L += ["### Modelos em shadow (treinados no nosso simulador)", "",
+    L += ["### Modelos em shadow instalados (logística e LightGBM treinados no mundo A do PixSim; Isolation Forest do nosso simulador)", "",
           "AUC é pontuação do modelo na fraude contra o legítimo; recall e fricção usam o limiar do próprio modelo. "
-          "No \"Nosso simulador\" os modelos foram treinados nesse mesmo gerador (seed 42): é desempenho dentro da distribuição.", ""]
+          "A logística e o LightGBM foram treinados neste mesmo mundo A, então as colunas do PixSim aqui são **dentro da amostra** (otimistas) para eles; o Isolation Forest instalado vem do nosso simulador, então é fora da distribuição; "
+          "o teste fora da amostra, no mundo B, está em \"Modelos treinados no PixSim\". As colunas \"Nosso\" aplicam os modelos instalados ao "
+          "fixture do CI, sem valor estatístico.", ""]
     rows = []
     for name, m in pix["models"].items():
         o = ours["models"].get(name, {})

@@ -1,6 +1,6 @@
 # Motor Antifraude Pix: Hackathon QI Tech 2026
 
-> API que recebe um Pix (POST /pix/transaction) e responde {key, status, metadata} com approved, two_factor_required ou rejected, sempre com motivo; GET /pix/transaction/{id} devolve a análise gravada. Python 3.11 + FastAPI + PostgreSQL 16, Docker Compose (api, db), a partir do bootcamp-base-api. Regras antifraude são classes puras em src/rules/; todas rodam e a decisão mais severa vence. Dinheiro em centavos; key UUID; erros {title, description, translation, code} com código QIT.
+> API que recebe um Pix (POST /pix/transaction) e responde {key, status, metadata} com approved, two_factor_required ou rejected, sempre com motivo; GET /pix/transaction/{id} devolve a análise gravada. Python 3.11 + FastAPI + PostgreSQL 16, Docker Compose (api, db, worker), a partir do bootcamp-base-api. Regras antifraude são classes puras em src/rules/; todas rodam e a decisão mais severa vence. Dinheiro em centavos; key UUID; erros {title, description, translation, code} com código QIT.
 
 Documentação em pt-BR; código, rotas, campos e códigos de regra em inglês. Cada documento tem front-matter (title, summary, related, sources) e começa com "Responde a". Sem RFC: decisões em ADRs, mudanças no CHANGELOG.
 
@@ -20,8 +20,8 @@ Documentação em pt-BR; código, rotas, campos e códigos de regra em inglês. 
 
 ## Arquitetura
 
-- [Visão geral](docs/02-arquitetura/visao-geral.md): api + db, caminho de um Pix, herdado × novo
-- [C4](docs/02-arquitetura/c4.md): contexto, containers, componentes (API e motor estatístico), simulador, proposta de backtest em lote com HistoryPort e teste de paridade
+- [Visão geral](docs/02-arquitetura/visao-geral.md): api, db e worker, caminho de um Pix, herdado × novo
+- [C4](docs/02-arquitetura/c4.md): contexto, containers, componentes (API, motor e worker), PixSim, backtest em lote com HistoryPort e teste de paridade (diagramas .puml e .png)
 - [Camadas](docs/02-arquitetura/camadas.md): o que cada pasta pode e não pode, incluindo rules/
 - [Decisões (ADRs)](docs/02-arquitetura/decisoes/README.md): índice com status
 - [ADR 0001](docs/02-arquitetura/decisoes/0001-partir-do-base-service.md): partir do bootcamp-base-api da Aula 1
@@ -43,7 +43,7 @@ Documentação em pt-BR; código, rotas, campos e códigos de regra em inglês. 
 - [ADR 0017](docs/02-arquitetura/decisoes/0017-ml-fora-do-prazo-e-do-hot-path.md): ML, GNN e LLM fora da entrega (roadmap)
 - [ADR 0018](docs/02-arquitetura/decisoes/0018-regras-compostas-por-tipologia.md): regras compostas por tipologia de golpe
 - [ADR 0019](docs/02-arquitetura/decisoes/0019-reputacao-de-contraparte-derivada.md): reputação de contraparte derivada do histórico
-- [ADR 0020](docs/02-arquitetura/decisoes/0020-simulador-para-calibracao.md): simulador para calibrar e medir P95
+- [ADR 0020](docs/02-arquitetura/decisoes/0020-simulador-para-calibracao.md): simulador de tráfego, hoje só fixture do CI (substituída em parte pela 0029)
 - [ADR 0021](docs/02-arquitetura/decisoes/0021-o-que-cada-janela-conta-e-versao-das-regras.md): o que cada janela conta, redutores de fricção, rule_set_version
 - [ADR 0022](docs/02-arquitetura/decisoes/0022-shadow-mode.md): shadow mode, calcula sem decidir
 - [ADR 0023](docs/02-arquitetura/decisoes/0023-motor-extraido-e-history-port.md): engine.py, HistoryPort (SQL e memória), features e paridade
@@ -70,11 +70,11 @@ Documentação em pt-BR; código, rotas, campos e códigos de regra em inglês. 
 ## Motor
 
 - [Motor de regras](docs/05-motor/motor-de-regras.md): peças, contrato da regra, passo a passo, sinais disponíveis
-- [Catálogo de regras](docs/05-motor/regras.md): regras, parâmetros, decisão, porquê, estado
+- [Catálogo de regras](docs/05-motor/regras.md): as 18 regras que decidem e os 5 modelos em shadow, com parâmetros, decisão, fonte verificada (BCB, literatura) e evidência no PixSim (disparo, precisão, ablação)
 - [Decisão](docs/05-motor/decisao.md): severidade, quando sai 2FA, exemplos
-- [Calibração](docs/05-motor/calibracao.md): metas, experimentos do simulador, configuração final e limites da evidência
+- [Calibração](docs/05-motor/calibracao.md): calibração no PixSim pelo custo ponderado, configuração final, trava do CI e limites da evidência
 - [Análises estatísticas](docs/05-motor/analises.md): log-normalidade, dispersão Poisson, PSI, sensibilidade de limiar (dados sintéticos)
-- [Validação no PixSim](docs/05-motor/validacao-pixsim.md): motor sobre um mundo do PixSim (5 mil contas, 30 dias): fricção 3,5%, captura de vítimas ~36%, LightGBM AUC 0,71 fora da distribuição
+- [Validação no PixSim](docs/05-motor/validacao-pixsim.md): motor sobre dois mundos do PixSim (5 mil contas, 30 dias): fricção de 3,8% de 2FA, 51,7% dos Pix de vítima barrados, contribuição de cada regra (ablação `make rule-ablation`), modelos treinados no PixSim, rótulos atrasados e retroalimentação pelo MED
 
 ## Operação e testes
 
@@ -89,6 +89,7 @@ Documentação em pt-BR; código, rotas, campos e códigos de regra em inglês. 
 - [Plano de implementação 2](docs/plano-de-implementacao-2.md): backtest em lote, modelos síncronos em shadow, worker assíncrono (grafo, GraphSAGE, HMM), pipeline de calibração e CI
 - [Plano de implementação 3](docs/plano-de-implementacao-3.md): validação externa no PixSim, custo/P@k, peer group, rótulos atrasados, stacking
 - [Plano de implementação 4](docs/plano-de-implementacao-4.md): PixSim como referência; retroalimentação pelo MED no backtest
+- [Relatório técnico](docs/relatorio/relatorio.md): problema, fundamentos, arquitetura, metodologia e resultados no PixSim (PDF gerado por `make pdf`)
 - [Skills](.agents/README.md): nova-regra, novo-erro, nova-decisao, registrar-mudanca, revisar-mudanca
 
 ## Optional

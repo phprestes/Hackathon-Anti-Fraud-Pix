@@ -4,7 +4,7 @@ Instruções para agentes de código, no formato [agents.md](https://agents.md).
 
 ## Projeto
 
-Motor antifraude de Pix do Hackathon QI Tech 2026: `POST /pix/transaction` recebe um Pix e devolve `{key, status, metadata}` com `approved`, `two_factor_required` ou `rejected`; `GET /pix/transaction/{id}` devolve a análise gravada. Python 3.11, FastAPI, SQLAlchemy 2, PostgreSQL 16, jsonschema, Docker Compose (`api`, `db`). Nasceu do `bootcamp-base-api` da Aula 1; o exemplo `sample_entity` foi substituído pela rota do Pix.
+Motor antifraude de Pix do Hackathon QI Tech 2026: `POST /pix/transaction` recebe um Pix e devolve `{key, status, metadata}` com `approved`, `two_factor_required` ou `rejected`; `GET /pix/transaction/{id}` devolve a análise gravada. Python 3.11, FastAPI, SQLAlchemy 2, PostgreSQL 16, jsonschema, Docker Compose (`api`, `db`, `worker`). O motor tem 18 regras que decidem e 5 modelos em shadow (a regressão logística, o LightGBM e o GraphSAGE foram treinados no mundo A do PixSim; o Isolation Forest e o HMM instalados vêm do nosso simulador). Nasceu do `bootcamp-base-api` da Aula 1; o exemplo `sample_entity` foi substituído pela rota do Pix.
 
 Entrega: domingo 18/10, até 12:00, link do repositório no Slack. A banca começa pelo README.
 
@@ -22,7 +22,11 @@ make check          # lint + test
 make reset          # depois de mudar database/database.sql
 make rebuild        # depois de mudar requirements.txt
 make logs           # log da api
-make simulate       # simulador de calibração (~3 min); suja o banco, rode make reset depois
+make simulate       # fixture do CI, sem valor estatístico (~3 min); suja o banco, rode make reset depois
+make validate-pixsim   # adaptador, backtest e relatório no PixSim (atualiza docs/05-motor/validacao-pixsim.md)
+make calibrate-pixsim  # grid de parâmetros pelo custo ponderado no PixSim (mundo A escolhe, B confirma)
+make rule-ablation     # ablação por regra e sensibilidade no mundo B do PixSim
+make parity            # API x backtest, Pix a Pix; make calibrate-check é a trava de regressão do CI
 ```
 
 Use Python 3.11: o SQLAlchemy 2.0.23 quebra no 3.12+. O `make install` resolve isso.
@@ -43,6 +47,7 @@ Use Python 3.11: o SQLAlchemy 2.0.23 quebra no 3.12+. O `make install` resolve i
 - O controller monta o `RuleContext` com agregados do repository, roda **todas** as regras de `ACTIVE_RULES`, e a decisão mais severa vence (`rejected` > `two_factor_required` > `approved`). Todos os disparos vão para `metadata.reasons`.
 - Parâmetro de regra é constante `RULE_*` em `src/constants.py`, lida do ambiente. Nada de número mágico.
 - **Não mude parâmetro de regra sem pedido explícito.** Calibrar é decisão do time e precisa de porquê no [catálogo](docs/05-motor/regras.md) e no README.
+- **Parâmetro de regra só muda com evidência do PixSim** (`make validate-pixsim`, `make rule-ablation`, `make calibrate-pixsim`); o simulador local (`scripts/simulate.py`) é só a trava do CI e não tem valor estatístico. Toda regra e todo parâmetro precisam de justificativa verificável (BCB, literatura ou medida no PixSim) em [regras.md](docs/05-motor/regras.md); o que não foi verificado fica marcado.
 
 ## Camadas
 
@@ -71,7 +76,7 @@ Detalhe em [docs/02-arquitetura/camadas.md](docs/02-arquitetura/camadas.md).
 
 ## Calibração
 
-Parâmetro de regra só muda com evidência do simulador (`scripts/simulate.py`, [ADR 0020](docs/02-arquitetura/decisoes/0020-simulador-para-calibracao.md)): rode antes e depois, registre os números em [docs/05-motor/calibracao.md](docs/05-motor/calibracao.md) e mude `RULE_SET_VERSION`. Não rode o simulador enquanto a suíte de testes roda: os testes zeram o banco.
+Parâmetro de regra só muda com evidência do PixSim ([ADR 0029](docs/02-arquitetura/decisoes/0029-pixsim-como-referencia.md)): rode `make calibrate-pixsim` e `make rule-ablation` antes e depois, registre os números em [docs/05-motor/calibracao.md](docs/05-motor/calibracao.md) e mude `RULE_SET_VERSION`. O simulador local ([ADR 0020](docs/02-arquitetura/decisoes/0020-simulador-para-calibracao.md)) é fixture do CI (paridade e `make calibrate-check`). Não rode o simulador enquanto a suíte de testes roda: os testes zeram o banco.
 
 ## Skills
 

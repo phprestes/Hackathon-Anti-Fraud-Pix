@@ -2,7 +2,7 @@
 title: "ADR 0028: Peer group medido e descartado"
 summary: A regra que compara o pagador sem histórico com pares parecidos (PF/PJ × idade da conta) foi implementada, medida no PixSim e descartada — efeito nulo em captura e custo, e até ~94 ms a mais por Pix no pior caso.
 related: [0016-sinais-estatisticos-como-regras.md, ../../05-motor/validacao-pixsim.md, ../../plano-de-implementacao-3.md]
-sources: [Bolton & Hand (2002), nível 2 (Peer Group Analysis); medições da fase V4 no PixSim]
+sources: [Bolton & Hand (2002), Statistical Fraud Detection: A Review, Statistical Science 17(3), p. 235-255, https://doi.org/10.1214/ss/1042727940, nível 2 (Peer Group Analysis); medições da fase V4 no PixSim]
 ---
 
 # ADR 0028: Peer group medido e descartado

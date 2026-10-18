@@ -1,5 +1,7 @@
 # Model results (mock: synthetic labels)
 
+**Fixture do CI, sem valor estatístico.** Rótulos e gerador são nossos; os resultados com valor estatístico estão em docs/05-motor/validacao-pixsim.md.
+
 Fixed simple hyperparameters, no search. Labels come from the simulator, so these numbers prove the pipeline fits the hot path; they say nothing about real fraud. Regenerate with `make train-models`.
 
 Train: 7995 Pix (201 fraud); fit slice 5996, validation slice 1999 (39 fraud), split by time. Thresholds: {"logreg": 0.5782, "lightgbm": 0.0071, "iforest": 0.5895}.

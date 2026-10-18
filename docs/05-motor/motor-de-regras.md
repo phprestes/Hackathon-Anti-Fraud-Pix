@@ -15,7 +15,7 @@ sources: [Desafio Antifraude Pix (seções 1 e 2), slides do hackathon ("Como o 
 
 ## Em uma frase
 
-O controller carrega o histórico relevante uma vez, passa o Pix e esse contexto por **todas** as 17 regras, e a decisão final é a mais severa entre as que dispararam, com todos os motivos e os números de cada sinal no `metadata`.
+O controller carrega o histórico relevante uma vez, passa o Pix e esse contexto por **todas** as 18 regras que decidem (e os 5 modelos em shadow, que só calculam), e a decisão final é a mais severa entre as que dispararam, com todos os motivos e os números de cada sinal no `metadata`.
 
 ## As peças
 
@@ -55,7 +55,7 @@ Regras não leem banco, ambiente nem relógio, e não leem o resultado de outra 
 1. **Schema** valida o formato (400 se torto). Data impossível (`2026-02-30`) também é 400.
 2. **Idempotência:** busca por `pix_id`. Mesmo corpo → 200 com a análise original. Corpo diferente → 409 ([ADR 0012](../02-arquitetura/decisoes/0012-idempotencia-pelo-id-do-pix.md)).
 3. **Snapshot e contexto:** o repository calcula os agregados relativos ao `transaction_date`, sempre sobre Pix **anteriores** e excluindo o próprio.
-4. **Regras:** as 17 rodam; cada uma devolve um disparo ou nada.
+4. **Regras:** as 18 que decidem rodam, mais os 5 modelos em shadow; cada uma devolve um disparo ou nada.
 5. **Decisão:** a mais severa vence ([decisão](decisao.md)).
 6. **Gravação:** `pix_transaction`, `pix_analysis` (com `rule_set_version`) e `pix_analysis_reason` no mesmo commit.
 7. **Resposta:** 201 com `{key, status, metadata}`.
@@ -78,5 +78,7 @@ Janelas são `[t − N, t)` com `t = transaction_date`. "Tentativas" contam todo
 | `source_last_geolocation` | Onde e quando foi o Pix anterior com GPS? | `PROFILE_GEO_VELOCITY`, conta tomada |
 | destinos novos e tentativas pequenas em 24 h | Está fracionando para contas novas? | `TYPOLOGY_SPLITTING` |
 | `destination_rejected_by_others_last_window` | O destino recebeu Pix reprovado de outros em 7 dias? | `COUNTERPARTY_FLAGGED` |
+| `destination_graph_risk` (e idade do score) | Qual a reputação do destino no grafo, calculada pelo worker nos últimos 120 min? | `COUNTERPARTY_GRAPH_RISK` |
+| `destination_graphsage_score`, `source_sequence_score` | O que o GraphSAGE e o HMM do worker dizem do destino e da sequência do pagador? | modelos em shadow |
 
 As regras, os parâmetros e o porquê de cada um estão no [catálogo](regras.md); a calibração, em [calibracao.md](calibracao.md).

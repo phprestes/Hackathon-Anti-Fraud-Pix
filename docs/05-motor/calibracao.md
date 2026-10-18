@@ -1,7 +1,7 @@
 ---
 title: Calibração
 summary: Como os parâmetros das regras foram escolhidos no PixSim (custo ponderado, mundo A para escolher e mundo B para confirmar), a configuração final, o que ficou de fora de propósito e a trava de regressão do CI.
-related: [regras.md, analises.md, validacao-pixsim.md, ../02-arquitetura/decisoes/0020-simulador-para-calibracao.md, ../../scripts/calibration-results.md]
+related: [regras.md, analises.md, validacao-pixsim.md, ../02-arquitetura/decisoes/0020-simulador-para-calibracao.md, regras.md]
 sources: [scripts/calibrate.py, scripts/calibration-grid-pixsim.json, scripts/costs.py, scripts/cost-model.json, scripts/out/calibration-pixsim.md, scripts/calibration-gate.json]
 ---
 
@@ -27,6 +27,8 @@ Regerar: `make calibrate-pixsim` (cerca de 20 passadas de 1 min; o cache em `scr
 ## Experimentos no mundo A
 
 Efeito de cada parâmetro sozinho sobre a linha de base (custo R$ 143,58 por 1.000 Pix; 3,50% de 2FA em legítimos; 36,1% dos Pix de vítima barrados; 383 de 986 eventos com algum Pix barrado):
+
+**Duas bases para o mesmo eixo.** Esta tabela move um parâmetro por vez a partir dos valores de antes da calibração (por isso Poisson a 1.000 ppm custa R$ 166,48). A [análise de sensibilidade](analises.md) varre o mesmo eixo com os outros parâmetros já nos valores atuais, e lá 1.000 ppm custa R$ 155,90. Os dois números não se contradizem: a base é outra.
 
 | Mudança | Custo R$/1.000 | 2FA legítimos | Pix de vítima barrados | Eventos barrados |
 |---|---|---|---|---|
@@ -61,11 +63,13 @@ Resultado da combinação, linha de base → final:
 | A (escolha) | 143,58 → **131,66** (−8,3%) | 3,50% → 3,81% | 0,01% → 0,01% | 36,1% → 51,7% | 383 → 591 de 986 | 237,54 → 229,18 |
 | B (confirmação) | 157,60 → **149,24** (−5,3%) | 3,74% → 4,13% | 0,03% → 0,03% | 38,4% → 51,8% | 427 → 622 de 986 | 263,19 → 259,51 |
 
+**Custo do falso bloqueio.** Os custos desta tabela foram medidos com R$ 50 fixos por legítimo reprovado. O modelo passou a usar R$ 50 + 2% do valor, como o PixSim (A3.5, ASSUMED): a configuração final fica em R$ 132,13 (A) e R$ 153,51 (B) por 1.000 Pix, uma soma constante de R$ 0,47 e R$ 4,27 sobre os valores acima. A configuração vencedora não muda: os mesmos 15 legítimos (A) e 36 (B) são reprovados em todas as combinações do grid, menos uma (162 reprovados em A, que só piora), então a parte proporcional soma o mesmo valor a todas e preserva a ordem. Nenhum parâmetro foi alterado.
+
 A melhora aparece nos dois mundos, com 2FA em legítimos ainda abaixo de 5% e sem reprovar mais legítimos. O ganho em B é menor que em A (o grid foi escolhido em A); essa diferença é a melhor estimativa do quanto a escolha é específica de um mundo.
 
 ### Mantido de propósito: limite noturno
 
-`RULE_LIMIT_NIGHT_AMOUNT_CENTS` fica em **R$ 1.000**, mantido por âncora regulatória (BCB), apesar de o grid preferir R$ 2.000. R$ 1.000 é o limite noturno padrão de pessoa física do Banco Central (Res. 142/2021); subir o corte pararia de pedir 2FA abaixo do teto que o regulador associa ao risco de sequestro relâmpago. O custo medido dessa escolha no PixSim, com os outros cinco parâmetros já aplicados: R$ 131,66 contra R$ 127,07 no mundo A (+R$ 4,59 por 1.000 Pix) e R$ 149,24 contra R$ 144,44 no mundo B (+R$ 4,80). O parâmetro está fixado como `pinned` no grid: é medido, nunca escolhido.
+`RULE_LIMIT_NIGHT_AMOUNT_CENTS` fica em **R$ 1.000**, mantido por âncora regulatória (BCB), apesar de o grid preferir R$ 2.000. R$ 1.000 é o limite noturno padrão de pessoa física do Banco Central ([Res. BCB 142/2021, art. 2º, I](https://www.bcb.gov.br/estabilidadefinanceira/exibenormativo?tipo=Resolu%C3%A7%C3%A3o%20BCB&numero=142), hoje na IN BCB 512/2024, art. 3º, §7º, II; detalhes e fontes em [regras.md](regras.md)); subir o corte pararia de pedir 2FA abaixo do teto que o regulador associa ao risco de sequestro relâmpago. O custo medido dessa escolha no PixSim, com os outros cinco parâmetros já aplicados: R$ 131,66 contra R$ 127,07 no mundo A (+R$ 4,59 por 1.000 Pix) e R$ 149,24 contra R$ 144,44 no mundo B (+R$ 4,80). O parâmetro está fixado como `pinned` no grid: é medido, nunca escolhido.
 
 ### Não mudou
 
@@ -85,7 +89,7 @@ A melhora aparece nos dois mundos, com 2FA em legítimos ainda abaixo de 5% e se
 
 `make calibrate-check` roda o backtest com os padrões sobre o nosso simulador (seed 42, 200 pagadores, 14 dias) e compara com [`scripts/calibration-gate.json`](../../scripts/calibration-gate.json): legítimos reprovados ≤ 0,1%, 2FA em legítimos ≤ 7,0% e 100% das sequências com algum Pix barrado. É uma **trava contra regressão**, não a meta: o fixture não tem valor estatístico e não justifica parâmetro.
 
-Com os parâmetros novos a trava mediu 0,04% de reprovados, 6,59% de 2FA (o primeiro Pix mais baixo para destino novo pede mais 2FA no fixture) e 100% das sequências. O teto de 2FA subiu de 5,0% para 7,0%, o valor medido com folga; os outros dois ficaram. Os experimentos antigos feitos no fixture estão em [`scripts/calibration-results.md`](../../scripts/calibration-results.md), só como histórico.
+Com os parâmetros novos a trava mediu 0,04% de reprovados, 6,59% de 2FA (o primeiro Pix mais baixo para destino novo pede mais 2FA no fixture) e 100% das sequências. O teto de 2FA subiu de 5,0% para 7,0%, o valor medido com folga; os outros dois ficaram. Os experimentos antigos no fixture foram descartados: eram circulares (as fraudes são nossas) e não justificam nenhum parâmetro.
 
 ## Como recalibrar
 

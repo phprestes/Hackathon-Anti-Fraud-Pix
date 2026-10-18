@@ -2,7 +2,7 @@
 title: "ADR 0016: Sinais estatísticos viram regras, em Python puro"
 summary: z robusto (mediana/MAD de log do valor), velocity Poisson–Gamma e viagem impossível entram como regras comuns com corte explícito, sem biblioteca de ML.
 related: [0004-motor-de-regras-em-codigo.md, 0017-ml-fora-do-prazo-e-do-hot-path.md, ../../05-motor/regras.md, ../../plano-de-implementacao.md]
-sources: [Pesquisa QITech (M1), Bolton & Hand (2002), Desafio Antifraude Pix (seção 2.2 "Perfil", "Velocity")]
+sources: [Pesquisa QITech (M1), Bolton & Hand (2002), Statistical Fraud Detection: A Review, Statistical Science 17(3), p. 235-255, https://doi.org/10.1214/ss/1042727940, Desafio Antifraude Pix (seção 2.2 "Perfil", "Velocity")]
 ---
 
 # ADR 0016: Sinais estatísticos viram regras, em Python puro

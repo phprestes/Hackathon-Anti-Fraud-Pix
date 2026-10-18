@@ -2,7 +2,7 @@
 title: "ADR 0031: Modelos treinados no PixSim e treino só com rótulos já reportados"
 summary: LogReg, LightGBM e GraphSAGE são treinados num mundo do PixSim e testados em outro; o treino considera só as fraudes cujo desfecho no MED já chegou, com os atrasos de reporte do próprio simulador.
 related: [0024-modelos-servidos-em-python-puro.md, 0026-graphsage-e-hmm-no-worker.md, 0029-pixsim-como-referencia.md]
-sources: [Dal Pozzolo et al. (2018), rótulos atrasados; PixSim (draw_report_delay); docs/05-motor/validacao-pixsim.md]
+sources: [Dal Pozzolo, Boracchi, Caelen, Alippi & Bontempi (2018), Credit card fraud detection: a realistic modeling and a novel learning strategy, IEEE Transactions on Neural Networks and Learning Systems 29(8), https://re.public.polimi.it/handle/11311/1044896, rótulos atrasados; PixSim (draw_report_delay); docs/05-motor/validacao-pixsim.md]
 ---
 
 # ADR 0031: Modelos treinados no PixSim e treino só com rótulos já reportados

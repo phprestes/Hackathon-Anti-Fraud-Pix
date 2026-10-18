@@ -2,7 +2,7 @@
 title: "ADR 0026: GraphSAGE e HMM enxutos em numpy, restritos ao worker"
 summary: GraphSAGE de 2 camadas (até 10 vizinhos) e HMM discreto de 3 estados, treinados em scripts/ com rótulos do simulador, servidos pelo worker em numpy e lidos em shadow pelo hot path; a imagem da api não ganha numpy.
 related: [0025-cold-path-worker.md, 0022-shadow-mode.md, 0024-modelos-servidos-em-python-puro.md]
-sources: [Pesquisa QITech (GNN: GraphSAGE grau 1–2, até 10 vizinhos; HMM de Lucas et al., 2019), scripts/model-results.md]
+sources: [Pesquisa QITech (GNN: GraphSAGE grau 1–2, até 10 vizinhos; HMM de Lucas et al., 2019), Hamilton, Ying & Leskovec (2017), Inductive Representation Learning on Large Graphs, NeurIPS 30, p. 1024-1034, https://papers.nips.cc/paper/6703-inductive-representation-learning-on-large-graphs, Rabiner (1989), A tutorial on hidden Markov models and selected applications in speech recognition, Proceedings of the IEEE 77(2), p. 257-286, https://ieeexplore.ieee.org/document/18626, scripts/model-results.md]
 ---
 
 # ADR 0026: GraphSAGE e HMM enxutos em numpy, restritos ao worker
@@ -29,7 +29,9 @@ A pesquisa coloca GNN e modelos de sequência fora do caminho síncrono: rodam e
 - **Imagens:** numpy só no target `worker` do Dockerfile (`requirements-worker.txt`). A `api` lê do JSON apenas o threshold.
 - **Shadow:** `MODEL_GRAPHSAGE` e `MODEL_SEQUENCE_HMM` leem o score mais recente e entram em `metadata.shadow` ([ADR 0022](0022-shadow-mode.md)); nunca decidem.
 
-## Resultados (dados sintéticos, sem busca de hiperparâmetros)
+## Resultados no fixture do CI (sem valor estatístico, sem busca de hiperparâmetros)
+
+Gerador e rótulos são nossos, então estes números só mostram que o caminho funciona. A medida com valor estatístico do GraphSAGE está no PixSim: AUC de nó 0,919 no mundo B, treinado no A ([ADR 0031](0031-modelos-treinados-no-pixsim-e-rotulos-atrasados.md), [validação](../../05-motor/validacao-pixsim.md)); o HMM não foi avaliado lá.
 
 | Modelo | AUC teste (perturbado) | Leitura |
 |---|---|---|

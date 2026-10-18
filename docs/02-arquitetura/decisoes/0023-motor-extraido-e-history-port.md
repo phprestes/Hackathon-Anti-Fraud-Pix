@@ -19,7 +19,7 @@ O backtest pela API leva cerca de 3 minutos para 5 mil Pix, e cada Pix paga HTTP
 
 - `src/rules/engine.py`: `build_context(snapshot, history)`, `evaluate(snapshot, context, rules)` e `metadata_from(result)`. O controller faz só idempotência, gravação e commit.
 - `src/rules/history_port.py`: `HistoryPort` (Protocol) com os agregados de que o contexto precisa. O `PixTransactionRepository` (SQL) o implementa na API; o `InMemoryHistory` (scripts/) o implementa no backtest.
-- `src/rules/features.py`: um único vetor de features (29 campos, nada identificável), montado do mesmo contexto que as regras veem e devolvido em `metadata.features`. É a fonte das features de treino.
+- `src/rules/features.py`: um único vetor de features (33 campos, nada identificável), montado do mesmo contexto que as regras veem e devolvido em `metadata.features`. É a fonte das features de treino.
 - **Paridade:** o mesmo arquivo de eventos passa pela API e pelo backtest; status, regras disparadas e o vetor inteiro de features precisam ser idênticos Pix a Pix (`make parity`). Como o vetor cobre todos os agregados, a comparação prova que as duas implementações do `HistoryPort` contam igual, sem que os testes importem `src/` (R1).
 
 ## Alternativas descartadas

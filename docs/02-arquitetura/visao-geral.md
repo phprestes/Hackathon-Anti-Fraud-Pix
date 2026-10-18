@@ -15,13 +15,14 @@ sources: [bootcamp-base-api, Desafio Antifraude Pix]
 
 Os mesmos sistemas em diagramas C4 (contexto, containers e componentes) estão em [c4.md](c4.md).
 
-Dois containers, um `docker-compose.yml` ([ADR 0002](decisoes/0002-monolito-sincrono-sem-dependencia-externa.md)).
+Três containers, um `docker-compose.yml`: `api` e `db` formam o caminho da decisão ([ADR 0002](decisoes/0002-monolito-sincrono-sem-dependencia-externa.md)); o `worker` é o cold path assíncrono, que só escreve scores de reputação no banco ([ADR 0025](decisoes/0025-cold-path-worker.md)).
 
 ```mermaid
 flowchart LR
     caller["Sistema de pagamento<br/>(ou pytest)"] -- "POST /pix/transaction<br/>INTERNAL-TOKEN" --> api
     subgraph compose["docker compose"]
         api["api<br/>FastAPI · :3000"] -- "SQLAlchemy" --> db[("db<br/>PostgreSQL 16")]
+        worker["worker<br/>cold path · a cada 30 s"] -- "grava scores" --> db
     end
 ```
 
@@ -29,6 +30,7 @@ flowchart LR
 |---|---|---|---|
 | `api` | build local (`Dockerfile`) | Recebe o Pix, roda as regras, grava e responde | `GET /health_check` a cada 3s |
 | `db` | build de `database/` (postgres:16 + `database.sql`) | Histórico de todo Pix recebido e das análises | `pg_isready` |
+| `worker` | build local, alvo `worker` do `Dockerfile` (imagem da `api` mais numpy) | Calcula a reputação de cada conta de destino no grafo, o GraphSAGE e o HMM de sequência; o hot path só lê o score pronto | sem porta e sem healthcheck; sobe depois do `db` |
 
 A API é stateless: a sessão de banco nasce e morre em cada requisição. Qualquer réplica atende qualquer Pix.
 
@@ -62,4 +64,4 @@ O detalhe do motor está em [motor de regras](../05-motor/motor-de-regras.md); o
 | `id` interno + `<entidade>_key` UUID; enumerador de status | Histórico append-only com índices de janela ([ADR 0009](decisoes/0009-historico-append-only.md)) |
 | Compose `api` + `db` com healthchecks; testes black box | Idempotência pelo `id` do Pix ([ADR 0012](decisoes/0012-idempotencia-pelo-id-do-pix.md)), `Makefile`, `AGENTS.md`, `CHANGELOG.md` |
 
-Estado atual do código: ver [CHANGELOG](../../CHANGELOG.md). Enquanto a rota do Pix não entra, o exemplo `sample_entity` da base continua no código.
+Estado atual do código: ver [CHANGELOG](../../CHANGELOG.md). O exemplo `sample_entity` da base foi substituído pela rota do Pix.

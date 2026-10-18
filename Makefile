@@ -6,7 +6,7 @@ COMPOSE := docker compose
 PYTHON_311 := $(shell command -v python3.11 2>/dev/null)
 
 .DEFAULT_GOAL := help
-.PHONY: help all up down stop reset rebuild ps logs shell install test test-cov lint check simulate events backtest parity calibrate calibrate-check calibrate-pixsim train-models-mock pixsim-datasets train-graphsage train-hmm clean pixsim validate-pixsim pixsim-parity delayed-labels feedback
+.PHONY: help all up down stop reset rebuild ps logs shell install test test-cov lint check simulate events backtest parity calibrate calibrate-check calibrate-pixsim rule-ablation train-models-mock pixsim-datasets train-graphsage train-hmm clean pixsim validate-pixsim pixsim-parity delayed-labels feedback
 
 help: ## Lista os comandos
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  \033[36m%-10s\033[0m %s\n", $$1, $$2}'
@@ -64,7 +64,7 @@ lint: install ## Roda o flake8
 
 check: lint test ## Lint e testes
 
-simulate: install ## Roda o simulador de calibração contra a api (depois, make reset limpa o banco)
+simulate: install ## Fixture do CI, sem valor estatistico: manda o trafego do nosso simulador pela api (depois, make reset limpa o banco)
 	$(BIN)/python scripts/simulate.py
 
 events: install ## Gera scripts/out/events.jsonl (seed 42, 60 pagadores, 7 dias)
@@ -123,6 +123,11 @@ analyze: install ## Gera docs/05-motor/analises.md no PixSim (log-normalidade, d
 	test -f $(PIXSIM_DIR)/features-b.jsonl || $(MAKE) pixsim-datasets
 	ulimit -v 2500000; $(BIN)/python scripts/analyze.py
 
+rule-ablation: install ## Ablacao por regra e sensibilidade no mundo B do PixSim (cache retoma); atualiza validacao-pixsim.md
+	test -f $(PIXSIM_DIR)/events-b.jsonl || $(MAKE) pixsim-datasets
+	ulimit -v 2500000; $(BIN)/python scripts/rule_ablation.py run
+	$(BIN)/python scripts/rule_ablation.py render
+
 calibrate-pixsim: install ## Grid de parametros pelo custo ponderado no PixSim: escolhe no mundo A, confirma no B; grava scripts/out/calibration-pixsim.md/.json (cache retoma)
 	test -f $(PIXSIM_DIR)/features-b.jsonl || $(MAKE) pixsim-datasets
 	ulimit -v 2500000; $(BIN)/python scripts/calibrate.py --events $(PIXSIM_DIR)/events.jsonl --events-b $(PIXSIM_DIR)/events-b.jsonl --objective cost
@@ -157,3 +162,7 @@ pixsim-parity: install ## Zera o banco e compara API x backtest nas 500 linhas d
 	$(MAKE) reset
 	$(COMPOSE) stop worker
 	$(BIN)/python scripts/parity.py $(PIXSIM_DIR)/events-parity.jsonl
+
+.PHONY: pdf
+pdf: ## Compila docs/relatorio/relatorio.md em relatorio.pdf (pandoc + xelatex)
+	cd docs/relatorio && pandoc metadata.yaml relatorio.md -o relatorio.pdf --pdf-engine=xelatex --toc --number-sections -V lang=pt-BR -V toc-depth=3 --resource-path=.:../02-arquitetura/diagramas

@@ -27,8 +27,8 @@ A ordem das regras **não** muda a decisão, só a ordem dos motivos.
 
 | Camada | Regras | Decide | Por quê |
 |---|---|---|---|
-| **Sinal isolado de dúvida** | limites, velocity fixa, montante, perfil (device novo, conta nova, z robusto, Poisson, viagem impossível), destino novo, primeira vez com valor alto, destino sinalizado | `two_factor_required` | Sozinho, o sinal acontece com cliente bom (viagem, compra grande, aparelho novo). O cliente legítimo resolve com um toque; o fraudador não tem o segundo fator |
-| **Sinal isolado de risco claro** | conta de destino com menos de 3 dias + valor alto, velocity extrema (10 em 10 min), aparelho com mais de 3 pagadores, fan-in acima de 10 | `rejected` | Padrões que quase nunca são de cliente legítimo |
+| **Sinal isolado de dúvida** | limites, velocity fixa, montante, perfil (device novo, conta nova, z robusto, Poisson, viagem impossível), destino novo, primeira vez com valor alto, destino sinalizado, reputação de grafo ≥ 0,6 (`COUNTERPARTY_GRAPH_RISK`) | `two_factor_required` | Sozinho, o sinal acontece com cliente bom (viagem, compra grande, aparelho novo). O cliente legítimo resolve com um toque; o fraudador não tem o segundo fator |
+| **Sinal isolado de risco claro** | conta de destino com menos de 3 dias + valor alto, velocity extrema (10 em 10 min), aparelho com mais de 3 pagadores, fan-in acima de 10, reputação de grafo ≥ 0,9 | `rejected` | Padrões que quase nunca são de cliente legítimo |
 | **Tipologia** (combinação) | `TYPOLOGY_ACCOUNT_TAKEOVER`, `TYPOLOGY_MULE`, `TYPOLOGY_SPLITTING` | `rejected` | A combinação descreve um golpe conhecido. Dois 2FA não somam um `rejected`; só uma tipologia explícita reprova ([ADR 0018](../02-arquitetura/decisoes/0018-regras-compostas-por-tipologia.md)) |
 
 ## Exemplos (dos testes de cenário)
@@ -41,4 +41,4 @@ A ordem das regras **não** muda a decisão, só a ordem dos motivos.
 | 5º pagador diferente em 1 h para conta aberta há 2 dias | `TYPOLOGY_MULE` (rejected), `COUNTERPARTY_NEW_ACCOUNT` | `rejected` |
 | Pagador novo mandando, 2 dias depois, para esse mesmo destino | `COUNTERPARTY_FLAGGED`, `COUNTERPARTY_NEW_ACCOUNT` (2FA) | `two_factor_required` |
 
-Os parâmetros estão no [catálogo](regras.md).
+Os parâmetros, as fontes e o efeito medido de cada regra no PixSim estão no [catálogo](regras.md).

@@ -9,7 +9,7 @@ sources: [Pesquisa QITech (análise 7, PixSim), Desafio Antifraude Pix ("Expliqu
 
 > [Índice](../../README.md) › [Decisões](README.md) › 0020
 
-**Status:** aceita
+**Status:** substituída parcialmente por [0029](0029-pixsim-como-referencia.md): o simulador fica só como fixture do CI (paridade e trava de regressão), sem valor estatístico; a calibração e as métricas vêm do PixSim.
 
 ## Contexto
 

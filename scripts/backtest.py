@@ -68,6 +68,18 @@ def run_backtest(events, rules):
     return stats["elapsed"], stats["conflicts"]
 
 
+def select_rules(rules, disabled):
+    """Drops the rules whose code is in `disabled`; an unknown code is an error, not a silent no-op."""
+    unknown = sorted(set(disabled) - {rule.code for rule in rules})
+    if unknown:
+        raise ValueError(f"unknown rule codes: {', '.join(unknown)}")
+    return [rule for rule in rules if rule.code not in disabled]
+
+
+def parse_disable(value):
+    return [code.strip() for code in value.split(",") if code.strip()] if value else []
+
+
 def parse_overrides(pairs):
     overrides = {}
     for pair in pairs:
@@ -99,6 +111,8 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Batch rule backtest (no HTTP, no database)")
     parser.add_argument("events")
     parser.add_argument("--set", action="append", default=[], metavar="RULE_X=value")
+    parser.add_argument("--disable", default="", metavar="RULE_A,RULE_B",
+                        help="rule codes to switch off (ablation: what the others do without them)")
     parser.add_argument("--out", help="Markdown file for the report")
     parser.add_argument("--responses", help="JSONL file with one response per Pix")
     parser.add_argument("--json", help="JSON file with the report metrics")
@@ -108,7 +122,7 @@ def parse_args():
 def main():
     args = parse_args()
     try:
-        rules = build_rules(parse_overrides(args.set))
+        rules = select_rules(build_rules(parse_overrides(args.set)), parse_disable(args.disable))
     except ValueError as error:
         raise SystemExit(str(error))
     stats = {}

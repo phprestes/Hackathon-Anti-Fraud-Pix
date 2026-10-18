@@ -24,6 +24,10 @@ Consequência para o motor: uma regra é provada mandando Pix pela API, nunca ch
 3. Ver o vermelho pelo motivo certo, implementar, ver o verde.
 4. A linha entra na [matriz regra → teste](../01-contexto/requisitos.md#matriz-regra--teste).
 
+## Cenários à mão e o simulador como fixture
+
+Os testes são **cenários escritos à mão**: cada um monta o histórico mínimo para uma regra e confere a decisão (130 testes, um arquivo por regra ou por rota em `tests/integration/`). Eles provam que o motor cumpre o catálogo; não medem fricção nem captura. O simulador de tráfego (`scripts/simulate.py`) é uma **fixture do CI, sem valor estatístico**: alimenta a paridade API × backtest (`make parity`) e a trava de regressão (`make calibrate-check`), e suas fraudes são nossas. Fricção, captura, custo e a contribuição de cada regra vêm do PixSim ([validação](../05-motor/validacao-pixsim.md), [ADR 0029](../02-arquitetura/decisoes/0029-pixsim-como-referencia.md)).
+
 ## Montando histórico sem relógio
 
 Como o relógio das regras é o `transaction_date` ([ADR 0007](../02-arquitetura/decisoes/0007-relogio-da-transacao.md)), o teste monta o passado mandando Pix com datas escolhidas:
@@ -69,6 +73,6 @@ Cada teste gera documentos e aparelhos aleatórios, para que o histórico de um 
 ## Como rodar
 
 ```bash
-make all      # sobe api e db, espera healthy, cria .venv 3.11 e roda pytest -v
+make all      # sobe api, db e worker, espera healthy, cria .venv 3.11 e roda pytest -v
 make test     # só os testes (api já de pé)
 ```

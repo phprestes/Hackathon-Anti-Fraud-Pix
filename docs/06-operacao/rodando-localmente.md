@@ -28,10 +28,13 @@ Docker com `docker compose`, Git e Python 3.11 (ou `uv`, que o `make install` us
 | `make reset` | apaga o volume e recria o banco | depois de mudar `database/database.sql` |
 | `make rebuild` | reconstrói a imagem sem cache | depois de mudar `requirements.txt` |
 | `make logs` | segue o log da `api` | para achar um `x-request-id` |
-| `make simulate` | tráfego sintético pela API (~3 min); suja o banco | medir fricção e latência |
+| `make simulate` | fixture do CI, sem valor estatístico: tráfego do nosso simulador pela API (~3 min); suja o banco | medir latência da API |
 | `make events` / `make backtest` | gera eventos / roda o motor em lote, sem HTTP e sem banco | experimentos rápidos |
 | `make parity` | zera o banco e compara API × backtest Pix a Pix | depois de mexer em agregados |
-| `make calibrate` / `make calibrate-check` | grid de parâmetros / trava de regressão | antes de mudar parâmetro de regra |
+| `make calibrate-check` | trava de regressão no fixture do CI (fricção e captura mínimas) | antes de entregar |
+| `make calibrate-pixsim` | grid de parâmetros pelo custo ponderado no PixSim: escolhe no mundo A, confirma no B | antes de mudar parâmetro de regra |
+| `make rule-ablation` | ablação por regra e sensibilidade dos parâmetros no mundo B do PixSim; atualiza a seção "Contribuição de cada regra" | depois de mudar regra ou parâmetro |
+| `make calibrate` | grid no fixture (sem valor estatístico; só para a trava) | raramente |
 | `make pixsim`, `make validate-pixsim`, `make pixsim-parity` | gera um mundo do PixSim (venv isolado), valida o motor nele e confere API × backtest nesse dado | números de referência |
 | `make train-models` | treina LogReg e LightGBM no mundo A do PixSim, avalia no B e instala os JSON (`make train-models-mock` treina no nosso simulador e sobrescreve) | retreinar |
 | `make datasets`, `make pixsim-datasets`, `make train-graphsage`, `make train-hmm`, `make model-parity` | dados de treino, demais modelos e fidelidade dos avaliadores | retreinar |

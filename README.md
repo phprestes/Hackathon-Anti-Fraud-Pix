@@ -4,7 +4,7 @@
 
 Motor antifraude de Pix do Hackathon QI Tech 2026: uma API que recebe um Pix e responde `approved`, `two_factor_required` ou `rejected`, sempre com o motivo. Feito a partir do [`bootcamp-base-api`](docs/referencia/base-service-readme.md). Stack: Python 3.11, FastAPI, PostgreSQL 16, Docker. Enunciado completo em [docs/01-contexto/enunciado.md](docs/01-contexto/enunciado.md).
 
-> **Em números:** 18 regras que decidem, 5 modelos em shadow, 130 testes black box, CI verde. No PixSim (simulador de terceiros, mundo A, [validação](docs/05-motor/validacao-pixsim.md)): 3,8% de 2FA em legítimos, 0,01% reprovados, 52% dos Pix de vítima barrados (conta tomada: 99% dos eventos com ao menos um Pix barrado) e custo ponderado de R$ 131,66 por 1.000 Pix, contra R$ 143,58 antes da [calibração](docs/05-motor/calibracao.md); no mundo B de confirmação, R$ 149,24 contra R$ 157,60. O backtest em memória avalia um Pix em P95 de 0,63 ms (2,6 mil Pix/s). Histórico no [CHANGELOG](CHANGELOG.md).
+> **Em números:** 18 regras que decidem, 5 modelos em shadow, 130 testes black box, CI verde. No PixSim (simulador de terceiros, mundo A, [validação](docs/05-motor/validacao-pixsim.md)): 3,8% de 2FA em legítimos, 0,01% reprovados, 52% dos Pix de vítima barrados (conta tomada: 99% dos eventos com ao menos um Pix barrado) e custo ponderado de R$ 132,13 por 1.000 Pix; no mundo B de confirmação, R$ 153,51 contra R$ 161,87 antes da [calibração](docs/05-motor/calibracao.md) (mesmo modelo de custo: reprovar legítimo custa R$ 50 mais 2% do valor). O backtest em memória avalia um Pix em P95 de 0,63 ms (2,6 mil Pix/s). Histórico no [CHANGELOG](CHANGELOG.md).
 
 ## Como o motor de decisão funciona
 
@@ -21,26 +21,26 @@ Detalhe em [motor de regras](docs/05-motor/motor-de-regras.md) e nos [diagramas 
 
 Fonte da verdade, com o porquê completo de cada parâmetro: [catálogo de regras](docs/05-motor/regras.md). Os parâmetros marcados com ★ foram ajustados no PixSim pelo custo ponderado, escolhidos no mundo A e confirmados no B ([calibração](docs/05-motor/calibracao.md)); "PixSim" na coluna "Por quê" é o efeito medido lá, em simulador de terceiros, não em Pix real. Todos são variáveis `RULE_*` em `src/constants.py`.
 
-| Regra | Lógica | Parâmetros | Por quê |
+| Regra | Lógica | Parâmetros | Por quê (fonte e número do PixSim, mundo B) |
 |-------|--------|------------|---------|
-| `LIMIT_NIGHT_AMOUNT` | Pix entre 20h e 6h (hora local) acima do teto; não vale para CNPJ | R$ 1.000 | Limite noturno padrão do BC para pessoa física (Res. 142/2021); sequestro relâmpago. Mantido por âncora regulatória, embora o PixSim preferisse R$ 2.000 (R$ 4,59 por 1.000 Pix) |
-| `LIMIT_SINGLE_AMOUNT` | Valor de um Pix acima do teto | R$ 50 mil CPF, R$ 200 mil CNPJ | Teto de exposição de um Pix só |
-| `VELOCITY_SOURCE_COUNT` | Tentativas do pagador em 10 min, inclusive reprovadas | 2FA a partir de 5, reprova a partir de 10 | Conta tomada é esvaziada em rajada; protege o pagador sem histórico |
-| `VELOCITY_DEVICE_SOURCES` | Pagadores distintos no mesmo aparelho em 24 h | reprova acima de 3 | Fazenda de contas; família raramente passa de 3 |
-| `VELOCITY_POISSON_GAMMA` | Rajada da última hora improvável para o ritmo histórico do pagador | ★ cauda < 30 ppm, 24 h de histórico | O "rápido demais" de cada um. No PixSim, de 100 para 30 ppm o 2FA em legítimos cai de 3,50% para 3,30%; 1.000 ppm é o pior ponto (5,03%, custo R$ 166,48) |
-| `AMOUNT_SOURCE_DAILY_SUM` | Soma de 24 h (só não reprovados) + este Pix | ★ R$ 45 mil CPF, R$ 50 mil CNPJ | Fracionamento. No PixSim é um platô: R$ 45 mil e R$ 60 mil custam o mesmo (R$ 143,11 contra R$ 143,58 por 1.000 Pix com R$ 30 mil) |
-| `PROFILE_NEW_DEVICE` | Pagador com histórico, aparelho nunca visto | ★ a partir de R$ 200 | Primeiro passo da tomada de conta; piso evita fricção no cafezinho. No PixSim, de R$ 500 para R$ 200 barra mais Pix de vítima (36,1% → 38,8%) sem fricção extra |
-| `PROFILE_NEW_SOURCE_ACCOUNT` | Conta de origem nova com valor alto | < 7 dias e > R$ 2.000 | Conta aberta com identidade falsa é usada logo (art. 39-B do Regulamento do Pix) |
-| `PROFILE_AMOUNT_ROBUST_Z` | z robusto de log(valor) sobre 30 dias do pagador (mediana/MAD) | ★ z > 4,5, mínimo 5 Pix | Fora do padrão do próprio cliente (Bolton & Hand); robusto a histórico pequeno. No PixSim, z de 3,5 para 4,5 tira 2FA de legítimos (3,50% → 3,35%) com a mesma captura |
-| `PROFILE_GEO_VELOCITY` | Distância ao último Pix com GPS ÷ tempo | > 50 km e > 900 km/h | Viagem impossível; 900 km/h é um avião comercial |
-| `COUNTERPARTY_NEW_ACCOUNT` | Idade da conta de destino | 2FA < 30 dias; reprova < 3 dias e > R$ 1.000 | Contas laranja são novas; com vítima coagida, só o destino denuncia |
-| `COUNTERPARTY_FAN_IN` | Pagadores distintos para o destino em 1 h | reprova acima de 10 | Conta de passagem (funil) |
-| `COUNTERPARTY_FIRST_TIME_HIGH` | Primeiro Pix do pagador para esse destino, valor alto | ★ > R$ 1.000 | Falso parente e falso boleto vão para destino novo; o aluguel não. É o parâmetro de maior efeito no PixSim: de R$ 3.000 para R$ 1.000 o custo cai de R$ 143,58 para R$ 135,72 por 1.000 Pix (+0,66 p.p. de 2FA) |
-| `COUNTERPARTY_FLAGGED` | Destino recebeu Pix reprovado de outro pagador em 7 dias | 7 dias | Reputação derivada do próprio histórico, sem lista externa |
-| `COUNTERPARTY_GRAPH_RISK` | Score de reputação do destino calculado pelo worker no grafo (funil, dispersão, 2 saltos, idade), com até 120 min | 2FA ≥ 0,6; reprova ≥ 0,9 | Conta laranja é um padrão de rede: muitos pagadores entrando e repasse para várias contas logo em seguida |
-| `TYPOLOGY_ACCOUNT_TAKEOVER` | Histórico + aparelho novo + (viagem impossível ou z > 3,0) | z > 3,0 | Os sinais juntos descrevem tomada de conta: risco claro |
-| `TYPOLOGY_MULE` | Destino < 30 dias recebendo de 5+ pagadores em 1 h | 5 pagadores | Barra a conta laranja antes do fan-in genérico |
-| `TYPOLOGY_SPLITTING` | 6+ Pix pequenos (≤ R$ 2.000) para 4+ destinos **novos** em 24 h acima do corte | R$ 15 mil | Fracionamento espalha para contas novas. No PixSim, R$ 5 mil é o pior ponto do grid (0,13% de legítimos reprovados, custo R$ 250,23) |
+| `LIMIT_NIGHT_AMOUNT` | Pix entre 20h e 6h (hora local) acima do teto; não vale para CNPJ | R$ 1.000 | [Res. BCB 142/2021, art. 2º, I](https://www.bcb.gov.br/estabilidadefinanceira/exibenormativo?tipo=Resolu%C3%A7%C3%A3o%20BCB&numero=142) e IN BCB 512/2024, art. 3º, §7º, II: R$ 1.000 no período noturno para pessoa física. Mantido por âncora regulatória. PixSim: dispara em 0,57% dos legítimos e 4,6% das vítimas; ablação −R$ 6,46 por 1.000 Pix (sem efeito no PixSim, custa); R$ 2.000 custaria R$ 4,80 a menos |
+| `LIMIT_SINGLE_AMOUNT` | Valor de um Pix acima do teto | R$ 50 mil CPF, R$ 200 mil CNPJ | Teto de exposição; o art. 37 do Regulamento do Pix só exige critério de risco, sem valor. PixSim: dispara em 0,02% dos legítimos e 0,0% das vítimas; ablação R$ 0,00 por 1.000 Pix (sem efeito no PixSim) |
+| `VELOCITY_SOURCE_COUNT` | Tentativas do pagador em 10 min, inclusive reprovadas | 2FA a partir de 5, reprova a partir de 10 | Velocity do enunciado; limiares do time, sem fonte externa. PixSim: nunca dispara, sem efeito |
+| `VELOCITY_DEVICE_SOURCES` | Pagadores distintos no mesmo aparelho em 24 h | reprova acima de 3 | Fazenda de contas; limiar do time, sem fonte externa. PixSim: nunca dispara, sem efeito |
+| `VELOCITY_POISSON_GAMMA` | Rajada da última hora improvável para o ritmo histórico do pagador | ★ cauda < 30 ppm, 24 h de histórico | Gamma–Poisson (Gelman et al., 2013) sobre o perfil do titular (Bolton & Hand, 2002). PixSim: dispara em 0,15% dos legítimos e 6,8% das vítimas; ablação +R$ 3,83 por 1.000 Pix (contribui); lift 46x |
+| `AMOUNT_SOURCE_DAILY_SUM` | Soma de 24 h (só não reprovados) + este Pix | ★ R$ 45 mil CPF, R$ 50 mil CNPJ | Fracionamento; sem fonte regulatória. Platô entre R$ 45 mil e R$ 60 mil. PixSim: dispara em 0,52% dos legítimos e 0,1% das vítimas; ablação −R$ 8,69 por 1.000 Pix (sem efeito no PixSim, custa) |
+| `PROFILE_NEW_DEVICE` | Pagador com histórico, aparelho nunca visto | ★ a partir de R$ 200 | Troca de aparelho abre a conta tomada (Pizzolato et al., 2025). PixSim: dispara em 0,00% dos legítimos e 15,0% das vítimas; ablação +R$ 5,44 por 1.000 Pix (contribui); precisão ponderada 43,8% (o legítimo do PixSim quase não troca de aparelho) |
+| `PROFILE_NEW_SOURCE_ACCOUNT` | Conta de origem nova com valor alto | < 7 dias e > R$ 2.000 | Analogia ao fator "idade da conta" do [Regulamento do Pix, art. 39-B](https://www.bcb.gov.br/content/estabilidadefinanceira/pix/Pix_Regulation/Resolution_BCB_1.pdf), §1º, II, que na norma é a do recebedor. PixSim: dispara em 0,00% dos legítimos e 0,1% das vítimas; ablação +R$ 0,18 por 1.000 Pix (contribui) |
+| `PROFILE_AMOUNT_ROBUST_Z` | z robusto de log(valor) sobre 30 dias do pagador (mediana/MAD) | ★ z > 4,5, mínimo 5 Pix | z modificado com MAD (Iglewicz & Hoaglin, 1993; corte 3,5 sob normalidade) e perfil do titular (Bolton & Hand, 2002). PixSim: dispara em 0,12% dos legítimos e 1,0% das vítimas; ablação −R$ 1,45 por 1.000 Pix (sem efeito no PixSim, custa) |
+| `PROFILE_GEO_VELOCITY` | Distância ao último Pix com GPS ÷ tempo | > 50 km e > 900 km/h | Viagem impossível; 900 km/h é convenção do time, sem fonte. PixSim: nunca dispara, sem efeito (o PixSim não tem geolocalização) |
+| `COUNTERPARTY_NEW_ACCOUNT` | Idade da conta de destino | 2FA < 30 dias; reprova < 3 dias e > R$ 1.000 | [Regulamento do Pix, art. 39-B](https://www.bcb.gov.br/content/estabilidadefinanceira/pix/Pix_Regulation/Resolution_BCB_1.pdf), §1º, II: tempo de abertura da conta do recebedor. PixSim: dispara em 1,13% dos legítimos e 1,1% das vítimas; ablação −R$ 24,28 por 1.000 Pix (sem efeito no PixSim, custa); as mulas do PixSim têm idade comum |
+| `COUNTERPARTY_FAN_IN` | Pagadores distintos para o destino em 1 h | reprova acima de 10 | Conta de passagem (funil); limiar do time. PixSim: nunca dispara, sem efeito |
+| `COUNTERPARTY_FIRST_TIME_HIGH` | Primeiro Pix do pagador para esse destino, valor alto | ★ > R$ 1.000 | [Regulamento do Pix, art. 39-B](https://www.bcb.gov.br/content/estabilidadefinanceira/pix/Pix_Regulation/Resolution_BCB_1.pdf), §1º, IV: recorrência entre pagador e recebedor. PixSim: dispara em 1,29% dos legítimos e 32,7% das vítimas; ablação +R$ 34,79 por 1.000 Pix (contribui); precisão ponderada 0,2%, lift 25,4x: a regra de maior contribuição |
+| `COUNTERPARTY_FLAGGED` | Destino recebeu Pix reprovado de outro pagador em 7 dias | 7 dias | Análogo a [Regulamento do Pix, art. 39-B](https://www.bcb.gov.br/content/estabilidadefinanceira/pix/Pix_Regulation/Resolution_BCB_1.pdf), §1º, I (notificações de infração do recebedor), derivado do nosso histórico. PixSim: dispara em 0,72% dos legítimos e 1,3% das vítimas; ablação −R$ 11,76 por 1.000 Pix (sem efeito no PixSim, custa) |
+| `COUNTERPARTY_GRAPH_RISK` | Reputação do destino calculada pelo worker no grafo, com até 120 min | 2FA ≥ 0,6; reprova ≥ 0,9 | Conta laranja é padrão de rede; GraphSAGE offline tem AUC de nó 0,919 (Hamilton et al., 2017). PixSim: nunca dispara, sem efeito (o worker não roda no backtest) |
+| `TYPOLOGY_ACCOUNT_TAKEOVER` | Histórico + aparelho novo + (viagem impossível ou z > 3,0) | z > 3,0 | Tomada de conta e acesso remoto (Pizzolato et al., 2025). PixSim: dispara em 0,00% dos legítimos e 1,0% das vítimas; ablação +R$ 0,50 por 1.000 Pix (contribui); precisão ponderada 100% |
+| `TYPOLOGY_MULE` | Destino < 30 dias recebendo de 5+ pagadores em 1 h | 5 pagadores | Idade da conta do recebedor ([Regulamento do Pix, art. 39-B](https://www.bcb.gov.br/content/estabilidadefinanceira/pix/Pix_Regulation/Resolution_BCB_1.pdf), §1º, II) com padrão funil. PixSim: dispara em 0,00% dos legítimos e 0,0% das vítimas; ablação −R$ 0,38 por 1.000 Pix (sem efeito no PixSim, custa) |
+| `TYPOLOGY_SPLITTING` | 6+ Pix pequenos (≤ R$ 2.000) para 4+ destinos **novos** em 24 h acima do corte | R$ 15 mil | Fracionamento; sem fonte verificada. PixSim: dispara em 0,03% dos legítimos e 0,1% das vítimas; ablação −R$ 25,99 por 1.000 Pix (sem efeito no PixSim, custa); o PixSim não tem fracionamento e a regra só reprova legítimos |
 
 **Calibração no PixSim** (mundos A e B, 30 dias avaliados, 125 mil Pix legítimos e 986 eventos de fraude cada): no mundo A, 96,2% dos legítimos aprovados, 3,8% com 2FA, 0,01% reprovados, 51,7% dos Pix pagador→mula barrados e ao menos um Pix barrado em 591 dos 986 eventos de fraude (conta tomada 98,6%, engenharia social 57,3%, QR adulterado 29,4%, Pix errado 12,1%). No B: 4,1% de 2FA, 0,03% reprovados, 51,8% barrados. É simulador de terceiros, não Pix real: mede fricção e custo relativo entre configurações, não eficácia em produção ([calibração](docs/05-motor/calibracao.md), [validação](docs/05-motor/validacao-pixsim.md)). Nosso simulador (`scripts/simulate.py`) é só fixture do CI e alimenta a trava de regressão `make calibrate-check`.
 
@@ -56,15 +56,15 @@ Exemplos em [como as regras viram decisão](docs/05-motor/decisao.md).
 
 ## Além das regras: modelos em shadow
 
-Sem rótulo real, nenhum modelo decide. Todos rodam em shadow: aparecem em `metadata.shadow` com o score e o que **decidiriam**, e o backtest mede como seria. Os modelos são treinados no mundo A do PixSim e avaliados no B, então isto prova que o caminho completo é viável, não que funciona contra fraude real ([ADR 0017](docs/02-arquitetura/decisoes/0017-ml-fora-do-prazo-e-do-hot-path.md)).
+Sem rótulo real, nenhum modelo decide. Todos rodam em shadow: aparecem em `metadata.shadow` com o score e o que **decidiriam**, e o backtest mede como seria. A logística, o LightGBM e o GraphSAGE são treinados no mundo A do PixSim e avaliados no B (o Isolation Forest e o HMM instalados vêm do nosso simulador), então isto prova que o caminho completo é viável, não que funciona contra fraude real ([ADR 0017](docs/02-arquitetura/decisoes/0017-ml-fora-do-prazo-e-do-hot-path.md)).
 
 | Modelo | Onde roda | Como | Resultado (PixSim, treino em A, teste em B) |
 |---|---|---|---|
 | Regressão logística + Platt | hot path | Treino em `scripts/` (sklearn só em dev), pesos em JSON, inferência em Python puro | AUC 0,990 |
-| LightGBM | hot path | Árvores exportadas para JSON, avaliadas em Python puro (diferença de 6e-17 contra a biblioteca) | AUC 0,990. Regras + LightGBM barrariam 70,8% dos Pix de vítima no limiar, contra 38,4% só com as regras |
-| Isolation Forest | hot path | Não supervisionado (só legítimos), árvores em JSON | AUC 0,846 (limiar p99 captura só 8,5%) |
+| LightGBM | hot path | Árvores exportadas para JSON, avaliadas em Python puro (diferença máxima de 1,1e-16 contra a biblioteca; 1,1e-15 na logística e 1,7e-16 no Isolation Forest, em 14.202 Pix) | AUC 0,990. No mundo B, com as regras de antes da calibração, regras + LightGBM barrariam 70,8% dos Pix de vítima no limiar, contra 38,4% só com as regras (as regras atuais sozinhas barram 51,8%) |
+| Isolation Forest | hot path | Não supervisionado (só legítimos), árvores em JSON | Instalado o do simulador: AUC 0,788 no mundo B. O treinado no PixSim (AUC 0,846, captura só 8,5% no limiar p99) não atendeu ao critério de troca |
 | GraphSAGE | worker | 2 camadas, até 10 vizinhos, numpy | AUC de nó 0,92 no mundo B, otimista: o rótulo `is_mule` é estático por conta |
-| HMM de sequência | worker | 3 estados, Baum-Welch, numpy | Não avaliado no PixSim; a sequência de Pix sozinha diz pouco |
+| HMM de sequência | worker | 3 estados, Baum-Welch, numpy | Instalado o do simulador; não avaliado no PixSim, onde a sequência de Pix sozinha diz pouco |
 
 Os mundos A e B vêm do mesmo gerador, então a generalização medida é entre amostras, não entre geradores. A imagem da `api` não ganhou nenhuma biblioteca de ML. Detalhes na [validação no PixSim](docs/05-motor/validacao-pixsim.md) e nas ADRs [0022](docs/02-arquitetura/decisoes/0022-shadow-mode.md) a [0026](docs/02-arquitetura/decisoes/0026-graphsage-e-hmm-no-worker.md).
 
@@ -99,11 +99,12 @@ Ferramentas de risco (rodam fora da API):
 
 | Comando | Faz |
 |---|---|
-| `make simulate` | Manda tráfego sintético (legítimos + 5 tipologias de fraude) pela API e mede fricção, captura e latência |
+| `make simulate` | Fixture do CI, sem valor estatístico: manda tráfego sintético nosso (legítimos + 5 tipologias de fraude) pela API e mede latência |
 | `make backtest` | O mesmo motor sobre um arquivo de eventos, sem HTTP e sem banco |
 | `make parity` | Confere que API e backtest decidem igual, Pix a Pix |
 | `make calibrate-pixsim` | Grid de parâmetros pelo custo ponderado no PixSim: escolhe no mundo A, confirma no B |
-| `make calibrate` / `make calibrate-check` | Grid no nosso simulador (fixture) / trava de regressão de fricção e captura (roda no CI) |
+| `make rule-ablation` | Ablação por regra e sensibilidade dos parâmetros no mundo B do PixSim ([validação](docs/05-motor/validacao-pixsim.md#contribuição-de-cada-regra)) |
+| `make calibrate` / `make calibrate-check` | Grid no nosso simulador (fixture, sem valor estatístico) / trava de regressão de fricção e captura (roda no CI) |
 | `make train-models`, `make train-graphsage`, `make train-hmm` | Retreina os modelos em shadow |
 | `make analyze` | Análises estatísticas no PixSim ([docs/05-motor/analises.md](docs/05-motor/analises.md)) |
 

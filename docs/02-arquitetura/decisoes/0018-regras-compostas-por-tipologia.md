@@ -2,7 +2,7 @@
 title: "ADR 0018: Regras compostas por tipologia de golpe, no lugar de score ponderado"
 summary: Combinações de sinais que caracterizam um golpe conhecido (conta tomada, mula, fracionamento) viram regras próprias com nome de tipologia e decisão rejected.
 related: [0006-pior-decisao-vence-e-todas-as-regras-rodam.md, 0004-motor-de-regras-em-codigo.md, ../../05-motor/regras.md]
-sources: [Pizzolato et al. (2025), A Taxonomy of Pix Fraud in Brazil; Pesquisa QITech (M4)]
+sources: [Pizzolato, Lopes, Schepke & Kreutz (2025), A Taxonomy of Pix Fraud in Brazil, arXiv:2511.20902, https://arxiv.org/abs/2511.20902; Pesquisa QITech (M4)]
 ---
 
 # ADR 0018: Regras compostas por tipologia de golpe, no lugar de score ponderado
