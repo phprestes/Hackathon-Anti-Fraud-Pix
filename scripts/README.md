@@ -5,18 +5,18 @@ Uma pasta por finalidade: `fixture/` (simulador do CI, replay, relatório), `bac
 Cada script importa `_paths.py`, que põe `src/` e todas as pastas no `sys.path`; a saída fica em `scripts/out/`.
 Mapa completo em [camadas](../docs/02-arquitetura/camadas.md#onde-fica-o-quê).
 
-`fixture/simulate.py`: CI fixture, **no statistical value** (ADR 0020, superseded in part by ADR 0029). Legitimate payers plus injected frauds
-(account_takeover, mule, splitting, night_kidnapping, device_farm), sent to `POST /pix/transaction`. It feeds `make parity`
-and the regression gate `make calibrate-check`; calibration and every reported metric come from PixSim.
+`fixture/simulate.py`: Fixture do CI, **sem valor estatístico** (ADR 0020, substituída em parte pela ADR 0029). Pagadores legítimos mais fraudes injetadas
+(roubo_de_conta, mula, fracionamento, sequestro_relampago, fazenda_de_dispositivos), enviados para `POST /pix/transaction`. Ele alimenta o `make parity`
+e a trava de regressão `make calibrate-check`; a calibração e cada métrica reportada vêm do PixSim.
 
 ```
-.venv/bin/python scripts/fixture/simulate.py --dry-run          # no HTTP, payload stats only
-.venv/bin/python scripts/fixture/simulate.py --out result.md    # real run against the API
+.venv/bin/python scripts/fixture/simulate.py --dry-run          # sem HTTP, apenas estatísticas do payload
+.venv/bin/python scripts/fixture/simulate.py --out result.md    # execução real contra a API
 ```
 
-Options: `--base-url` (default `http://localhost:$API_PORT`), `--token` (default `$INTERNAL_TOKEN`),
-`--seed` (42), `--payers` (200), `--days` (14). Fraud labels live only in the simulator.
-The frauds are ours, so any number from it is circular.
+Opções: `--base-url` (padrão `http://localhost:$API_PORT`), `--token` (padrão `$INTERNAL_TOKEN`),
+`--seed` (42), `--payers` (200), `--days` (14). As classificações (labels) de fraude vivem apenas no simulador.
+As fraudes são nossas, então qualquer número derivado dele é circular.
 
 ## Backtest sem HTTP e sem banco
 
