@@ -73,13 +73,13 @@ xychart-beta
 | weekday | 0,039 | estável | 0,000 | 0,013 | estável |
 | source_attempts_poisson_lookback | 0,003 | estável | 0,007 | 0,005 | estável |
 | history_30d_median_cents | 0,003 | estável | 0,006 | 0,012 | estável |
-| history_30d_size | 0,003 | estável | 0,006 | 0,006 | estável |
+| history_30d_size | 0,003 | estável | 0,007 | 0,006 | estável |
 | local_hour | 0,003 | estável | 0,000 | 0,011 | estável |
-| destination_rejected_by_others_last_window | 0,002 | estável | 0,000 | 0,000 | estável |
 | poisson_tail_log10 | 0,002 | estável | 0,003 | 0,004 | estável |
 | source_age_days | 0,001 | estável | 0,010 | 0,017 | estável |
 | destination_age_days | 0,001 | estável | 0,012 | 0,169 | atenção |
 | source_new_destinations_last_24h | 0,001 | estável | 0,000 | 0,004 | estável |
+| destination_rejected_by_others_last_window | 0,001 | estável | 0,001 | 0,009 | estável |
 | source_small_attempts_last_24h | 0,001 | estável | 0,000 | 0,004 | estável |
 | source_sum_last_24h_cents | 0,001 | estável | 0,002 | 0,008 | estável |
 | amount_robust_z | 0,001 | estável | 0,000 | 0,004 | estável |
@@ -106,40 +106,17 @@ xychart-beta
 
 ## 4. Sensibilidade de limiar
 
-**Medido.** Passada em streaming pelo mundo A com um parâmetro por vez e os demais nos padrões atuais, a mesma avaliação da [calibração](calibracao.md). Em legítimos: % aprovado / 2FA / reprovado (fricção). Em fraude: % de Pix pagador→mula barrados (2FA ou reprovação). Custo: esperado por 1.000 Pix na visão do pagador, com a fraude ponderada pelo peso de importância do PixSim ([`scripts/backtest/cost-model.json`](../../scripts/backtest/cost-model.json)); a dispersão (lado da mula) não entra. Padrão de cada parâmetro marcado com `*`. Linha de base: legítimos 96,18% aprovados, fraude barrada 51,67% (1380 Pix pagador→mula), custo R$ 131,66 por 1.000 Pix.
-
-### `RULE_AMOUNT_DAILY_SUM_CENTS`
-
-| Valor | Legítimos aprovados % | Legítimos 2FA % | Legítimos reprovados % | Fraude barrada % | Custo R$/1.000 Pix |
-|---|---|---|---|---|---|
-| R$ 15.000 | 96,04 | 3,95 | 0,01 | 52,39 | 133,01 |
-| R$ 22.500 | 96,14 | 3,85 | 0,01 | 51,88 | 132,52 |
-| R$ 30.000 | 96,16 | 3,83 | 0,01 | 51,67 | 132,18 |
-| R$ 45.000* | 96,18 | 3,81 | 0,01 | 51,67 | 131,66 |
-| R$ 60.000 | 96,18 | 3,80 | 0,01 | 51,59 | 131,66 |
-
-Linhas: fricção em legítimos (100 − aprovados) e fraude barrada, em %. Eixo x em reais.
-
-```mermaid
-xychart-beta
-    title "RULE_AMOUNT_DAILY_SUM_CENTS"
-    x-axis ["15000", "22500", "30000", "45000", "60000"]
-    y-axis "%" 0 --> 100
-    line [3.96, 3.86, 3.84, 3.82, 3.82]
-    line [52.39, 51.88, 51.67, 51.67, 51.59]
-```
-
-Amplitude ao varrer o parâmetro: 0,15 p.p. de fricção, 0,80 p.p. de fraude barrada e R$ 1,35 de custo.
+**Medido.** Passada em streaming pelo mundo A com um parâmetro por vez e os demais nos padrões atuais, a mesma avaliação da [calibração](calibracao.md). Em legítimos: % aprovado / 2FA / reprovado (fricção). Em fraude: % de Pix pagador→mula barrados (2FA ou reprovação). Custo: esperado por 1.000 Pix na visão do pagador, com a fraude ponderada pelo peso de importância do PixSim ([`scripts/backtest/cost-model.json`](../../scripts/backtest/cost-model.json)); a dispersão (lado da mula) não entra. Padrão de cada parâmetro marcado com `*`. Linha de base: legítimos 97,03% aprovados, fraude barrada 50,65% (1380 Pix pagador→mula), custo R$ 109,61 por 1.000 Pix.
 
 ### `RULE_POISSON_TAIL_PPM`
 
 | Valor | Legítimos aprovados % | Legítimos 2FA % | Legítimos reprovados % | Fraude barrada % | Custo R$/1.000 Pix |
 |---|---|---|---|---|---|
-| 10 | 96,25 | 3,74 | 0,01 | 50,43 | 131,77 |
-| 30* | 96,18 | 3,81 | 0,01 | 51,67 | 131,66 |
-| 100 | 95,98 | 4,00 | 0,01 | 54,13 | 133,27 |
-| 300 | 95,58 | 4,41 | 0,01 | 56,23 | 137,74 |
-| 1000 | 94,45 | 5,54 | 0,01 | 59,86 | 155,90 |
+| 10 | 97,09 | 2,91 | 0,00 | 49,35 | 109,92 |
+| 30* | 97,03 | 2,97 | 0,00 | 50,65 | 109,61 |
+| 100 | 96,82 | 3,18 | 0,00 | 53,12 | 111,27 |
+| 300 | 96,42 | 3,58 | 0,00 | 55,22 | 115,80 |
+| 1000 | 95,28 | 4,72 | 0,00 | 58,91 | 134,12 |
 
 Linhas: fricção em legítimos (100 − aprovados) e fraude barrada, em %.
 
@@ -148,21 +125,21 @@ xychart-beta
     title "RULE_POISSON_TAIL_PPM"
     x-axis ["10", "30", "100", "300", "1000"]
     y-axis "%" 0 --> 100
-    line [3.75, 3.82, 4.02, 4.42, 5.55]
-    line [50.43, 51.67, 54.13, 56.23, 59.86]
+    line [2.91, 2.97, 3.18, 3.58, 4.72]
+    line [49.35, 50.65, 53.12, 55.22, 58.91]
 ```
 
-Amplitude ao varrer o parâmetro: 1,79 p.p. de fricção, 9,42 p.p. de fraude barrada e R$ 24,24 de custo.
+Amplitude ao varrer o parâmetro: 1,81 p.p. de fricção, 9,57 p.p. de fraude barrada e R$ 24,51 de custo.
 
 ### `RULE_PROFILE_Z_2FA_TENTHS`
 
 | Valor | Legítimos aprovados % | Legítimos 2FA % | Legítimos reprovados % | Fraude barrada % | Custo R$/1.000 Pix |
 |---|---|---|---|---|---|
-| 25 | 95,26 | 4,73 | 0,01 | 55,58 | 142,04 |
-| 30 | 95,84 | 4,15 | 0,01 | 53,41 | 134,48 |
-| 35 | 96,05 | 3,94 | 0,01 | 52,39 | 132,97 |
-| 45* | 96,18 | 3,81 | 0,01 | 51,67 | 131,66 |
-| 55 | 96,22 | 3,77 | 0,01 | 51,45 | 131,75 |
+| 25 | 96,06 | 3,94 | 0,00 | 54,57 | 120,88 |
+| 30 | 96,66 | 3,34 | 0,00 | 52,39 | 112,86 |
+| 35 | 96,88 | 3,12 | 0,00 | 51,38 | 111,06 |
+| 45* | 97,03 | 2,97 | 0,00 | 50,65 | 109,61 |
+| 55 | 97,06 | 2,94 | 0,00 | 50,43 | 109,69 |
 
 Linhas: fricção em legítimos (100 − aprovados) e fraude barrada, em %.
 
@@ -171,10 +148,10 @@ xychart-beta
     title "RULE_PROFILE_Z_2FA_TENTHS"
     x-axis ["25", "30", "35", "45", "55"]
     y-axis "%" 0 --> 100
-    line [4.74, 4.16, 3.95, 3.82, 3.78]
-    line [55.58, 53.41, 52.39, 51.67, 51.45]
+    line [3.94, 3.34, 3.12, 2.97, 2.94]
+    line [54.57, 52.39, 51.38, 50.65, 50.43]
 ```
 
-Amplitude ao varrer o parâmetro: 0,96 p.p. de fricção, 4,13 p.p. de fraude barrada e R$ 10,38 de custo.
+Amplitude ao varrer o parâmetro: 1,00 p.p. de fricção, 4,13 p.p. de fraude barrada e R$ 11,27 de custo.
 
-**Conclusão.** `RULE_POISSON_TAIL_PPM` é o parâmetro de maior efeito no custo (R$ 24,24 na faixa varrida; 1,79 p.p. de fricção, 9,42 p.p. de fraude) e `RULE_AMOUNT_DAILY_SUM_CENTS` o de menor (R$ 1,35; 0,15 e 0,80 p.p.). Onde a fraude barrada não muda com a fricção, o limiar está num platô e a escolha é por custo de falso positivo; onde as duas curvas sobem juntas, há troca real. Os padrões em uso foram escolhidos na [calibração](calibracao.md); esta tabela só mede o entorno deles, no mesmo mundo.
+**Conclusão.** `RULE_POISSON_TAIL_PPM` é o parâmetro de maior efeito no custo (R$ 24,51 na faixa varrida; 1,81 p.p. de fricção, 9,57 p.p. de fraude) e `RULE_PROFILE_Z_2FA_TENTHS` o de menor (R$ 11,27; 1,00 e 4,13 p.p.). Onde a fraude barrada não muda com a fricção, o limiar está num platô e a escolha é por custo de falso positivo; onde as duas curvas sobem juntas, há troca real. Os padrões em uso foram escolhidos na [calibração](calibracao.md); esta tabela só mede o entorno deles, no mesmo mundo.

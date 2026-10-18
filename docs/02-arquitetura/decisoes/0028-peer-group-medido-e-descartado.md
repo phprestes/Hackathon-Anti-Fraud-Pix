@@ -17,7 +17,7 @@ sources: [Bolton & Hand (2002), Statistical Fraud Detection: A Review, Statistic
 
 ## Decisão
 
-A regra **não entra** no motor. O código fica guardado fora da árvore (`git stash`), e a medição fica na [validação no PixSim](../../05-motor/validacao-pixsim.md#peer-group).
+A regra **não entra** no motor. O código não foi versionado no `main` (fica num branch local de arquivo, `archive/plano-3-parcial`), e a medição fica na [validação no PixSim](../../05-motor/validacao-pixsim.md#peer-group).
 
 | Medida | Resultado |
 |---|---|
@@ -37,4 +37,4 @@ A regra **não entra** no motor. O código fica guardado fora da árvore (`git s
 ## Consequências
 
 - O pagador sem histórico continua coberto pelas regras de payload e de velocity fixa.
-- Voltar com a regra é recuperar o stash e reavaliar com dados em que pagador novo seja vetor de fraude.
+- Voltar com a regra é reimplementá-la pelo desenho acima (ou recuperar o branch de arquivo) e reavaliar com dados em que pagador novo seja vetor de fraude.

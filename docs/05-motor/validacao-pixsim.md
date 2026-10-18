@@ -483,32 +483,29 @@ Regerar: `make rule-ablation` (retoma do cache em `scripts/out/pixsim/ablation.j
 
 <!-- pixsim:ablation:start -->
 
-Mundo B do PixSim (seed 20261017), visão pagador (legítimo + pagador→mula), custo ponderado pelo peso de importância (0,0072) e por [`scripts/backtest/cost-model.json`](../../scripts/backtest/cost-model.json). Parâmetros atuais (`RULE_SET_VERSION` 2026.10.18-pixsim). Linha de base com as 18 regras: **R$ 153,51 por 1.000 Pix**; 51,8% dos Pix de vítima barrados; 4,13% de 2FA e 0,03% de reprovação em legítimos (127683 legítimos, 1438 Pix de vítima). Taxa base de fraude ponderada: 0,008%.
+Mundo B do PixSim (seed 20261017), visão pagador (legítimo + pagador→mula), custo ponderado pelo peso de importância (0,0072) e por [`scripts/backtest/cost-model.json`](../../scripts/backtest/cost-model.json). Parâmetros atuais (`RULE_SET_VERSION` 2026.10.18-pixsim-2). Linha de base com as 15 regras: **R$ 118,82 por 1.000 Pix**; 51,1% dos Pix de vítima barrados; 3,09% de 2FA e 0,00% de reprovação em legítimos (127683 legítimos, 1438 Pix de vítima). Taxa base de fraude ponderada: 0,008%.
 
-**Como ler.** *Disparo* é a fração de Pix do grupo em que a regra aparece nos motivos (qualquer decisão). *Precisão ponderada* é a fração dos disparos que é fraude de vítima, com a fraude multiplicada pelo peso; *lift* é essa precisão dividida pela taxa base. *Sem a regra* é o mesmo mundo com a regra desligada (`scripts/backtest/backtest.py --disable`; as outras 17 seguem ativas e o histórico reflete as decisões sem ela). *Contribuição* é o custo sem a regra menos o custo com todas: positiva quer dizer que a regra economiza dinheiro; negativa, que atrapalha. A ablação é marginal: duas regras que cobrem o mesmo Pix aparecem as duas com contribuição baixa.
+**Como ler.** *Disparo* é a fração de Pix do grupo em que a regra aparece nos motivos (qualquer decisão). *Precisão ponderada* é a fração dos disparos que é fraude de vítima, com a fraude multiplicada pelo peso; *lift* é essa precisão dividida pela taxa base. *Sem a regra* é o mesmo mundo com a regra desligada (`scripts/backtest/backtest.py --disable`; as outras 14 seguem ativas e o histórico reflete as decisões sem ela). *Contribuição* é o custo sem a regra menos o custo com todas: positiva quer dizer que a regra economiza dinheiro; negativa, que atrapalha. A ablação é marginal: duas regras que cobrem o mesmo Pix aparecem as duas com contribuição baixa.
 
 | Regra | Disparo em legítimos | Disparo em Pix de vítima | Precisão ponderada | Lift | Custo sem a regra (por 1.000 Pix) | Contribuição (R$ por 1.000 Pix) | Vítima barrada sem a regra | Veredito |
 |---|---|---|---|---|---|---|---|---|
-| `LIMIT_NIGHT_AMOUNT` | 0,568% | 4,6% | 0,1% | 8,1x | R$ 147,05 | R$ -6,46 | 50,9% | sem efeito no PixSim (custa mais com ela) |
-| `LIMIT_SINGLE_AMOUNT` | 0,022% | 0,0% | 0,0% | n/a | R$ 153,51 | R$ 0,00 | 51,8% | sem efeito no PixSim |
-| `VELOCITY_SOURCE_COUNT` | 0,000% | 0,0% | n/a | n/a | R$ 153,51 | R$ 0,00 | 51,8% | sem efeito no PixSim (nunca dispara) |
-| `VELOCITY_DEVICE_SOURCES` | 0,000% | 0,0% | n/a | n/a | R$ 153,51 | R$ 0,00 | 51,8% | sem efeito no PixSim (nunca dispara) |
-| `AMOUNT_SOURCE_DAILY_SUM` | 0,515% | 0,1% | 0,0% | 0,1x | R$ 144,82 | R$ -8,69 | 51,7% | sem efeito no PixSim (custa mais com ela) |
-| `PROFILE_NEW_DEVICE` | 0,002% | 15,0% | 43,8% | 5367,5x | R$ 158,95 | R$ 5,44 | 41,7% | contribui |
-| `PROFILE_NEW_SOURCE_ACCOUNT` | 0,000% | 0,1% | 100,0% | 12262,4x | R$ 153,69 | R$ 0,18 | 51,7% | contribui |
-| `PROFILE_AMOUNT_ROBUST_Z` | 0,121% | 1,0% | 0,1% | 8,0x | R$ 152,06 | R$ -1,45 | 51,6% | sem efeito no PixSim (custa mais com ela) |
-| `PROFILE_GEO_VELOCITY` | 0,000% | 0,0% | n/a | n/a | R$ 153,51 | R$ 0,00 | 51,8% | sem efeito no PixSim (nunca dispara) |
-| `VELOCITY_POISSON_GAMMA` | 0,146% | 6,8% | 0,4% | 46,4x | R$ 157,34 | R$ 3,83 | 46,1% | contribui |
-| `COUNTERPARTY_NEW_ACCOUNT` | 1,127% | 1,1% | 0,0% | 1,0x | R$ 129,23 | R$ -24,28 | 51,3% | sem efeito no PixSim (custa mais com ela) |
-| `COUNTERPARTY_FAN_IN` | 0,000% | 0,0% | n/a | n/a | R$ 153,51 | R$ 0,00 | 51,8% | sem efeito no PixSim (nunca dispara) |
-| `COUNTERPARTY_FIRST_TIME_HIGH` | 1,286% | 32,7% | 0,2% | 25,4x | R$ 188,30 | R$ 34,79 | 28,7% | contribui |
-| `COUNTERPARTY_FLAGGED` | 0,717% | 1,3% | 0,0% | 1,8x | R$ 141,75 | R$ -11,76 | 51,3% | sem efeito no PixSim (custa mais com ela) |
-| `COUNTERPARTY_GRAPH_RISK` | 0,000% | 0,0% | n/a | n/a | R$ 153,51 | R$ 0,00 | 51,8% | sem efeito no PixSim (nunca dispara) |
-| `TYPOLOGY_ACCOUNT_TAKEOVER` | 0,000% | 1,0% | 100,0% | 12262,4x | R$ 154,01 | R$ 0,50 | 51,3% | contribui |
-| `TYPOLOGY_MULE` | 0,001% | 0,0% | 0,0% | n/a | R$ 153,13 | R$ -0,38 | 51,8% | sem efeito no PixSim (custa mais com ela) |
-| `TYPOLOGY_SPLITTING` | 0,027% | 0,1% | 0,0% | 2,6x | R$ 127,52 | R$ -25,99 | 51,7% | sem efeito no PixSim (custa mais com ela) |
+| `LIMIT_NIGHT_AMOUNT` | 0,568% | 4,6% | 0,1% | 8,1x | R$ 112,30 | R$ -6,52 | 50,2% | sem efeito no PixSim (custa mais com ela) |
+| `LIMIT_SINGLE_AMOUNT` | 0,022% | 0,0% | 0,0% | n/a | R$ 118,60 | R$ -0,22 | 51,1% | sem efeito no PixSim (custa mais com ela) |
+| `VELOCITY_SOURCE_COUNT` | 0,000% | 0,0% | n/a | n/a | R$ 118,82 | R$ 0,00 | 51,1% | sem efeito no PixSim (nunca dispara) |
+| `VELOCITY_DEVICE_SOURCES` | 0,000% | 0,0% | n/a | n/a | R$ 118,82 | R$ 0,00 | 51,1% | sem efeito no PixSim (nunca dispara) |
+| `PROFILE_NEW_DEVICE` | 0,002% | 15,0% | 43,8% | 5367,5x | R$ 124,42 | R$ 5,60 | 40,8% | contribui |
+| `PROFILE_NEW_SOURCE_ACCOUNT` | 0,000% | 0,1% | 100,0% | 12262,4x | R$ 119,00 | R$ 0,18 | 51,0% | contribui |
+| `PROFILE_AMOUNT_ROBUST_Z` | 0,121% | 1,0% | 0,1% | 8,0x | R$ 117,28 | R$ -1,54 | 50,9% | sem efeito no PixSim (custa mais com ela) |
+| `PROFILE_GEO_VELOCITY` | 0,000% | 0,0% | n/a | n/a | R$ 118,82 | R$ 0,00 | 51,1% | sem efeito no PixSim (nunca dispara) |
+| `VELOCITY_POISSON_GAMMA` | 0,146% | 6,8% | 0,4% | 46,4x | R$ 122,59 | R$ 3,77 | 45,3% | contribui |
+| `COUNTERPARTY_NEW_ACCOUNT` | 1,127% | 1,1% | 0,0% | 1,0x | R$ 93,44 | R$ -25,38 | 50,6% | sem efeito no PixSim (custa mais com ela) |
+| `COUNTERPARTY_FAN_IN` | 0,000% | 0,0% | n/a | n/a | R$ 118,82 | R$ 0,00 | 51,1% | sem efeito no PixSim (nunca dispara) |
+| `COUNTERPARTY_FIRST_TIME_HIGH` | 1,286% | 32,7% | 0,2% | 25,4x | R$ 153,45 | R$ 34,63 | 27,7% | contribui |
+| `COUNTERPARTY_GRAPH_RISK` | 0,000% | 0,0% | n/a | n/a | R$ 118,82 | R$ 0,00 | 51,1% | sem efeito no PixSim (nunca dispara) |
+| `TYPOLOGY_ACCOUNT_TAKEOVER` | 0,000% | 1,0% | 100,0% | 12262,4x | R$ 119,13 | R$ 0,31 | 51,1% | contribui |
+| `TYPOLOGY_MULE` | 0,001% | 0,0% | 0,0% | n/a | R$ 118,43 | R$ -0,39 | 51,1% | sem efeito no PixSim (custa mais com ela) |
 
-**Antes da calibração** (os seis parâmetros ajustados nos valores anteriores, mesmo modelo de custo): R$ 161,87 por 1.000 Pix e 38,4% dos Pix de vítima barrados, contra R$ 153,51 e 51,8% agora.
+**Antes da calibração** (os 4 parâmetros ajustados ainda ativos nos valores anteriores, mesmo modelo de custo): R$ 127,26 por 1.000 Pix e 37,4% dos Pix de vítima barrados, contra R$ 118,82 e 51,1% agora.
 
 ### Sensibilidade dos parâmetros principais
 
@@ -516,45 +513,36 @@ Um parâmetro por vez, os outros nos valores atuais (**negrito**). Custo pondera
 
 | Regra | Parâmetro | Valor | Custo por 1.000 Pix | Fricção em legítimos | Vítima barrada |
 |---|---|---|---|---|---|
-| `LIMIT_NIGHT_AMOUNT` | `RULE_LIMIT_NIGHT_AMOUNT_CENTS` | R$ 500 | R$ 163,04 | 4,75% | 55,9% |
-| `LIMIT_NIGHT_AMOUNT` | `RULE_LIMIT_NIGHT_AMOUNT_CENTS` | **R$ 1.000** | R$ 153,51 | 4,15% | 51,8% |
-| `LIMIT_NIGHT_AMOUNT` | `RULE_LIMIT_NIGHT_AMOUNT_CENTS` | R$ 2.000 | R$ 148,71 | 3,89% | 51,3% |
-| `LIMIT_SINGLE_AMOUNT` | `RULE_LIMIT_SINGLE_AMOUNT_CENTS` | R$ 25.000 | R$ 153,60 | 4,16% | 51,8% |
-| `LIMIT_SINGLE_AMOUNT` | `RULE_LIMIT_SINGLE_AMOUNT_CENTS` | **R$ 50.000** | R$ 153,51 | 4,15% | 51,8% |
-| `LIMIT_SINGLE_AMOUNT` | `RULE_LIMIT_SINGLE_AMOUNT_CENTS` | R$ 100.000 | R$ 153,51 | 4,15% | 51,8% |
-| `AMOUNT_SOURCE_DAILY_SUM` | `RULE_AMOUNT_DAILY_SUM_CENTS` | R$ 30.000 | R$ 153,67 | 4,17% | 51,9% |
-| `AMOUNT_SOURCE_DAILY_SUM` | `RULE_AMOUNT_DAILY_SUM_CENTS` | **R$ 45.000** | R$ 153,51 | 4,15% | 51,8% |
-| `AMOUNT_SOURCE_DAILY_SUM` | `RULE_AMOUNT_DAILY_SUM_CENTS` | R$ 60.000 | R$ 153,51 | 4,15% | 51,8% |
-| `PROFILE_NEW_DEVICE` | `RULE_NEW_DEVICE_MIN_AMOUNT_CENTS` | R$ 100 | R$ 153,50 | 4,16% | 52,2% |
-| `PROFILE_NEW_DEVICE` | `RULE_NEW_DEVICE_MIN_AMOUNT_CENTS` | **R$ 200** | R$ 153,51 | 4,15% | 51,8% |
-| `PROFILE_NEW_DEVICE` | `RULE_NEW_DEVICE_MIN_AMOUNT_CENTS` | R$ 500 | R$ 154,18 | 4,15% | 49,3% |
-| `PROFILE_NEW_SOURCE_ACCOUNT` | `RULE_SOURCE_MIN_AGE_DAYS` | 3 | R$ 153,69 | 4,15% | 51,7% |
-| `PROFILE_NEW_SOURCE_ACCOUNT` | `RULE_SOURCE_MIN_AGE_DAYS` | **7** | R$ 153,51 | 4,15% | 51,8% |
-| `PROFILE_NEW_SOURCE_ACCOUNT` | `RULE_SOURCE_MIN_AGE_DAYS` | 14 | R$ 153,57 | 4,16% | 51,8% |
-| `PROFILE_AMOUNT_ROBUST_Z` | `RULE_PROFILE_Z_2FA_TENTHS` | 35 | R$ 155,19 | 4,28% | 52,2% |
-| `PROFILE_AMOUNT_ROBUST_Z` | `RULE_PROFILE_Z_2FA_TENTHS` | **45** | R$ 153,51 | 4,15% | 51,8% |
-| `PROFILE_AMOUNT_ROBUST_Z` | `RULE_PROFILE_Z_2FA_TENTHS` | 55 | R$ 152,83 | 4,11% | 51,6% |
-| `VELOCITY_POISSON_GAMMA` | `RULE_POISSON_TAIL_PPM` | 10 | R$ 154,64 | 4,08% | 49,8% |
-| `VELOCITY_POISSON_GAMMA` | `RULE_POISSON_TAIL_PPM` | **30** | R$ 153,51 | 4,15% | 51,8% |
-| `VELOCITY_POISSON_GAMMA` | `RULE_POISSON_TAIL_PPM` | 100 | R$ 154,04 | 4,34% | 55,0% |
-| `COUNTERPARTY_NEW_ACCOUNT` | `RULE_DESTINATION_MIN_AGE_DAYS` | 15 | R$ 137,92 | 3,37% | 51,5% |
-| `COUNTERPARTY_NEW_ACCOUNT` | `RULE_DESTINATION_MIN_AGE_DAYS` | **30** | R$ 153,51 | 4,15% | 51,8% |
-| `COUNTERPARTY_NEW_ACCOUNT` | `RULE_DESTINATION_MIN_AGE_DAYS` | 60 | R$ 198,48 | 6,45% | 52,9% |
-| `COUNTERPARTY_FIRST_TIME_HIGH` | `RULE_FIRST_TIME_MIN_AMOUNT_CENTS` | R$ 500 | R$ 160,52 | 5,14% | 72,2% |
-| `COUNTERPARTY_FIRST_TIME_HIGH` | `RULE_FIRST_TIME_MIN_AMOUNT_CENTS` | **R$ 1.000** | R$ 153,51 | 4,15% | 51,8% |
-| `COUNTERPARTY_FIRST_TIME_HIGH` | `RULE_FIRST_TIME_MIN_AMOUNT_CENTS` | R$ 3.000 | R$ 158,86 | 3,42% | 37,0% |
-| `COUNTERPARTY_FLAGGED` | `RULE_FLAGGED_WINDOW_DAYS` | 3 | R$ 153,51 | 4,15% | 51,8% |
-| `COUNTERPARTY_FLAGGED` | `RULE_FLAGGED_WINDOW_DAYS` | **7** | R$ 153,51 | 4,15% | 51,8% |
-| `COUNTERPARTY_FLAGGED` | `RULE_FLAGGED_WINDOW_DAYS` | 14 | R$ 153,51 | 4,15% | 51,8% |
-| `TYPOLOGY_ACCOUNT_TAKEOVER` | `RULE_ATO_Z_TENTHS` | 20 | R$ 150,49 | 4,17% | 54,4% |
-| `TYPOLOGY_ACCOUNT_TAKEOVER` | `RULE_ATO_Z_TENTHS` | **30** | R$ 153,51 | 4,15% | 51,8% |
-| `TYPOLOGY_ACCOUNT_TAKEOVER` | `RULE_ATO_Z_TENTHS` | 40 | R$ 154,05 | 4,15% | 51,3% |
-| `TYPOLOGY_MULE` | `RULE_MULE_MIN_SOURCES_1H` | 3 | R$ 167,44 | 4,22% | 51,8% |
-| `TYPOLOGY_MULE` | `RULE_MULE_MIN_SOURCES_1H` | **5** | R$ 153,51 | 4,15% | 51,8% |
-| `TYPOLOGY_MULE` | `RULE_MULE_MIN_SOURCES_1H` | 8 | R$ 153,13 | 4,15% | 51,8% |
-| `TYPOLOGY_SPLITTING` | `RULE_SPLITTING_MIN_SUM_CENTS` | R$ 5.000 | R$ 288,06 | 7,01% | 52,4% |
-| `TYPOLOGY_SPLITTING` | `RULE_SPLITTING_MIN_SUM_CENTS` | **R$ 15.000** | R$ 153,51 | 4,15% | 51,8% |
-| `TYPOLOGY_SPLITTING` | `RULE_SPLITTING_MIN_SUM_CENTS` | R$ 50.000 | R$ 129,83 | 3,58% | 51,7% |
+| `LIMIT_NIGHT_AMOUNT` | `RULE_LIMIT_NIGHT_AMOUNT_CENTS` | R$ 500 | R$ 128,39 | 3,69% | 55,2% |
+| `LIMIT_NIGHT_AMOUNT` | `RULE_LIMIT_NIGHT_AMOUNT_CENTS` | **R$ 1.000** | R$ 118,82 | 3,09% | 51,1% |
+| `LIMIT_NIGHT_AMOUNT` | `RULE_LIMIT_NIGHT_AMOUNT_CENTS` | R$ 2.000 | R$ 114,02 | 2,82% | 50,6% |
+| `LIMIT_SINGLE_AMOUNT` | `RULE_LIMIT_SINGLE_AMOUNT_CENTS` | R$ 25.000 | R$ 118,91 | 3,09% | 51,1% |
+| `LIMIT_SINGLE_AMOUNT` | `RULE_LIMIT_SINGLE_AMOUNT_CENTS` | **R$ 50.000** | R$ 118,82 | 3,09% | 51,1% |
+| `LIMIT_SINGLE_AMOUNT` | `RULE_LIMIT_SINGLE_AMOUNT_CENTS` | R$ 100.000 | R$ 118,79 | 3,09% | 51,1% |
+| `PROFILE_NEW_DEVICE` | `RULE_NEW_DEVICE_MIN_AMOUNT_CENTS` | R$ 100 | R$ 118,82 | 3,09% | 51,5% |
+| `PROFILE_NEW_DEVICE` | `RULE_NEW_DEVICE_MIN_AMOUNT_CENTS` | **R$ 200** | R$ 118,82 | 3,09% | 51,1% |
+| `PROFILE_NEW_DEVICE` | `RULE_NEW_DEVICE_MIN_AMOUNT_CENTS` | R$ 500 | R$ 119,51 | 3,09% | 48,5% |
+| `PROFILE_NEW_SOURCE_ACCOUNT` | `RULE_SOURCE_MIN_AGE_DAYS` | 3 | R$ 119,00 | 3,09% | 51,0% |
+| `PROFILE_NEW_SOURCE_ACCOUNT` | `RULE_SOURCE_MIN_AGE_DAYS` | **7** | R$ 118,82 | 3,09% | 51,1% |
+| `PROFILE_NEW_SOURCE_ACCOUNT` | `RULE_SOURCE_MIN_AGE_DAYS` | 14 | R$ 118,88 | 3,09% | 51,1% |
+| `PROFILE_AMOUNT_ROBUST_Z` | `RULE_PROFILE_Z_2FA_TENTHS` | 35 | R$ 120,82 | 3,23% | 51,5% |
+| `PROFILE_AMOUNT_ROBUST_Z` | `RULE_PROFILE_Z_2FA_TENTHS` | **45** | R$ 118,82 | 3,09% | 51,1% |
+| `PROFILE_AMOUNT_ROBUST_Z` | `RULE_PROFILE_Z_2FA_TENTHS` | 55 | R$ 118,09 | 3,05% | 50,9% |
+| `VELOCITY_POISSON_GAMMA` | `RULE_POISSON_TAIL_PPM` | 10 | R$ 119,87 | 3,01% | 49,1% |
+| `VELOCITY_POISSON_GAMMA` | `RULE_POISSON_TAIL_PPM` | **30** | R$ 118,82 | 3,09% | 51,1% |
+| `VELOCITY_POISSON_GAMMA` | `RULE_POISSON_TAIL_PPM` | 100 | R$ 119,35 | 3,28% | 54,4% |
+| `COUNTERPARTY_NEW_ACCOUNT` | `RULE_DESTINATION_MIN_AGE_DAYS` | 15 | R$ 102,73 | 2,28% | 50,8% |
+| `COUNTERPARTY_NEW_ACCOUNT` | `RULE_DESTINATION_MIN_AGE_DAYS` | **30** | R$ 118,82 | 3,09% | 51,1% |
+| `COUNTERPARTY_NEW_ACCOUNT` | `RULE_DESTINATION_MIN_AGE_DAYS` | 60 | R$ 164,54 | 5,42% | 52,2% |
+| `COUNTERPARTY_FIRST_TIME_HIGH` | `RULE_FIRST_TIME_MIN_AMOUNT_CENTS` | R$ 500 | R$ 125,85 | 4,08% | 71,7% |
+| `COUNTERPARTY_FIRST_TIME_HIGH` | `RULE_FIRST_TIME_MIN_AMOUNT_CENTS` | **R$ 1.000** | R$ 118,82 | 3,09% | 51,1% |
+| `COUNTERPARTY_FIRST_TIME_HIGH` | `RULE_FIRST_TIME_MIN_AMOUNT_CENTS` | R$ 3.000 | R$ 124,23 | 2,34% | 36,1% |
+| `TYPOLOGY_ACCOUNT_TAKEOVER` | `RULE_ATO_Z_TENTHS` | 20 | R$ 117,43 | 3,09% | 51,4% |
+| `TYPOLOGY_ACCOUNT_TAKEOVER` | `RULE_ATO_Z_TENTHS` | **30** | R$ 118,82 | 3,09% | 51,1% |
+| `TYPOLOGY_ACCOUNT_TAKEOVER` | `RULE_ATO_Z_TENTHS` | 40 | R$ 119,09 | 3,09% | 51,1% |
+| `TYPOLOGY_MULE` | `RULE_MULE_MIN_SOURCES_1H` | 3 | R$ 131,35 | 3,09% | 51,1% |
+| `TYPOLOGY_MULE` | `RULE_MULE_MIN_SOURCES_1H` | **5** | R$ 118,82 | 3,09% | 51,1% |
+| `TYPOLOGY_MULE` | `RULE_MULE_MIN_SOURCES_1H` | 8 | R$ 118,43 | 3,09% | 51,1% |
 
 Regras que não aparecem na sensibilidade nunca dispararam neste mundo (veja o veredito acima).
 
