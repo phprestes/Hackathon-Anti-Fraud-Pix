@@ -25,6 +25,7 @@ Versão entregue ao Hackathon QI Tech 2026: 15 regras que decidem, 5 modelos em 
 | Documentado | Resposta de exemplo em `rotas.md` recapturada da API atual (`2026.10.18-pixsim-2`, scores dos modelos retreinados); índice da documentação com 33 ADRs | `docs/03-api/rotas.md`, `docs/README.md` | Exemplo igual ao que a API devolve hoje | agente (Claude Code) |
 | Documentado | Os quatro planos de implementação marcados como registro histórico (nota no topo e no índice), apontando para README, catálogo e ADRs como estado atual | `docs/plano-de-implementacao*.md`, `docs/README.md` | Evitar que a banca leia plano antigo como estado do código | agente (Claude Code) |
 | Documentado | Sensibilidade do custo à taxa de escape do 2FA (premissa de 10% sem fonte; R$ 118,82 com 10%, R$ 160,95 com 50%; acima de ~40% o motor custa mais do que aprovar tudo, R$ 151,29) e o limite da defesa contra engenharia social, na validação, nas limitações e numa pergunta nova do PDF; ponto de empate do teste de ruído corrigido de AUC ~0,9 para ~0,93 | `docs/05-motor/validacao-pixsim.md`, `docs/relatorio/` | A premissa que mais pesa no resultado fica explícita | agente (Claude Code) |
+| Documentado | Escopo atualizado: retroalimentação fora da API (sem rota de desfechos no contrato) e simulada só no backtest; "modelos de ML fora" virou "modelo decidindo fora", porque os modelos rodam em shadow | `docs/01-contexto/problema.md`, `docs/relatorio/` | O escopo declarado bate com o que foi entregue | agente (Claude Code) |
 
 ### 2026-10-17
 

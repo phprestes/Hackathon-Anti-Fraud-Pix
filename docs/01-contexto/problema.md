@@ -49,4 +49,6 @@ Do enunciado: onboarding e cadastro de contas, front-end e outras APIs. Também 
 - Mover o dinheiro. O motor só decide; quem liquida o Pix é outro sistema.
 - Fluxo do 2FA. A API responde `two_factor_required` e não acompanha a confirmação.
 - Regras configuráveis sem código ("no code", dos slides). As regras são código, com parâmetros por ambiente ([ADR 0004](../02-arquitetura/decisoes/0004-motor-de-regras-em-codigo.md)).
-- Modelos de machine learning e consultas a bases externas (listas restritivas, DICT).
+- Modelo de machine learning decidindo. Os modelos rodam em todo Pix, mas só em shadow: calculam e gravam, sem mudar a decisão ([ADR 0022](../02-arquitetura/decisoes/0022-shadow-mode.md)).
+- Retroalimentação na API. A API não recebe desfechos (MED, contestação, resultado do 2FA): não há rota para isso no contrato do enunciado. A retroalimentação existe só no backtest, sobre o PixSim, com os atrasos de reporte ao MED ([ADR 0032](../02-arquitetura/decisoes/0032-retroalimentacao-pelo-med-no-backtest.md)).
+- Consultas a bases externas (listas restritivas, DICT).
