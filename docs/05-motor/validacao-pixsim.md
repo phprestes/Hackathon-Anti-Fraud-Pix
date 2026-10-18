@@ -64,7 +64,7 @@ Extras no `events.jsonl` (não vão ao motor): `typology` (tipo de fraude do Pix
 
 | Conjunto | Legítimos | approved | 2FA | rejected |
 |---|---|---|---|---|
-| PixSim | 125518 | 96,18% | 3,81% | 0,01% |
+| PixSim | 125518 | 97,03% | 2,97% | 0,00% |
 | Fixture do CI, sem valor estatístico | 7794 | 94,01% | 5,99% | 0,00% |
 
 ### Captura por tipologia do PixSim
@@ -73,30 +73,30 @@ Pagador→mula é o Pix que a vítima faz (a fraude contra o nosso cliente). `fr
 
 | Tipologia | Papel | Pix | approved (escapou) | 2FA | rejected |
 |---|---|---|---|---|---|
-| account_takeover | cash_out | 663 | 69,08% | 30,92% | 0,00% |
-| account_takeover | mule_forward | 440 | 75,23% | 24,77% | 0,00% |
+| account_takeover | cash_out | 663 | 76,92% | 23,08% | 0,00% |
+| account_takeover | mule_forward | 440 | 75,68% | 24,32% | 0,00% |
 | account_takeover | victim_to_mule | 323 | 22,60% | 73,07% | 4,33% |
-| pix_errado | cash_out | 215 | 79,53% | 20,47% | 0,00% |
+| pix_errado | cash_out | 215 | 90,23% | 9,77% | 0,00% |
 | pix_errado | fraudster_seed | 91 | 91,21% | 8,79% | 0,00% |
 | pix_errado | mule_forward | 118 | 86,44% | 13,56% | 0,00% |
-| pix_errado | victim_to_mule | 91 | 87,91% | 12,09% | 0,00% |
-| qr_substitution | cash_out | 152 | 78,95% | 21,05% | 0,00% |
+| pix_errado | victim_to_mule | 91 | 90,11% | 9,89% | 0,00% |
+| qr_substitution | cash_out | 152 | 89,47% | 10,53% | 0,00% |
 | qr_substitution | mule_forward | 88 | 86,36% | 13,64% | 0,00% |
-| qr_substitution | victim_to_mule | 68 | 70,59% | 29,41% | 0,00% |
-| social_engineering | cash_out | 2038 | 64,13% | 35,23% | 0,64% |
-| social_engineering | mule_forward | 1125 | 72,09% | 27,11% | 0,80% |
-| social_engineering | victim_to_mule | 898 | 51,89% | 48,11% | 0,00% |
+| qr_substitution | victim_to_mule | 68 | 72,06% | 27,94% | 0,00% |
+| social_engineering | cash_out | 2038 | 72,52% | 27,48% | 0,00% |
+| social_engineering | mule_forward | 1125 | 73,51% | 26,49% | 0,00% |
+| social_engineering | victim_to_mule | 898 | 53,12% | 46,88% | 0,00% |
 
 ### Sequências e anéis
 
 | Tipologia (eventos de fraude) | Eventos com ao menos um Pix de vítima barrado | Taxa |
 |---|---|---|
 | account_takeover | 206/209 | 98,6% |
-| pix_errado | 11/91 | 12,1% |
-| qr_substitution | 20/68 | 29,4% |
-| social_engineering | 354/618 | 57,3% |
+| pix_errado | 9/91 | 9,9% |
+| qr_substitution | 19/68 | 27,9% |
+| social_engineering | 350/618 | 56,6% |
 
-- Eventos com ao menos um Pix barrado em qualquer papel (vítima ou dispersão): 766/986 (77,7%).
+- Eventos com ao menos um Pix barrado em qualquer papel (vítima ou dispersão): 699/986 (70,9%).
 - Anéis de mulas com ao menos um Pix barrado (qualquer papel): 75/75 (100,0%).
 
 - Atraso de reporte ao MED nos eventos: mediana 2,06 dia(s), p90 19,8 dias; 98,2% reportados dentro da janela de contestação.
@@ -107,8 +107,8 @@ Modelo de [`scripts/backtest/cost-model.json`](../../scripts/backtest/cost-model
 
 | Visão | Bruto por 1.000 Pix | Ponderado por 1.000 Pix | Parte fraude (pond.) | Parte fricção (pond.) |
 |---|---|---|---|---|
-| PixSim, visão pagador (legítimo + pagador→mula) | R$ 6.970,02 | R$ 132,13 | R$ 49,57 | R$ 82,56 |
-| PixSim, visão dispersão (legítimo + dispersão) | R$ 19.969,36 | R$ 229,65 | R$ 147,11 | R$ 82,55 |
+| PixSim, visão pagador (legítimo + pagador→mula) | R$ 7.023,16 | R$ 109,61 | R$ 50,12 | R$ 59,49 |
+| PixSim, visão dispersão (legítimo + dispersão) | R$ 20.757,39 | R$ 212,59 | R$ 153,11 | R$ 59,48 |
 | Fixture do CI, sem valor estatístico | R$ 2.200,88 | R$ 2.200,88 | R$ 2.084,05 | R$ 116,82 |
 
 Peso médio de importância da fraude no PixSim: 0,0071 (um evento de fraude vale 0,0071 de um real).
@@ -119,10 +119,10 @@ Média diária da precisão nos k Pix mais bem ranqueados (fraude superamostrada
 
 | Conjunto, ranking | P@5 | P@10 | P@25 | P@50 |
 |---|---|---|---|---|
-| PixSim, visão pagador, regras | 11,3% | 11,3% | 18,7% | 21,4% |
-| PixSim, visão pagador, regras + LightGBM (dentro da amostra) | 90,0% | 94,3% | 87,6% | 71,2% |
-| PixSim, visão dispersão, regras | 18,1% | 17,4% | 25,9% | 29,5% |
-| PixSim, visão dispersão, regras + LightGBM (dentro da amostra) | 74,8% | 68,7% | 52,9% | 41,9% |
+| PixSim, visão pagador, regras | 13,3% | 16,7% | 21,7% | 22,9% |
+| PixSim, visão pagador, regras + LightGBM (dentro da amostra) | 100,0% | 98,7% | 89,2% | 71,8% |
+| PixSim, visão dispersão, regras | 11,0% | 17,7% | 28,0% | 29,7% |
+| PixSim, visão dispersão, regras + LightGBM (dentro da amostra) | 79,4% | 66,8% | 50,5% | 40,8% |
 | Fixture do CI, sem valor estatístico, regras | 71,4% | 62,1% | 34,6% | 25,0% |
 | Fixture do CI, sem valor estatístico, regras + LightGBM (treinado no PixSim A, aplicado ao fixture) | 72,9% | 64,3% | 33,4% | 19,7% |
 
@@ -136,19 +136,16 @@ Parcela de cada grupo em que a regra disparou (qualquer decisão).
 | PROFILE_NEW_DEVICE | 0,0% | 14,9% | 0,0% | 1,0% | 21,9% |
 | VELOCITY_POISSON_GAMMA | 0,1% | 6,4% | 12,9% | 0,1% | 14,9% |
 | LIMIT_NIGHT_AMOUNT | 0,6% | 5,0% | 3,4% | 0,7% | 26,9% |
-| COUNTERPARTY_FLAGGED | 0,6% | 1,7% | 7,1% | 0,0% | 34,8% |
 | PROFILE_AMOUNT_ROBUST_Z | 0,1% | 1,3% | 0,7% | 0,3% | 21,4% |
 | COUNTERPARTY_NEW_ACCOUNT | 1,2% | 0,0% | 1,0% | 0,0% | 52,2% |
 | TYPOLOGY_ACCOUNT_TAKEOVER | 0,0% | 1,0% | 0,0% | 0,0% | 8,5% |
-| AMOUNT_SOURCE_DAILY_SUM | 0,4% | 0,1% | 0,0% | 0,0% | 0,0% |
 | LIMIT_SINGLE_AMOUNT | 0,0% | 0,1% | 0,0% | 0,0% | 0,0% |
 | PROFILE_NEW_SOURCE_ACCOUNT | 0,0% | 0,1% | 0,0% | 0,0% | 0,0% |
-| TYPOLOGY_SPLITTING | 0,0% | 0,0% | 0,4% | 0,0% | 0,0% |
-| VELOCITY_SOURCE_COUNT | 0,0% | 0,0% | 1,2% | 0,0% | 0,0% |
-| TYPOLOGY_MULE | 0,0% | 0,0% | 0,0% | 0,0% | 24,4% |
-| VELOCITY_DEVICE_SOURCES | 0,0% | 0,0% | 0,0% | 0,0% | 8,0% |
 | COUNTERPARTY_FAN_IN | 0,0% | 0,0% | 0,0% | 0,0% | 2,5% |
 | PROFILE_GEO_VELOCITY | 0,0% | 0,0% | 0,0% | 0,0% | 1,0% |
+| TYPOLOGY_MULE | 0,0% | 0,0% | 0,0% | 0,0% | 24,4% |
+| VELOCITY_DEVICE_SOURCES | 0,0% | 0,0% | 0,0% | 0,0% | 8,0% |
+| VELOCITY_SOURCE_COUNT | 0,0% | 0,0% | 1,2% | 0,0% | 0,0% |
 
 ### Modelos em shadow instalados (logística e LightGBM treinados no mundo A do PixSim; Isolation Forest do nosso simulador)
 
@@ -157,9 +154,9 @@ AUC é pontuação do modelo na fraude contra o legítimo; recall e fricção us
 | Modelo | PixSim AUC pagador | PixSim recall pagador | PixSim AUC dispersão | PixSim fricção legítimo | Nosso AUC | Nosso recall | Nossa fricção |
 |---|---|---|---|---|---|---|---|
 | MODEL_IFOREST | 0,797 | 37,0% | 0,500 | 8,0% | 0,892 | 22,9% | 1,0% |
-| MODEL_LIGHTGBM | 0,996 | 81,4% | 0,818 | 0,3% | 0,596 | 10,0% | 2,6% |
-| MODEL_LOGREG | 0,990 | 63,6% | 0,902 | 0,8% | 0,871 | 52,7% | 3,6% |
-| regras (decisão como score) | 0,739 |  | 0,630 |  | 0,977 |  |  |
+| MODEL_LIGHTGBM | 0,996 | 81,4% | 0,812 | 0,3% | 0,596 | 10,0% | 2,6% |
+| MODEL_LOGREG | 0,990 | 63,6% | 0,897 | 0,8% | 0,871 | 52,7% | 3,6% |
+| regras (decisão como score) | 0,739 |  | 0,606 |  | 0,977 |  |  |
 
 ### PSI das features (nosso gerador × PixSim)
 
@@ -185,8 +182,8 @@ Base: nosso simulador (seed 42); comparado: PixSim. PSI acima de 0,25 é deriva 
 
 ### Latência do backtest
 
-- `scripts/backtest/backtest.py`: 254795 Pix em 102,3 s (2490 Pix/s).
-- Avaliação em streaming deste relatório (motor + histórico em memória, sem HTTP): 254795 Pix, 2689 Pix/s; por Pix P50 0,33 ms, P95 0,61 ms, P99 0,85 ms.
+- `scripts/backtest/backtest.py`: 254795 Pix em 103,3 s (2467 Pix/s).
+- Avaliação em streaming deste relatório (motor + histórico em memória, sem HTTP): 254795 Pix, 2662 Pix/s; por Pix P50 0,34 ms, P95 0,62 ms, P99 0,87 ms.
 
 <!-- pixsim:tables:end -->
 
@@ -387,15 +384,15 @@ Regerar: `make feedback` (só no backtest: API, banco e `ACTIVE_RULES` não muda
 
 Peças (todas em `scripts/feedback/feedback_core.py`): heap de desfechos pendentes; regra `COUNTERPARTY_CONFIRMED_FRAUD` (destino que recebeu, de outro pagador, Pix com fraude confirmada antes do instante t), registrada só no backtest com `build_rules() + [regra]`; LightGBM instalado (treinado no mundo A) como regra extra (score ≥ limiar → `two_factor_required`); retreino a cada 7 dias com os hiperparâmetros fixos de `--source pixsim`, em pool formado pelas linhas do mundo A (com os rótulos conhecidos no fim do A, a história anterior) mais as linhas do mundo B já passadas: positivo = desfecho já chegado, negativo = Pix com mais de 7 dias sem desfecho (mais novos ficam fora). O desafiante treinado na virada da semana k roda em sombra na semana k+1 e é promovido se o custo ponderado dessa semana, com a decisão final (regras + modelo), for menor que o do campeão.
 
-Decisão do sinal escolhida no mundo A (para não usar o B na escolha): 2FA custa R$ 130,14 por 1,000 Pix e reprovar custa R$ 268,06; usado: `two_factor_required`,
+Decisão do sinal escolhida no mundo A (para não usar o B na escolha): 2FA custa R$ 103,47 por 1,000 Pix e reprovar custa R$ 225,28; usado: `two_factor_required`,
 
 | cenário | custo ponderado por 1.000 Pix | captura ponderada | captura bruta | fricção em legítimos | AUC médio do campeão | fraudes sem desfecho possível | escapes confirmados |
 |---|---|---|---|---|---|---|---|
-| a) regras, sem retroalimentação | R$ 157,60 | 38,4% | 38,4% | 3,8% | 0,990 | 36,2% | 763 (R$ 925.935,28) |
-| b) + sinal de fraude confirmada | R$ 144,87 | 59,7% | 59,7% | 4,0% | 0,990 | 54,8% | 512 (R$ 634.533,40) |
-| c) + modelo campeão fixo | R$ 127,74 | 78,2% | 78,2% | 4,3% | 0,990 | 71,6% | 271 (R$ 221.213,65) |
-| d) + retreino semanal, campeão/desafiante | R$ 127,74 | 78,2% | 78,2% | 4,3% | 0,990 | 71,6% | 271 (R$ 221.213,65) |
-| d') como d, pool só do mundo B | R$ 127,74 | 78,2% | 78,2% | 4,3% | 0,990 | 71,6% | 271 (R$ 221.213,65) |
+| a) regras, sem retroalimentação | R$ 118,82 | 51,1% | 51,1% | 3,1% | 0,990 | 47,6% | 597 (R$ 641.378,23) |
+| b) + sinal de fraude confirmada | R$ 112,23 | 65,4% | 65,4% | 3,3% | 0,990 | 59,9% | 438 (R$ 466.525,31) |
+| c) + modelo campeão fixo | R$ 97,62 | 80,1% | 80,1% | 3,4% | 0,990 | 73,6% | 246 (R$ 161.501,31) |
+| d) + retreino semanal, campeão/desafiante | R$ 97,62 | 79,8% | 79,8% | 3,5% | 0,983 | 73,2% | 247 (R$ 154.951,07) |
+| d') como d, pool só do mundo B | R$ 97,62 | 80,1% | 80,1% | 3,4% | 0,990 | 73,6% | 246 (R$ 161.501,31) |
 
 O AUC é o do LightGBM instalado ou promovido, calculado por semana sobre os Pix de vítima e legítimos (rótulo verdadeiro) e tirado a média; nos cenários a e b o modelo não decide, só é medido. "Fraudes sem desfecho possível" é o peso das fraudes de vítima reprovadas, com 2FA que barrou ou nunca reportadas, sobre o peso total das fraudes.
 
@@ -403,21 +400,21 @@ O AUC é o do LightGBM instalado ou promovido, calculado por semana sobre os Pix
 
 | semana | a | b | c | d | d' |
 |---|---|---|---|---|---|
-| 0 | R$ 203,44 | R$ 190,11 | R$ 170,09 | R$ 170,09 | R$ 170,09 |
-| 1 | R$ 165,11 | R$ 148,12 | R$ 127,62 | R$ 127,62 | R$ 127,62 |
-| 2 | R$ 144,49 | R$ 134,78 | R$ 116,09 | R$ 116,09 | R$ 116,09 |
-| 3 | R$ 119,79 | R$ 111,80 | R$ 99,19 | R$ 99,19 | R$ 99,19 |
-| 4 | R$ 142,26 | R$ 120,24 | R$ 114,40 | R$ 114,40 | R$ 114,40 |
+| 0 | R$ 152,88 | R$ 145,93 | R$ 129,20 | R$ 129,20 | R$ 129,20 |
+| 1 | R$ 121,15 | R$ 110,40 | R$ 93,46 | R$ 93,46 | R$ 93,46 |
+| 2 | R$ 110,37 | R$ 108,12 | R$ 92,52 | R$ 92,52 | R$ 92,52 |
+| 3 | R$ 97,86 | R$ 91,33 | R$ 79,33 | R$ 79,07 | R$ 79,33 |
+| 4 | R$ 90,60 | R$ 84,58 | R$ 79,56 | R$ 80,42 | R$ 79,56 |
 
 **Captura ponderada de vítimas, semana a semana**
 
 | semana | a | b | c | d | d' |
 |---|---|---|---|---|---|
-| 0 | 42,9% | 54,9% | 80,1% | 80,1% | 80,1% |
-| 1 | 37,6% | 63,0% | 82,4% | 82,4% | 82,4% |
-| 2 | 42,1% | 61,3% | 79,6% | 79,6% | 79,6% |
-| 3 | 31,8% | 56,6% | 70,1% | 70,1% | 70,1% |
-| 4 | 33,6% | 70,1% | 78,5% | 78,5% | 78,5% |
+| 0 | 54,6% | 60,9% | 81,4% | 81,4% | 81,4% |
+| 1 | 51,7% | 69,9% | 83,7% | 83,7% | 83,7% |
+| 2 | 54,0% | 64,3% | 80,5% | 80,5% | 80,5% |
+| 3 | 44,3% | 64,5% | 74,8% | 74,8% | 74,8% |
+| 4 | 48,6% | 73,8% | 79,4% | 74,8% | 79,4% |
 
 **AUC do campeão, semana a semana**
 
@@ -426,8 +423,8 @@ O AUC é o do LightGBM instalado ou promovido, calculado por semana sobre os Pix
 | 0 | 0,991 | 0,991 | 0,991 | 0,991 | 0,991 |
 | 1 | 0,993 | 0,993 | 0,993 | 0,993 | 0,993 |
 | 2 | 0,990 | 0,990 | 0,990 | 0,990 | 0,990 |
-| 3 | 0,989 | 0,989 | 0,989 | 0,989 | 0,989 |
-| 4 | 0,989 | 0,989 | 0,989 | 0,989 | 0,989 |
+| 3 | 0,989 | 0,989 | 0,989 | 0,965 | 0,989 |
+| 4 | 0,989 | 0,989 | 0,989 | 0,977 | 0,989 |
 
 A semana 4 tem só 2 dias de dados (o mundo B tem 30 dias de avaliação).
 
@@ -435,11 +432,11 @@ A semana 4 tem só 2 dias de dados (o mundo B tem 30 dias de avaliação).
 xychart-beta
     title "Custo ponderado por 1.000 Pix (R$) por semana: a, b, c, d"
     x-axis [0, 1, 2, 3, 4]
-    y-axis "R$ por 1.000 Pix" 0 --> 213
-    line [203.4, 165.1, 144.5, 119.8, 142.3]
-    line [190.1, 148.1, 134.8, 111.8, 120.2]
-    line [170.1, 127.6, 116.1, 99.2, 114.4]
-    line [170.1, 127.6, 116.1, 99.2, 114.4]
+    y-axis "R$ por 1.000 Pix" 0 --> 162
+    line [152.9, 121.2, 110.4, 97.9, 90.6]
+    line [145.9, 110.4, 108.1, 91.3, 84.6]
+    line [129.2, 93.5, 92.5, 79.3, 79.6]
+    line [129.2, 93.5, 92.5, 79.1, 80.4]
 ```
 
 Linhas, na ordem: a, b, c, d.
@@ -448,33 +445,33 @@ Linhas, na ordem: a, b, c, d.
 
 | semana avaliada | linhas do treino | positivos no treino | custo do campeão | custo do desafiante | promovido |
 |---|---|---|---|---|---|
-| 1 | 126958 | 1142 | R$ 127,62 | R$ 142,52 | não |
-| 2 | 157995 | 1212 | R$ 116,09 | R$ 117,30 | não |
-| 3 | 187817 | 1287 | R$ 99,19 | R$ 124,35 | não |
-| 4 | 217366 | 1369 | R$ 114,40 | R$ 148,42 | não |
+| 1 | 126957 | 1141 | R$ 93,46 | R$ 99,31 | não |
+| 2 | 157991 | 1206 | R$ 92,52 | R$ 91,57 | sim |
+| 3 | 187815 | 1279 | R$ 79,07 | R$ 102,57 | não |
+| 4 | 217362 | 1355 | R$ 80,42 | R$ 109,27 | não |
 
 **Promoções, cenário d') como d, pool só do mundo B**
 
 | semana avaliada | linhas do treino | positivos no treino | custo do campeão | custo do desafiante | promovido |
 |---|---|---|---|---|---|
-| 1 | 60 | 59 | R$ 127,62 | R$ 1.995,17 | não |
-| 2 | 31097 | 129 | R$ 116,09 | R$ 265,86 | não |
-| 3 | 60919 | 204 | R$ 99,19 | R$ 356,73 | não |
-| 4 | 90468 | 286 | R$ 114,40 | R$ 139,26 | não |
+| 1 | 59 | 58 | R$ 93,46 | R$ 1.989,88 | não |
+| 2 | 31093 | 123 | R$ 92,52 | R$ 136,22 | não |
+| 3 | 60917 | 196 | R$ 79,33 | R$ 140,40 | não |
+| 4 | 90462 | 270 | R$ 79,56 | R$ 202,93 | não |
 
 **Monitoramento semanal, cenário d) + retreino semanal, campeão/desafiante**
 
 | semana | escapes confirmados na semana | valor dos escapes | 2FA: precisão real | 2FA: precisão observada | reprovação: precisão real | reprovação: precisão observada | reprovações (% dos Pix) | fraudes sem desfecho possível |
 |---|---|---|---|---|---|---|---|---|
-| 0 | 38 | R$ 28.022,03 | 0,13% | 0,01% | 0,19% | 0,00% | 0,1% | 71,0% |
-| 1 | 54 | R$ 51.267,34 | 0,13% | 0,01% | 0,48% | 0,00% | 0,0% | 76,8% |
-| 2 | 56 | R$ 42.273,06 | 0,15% | 0,01% | 1,19% | 0,00% | 0,0% | 72,9% |
-| 3 | 64 | R$ 51.200,97 | 0,18% | 0,01% | 0,18% | 0,00% | 0,0% | 65,7% |
-| 4 | 59 | R$ 48.450,25 | 0,20% | 0,03% | 0,48% | 0,00% | 0,1% | 72,0% |
+| 0 | 37 | R$ 21.236,67 | 0,16% | 0,01% | 1,78% | 0,00% | 0,0% | 71,9% |
+| 1 | 47 | R$ 32.805,65 | 0,18% | 0,01% | 100,00% | 0,00% | 0,0% | 77,7% |
+| 2 | 53 | R$ 38.983,42 | 0,19% | 0,02% | 100,00% | 0,00% | 0,0% | 73,8% |
+| 3 | 58 | R$ 30.183,80 | 0,21% | 0,02% | 100,00% | 0,00% | 0,0% | 71,1% |
+| 4 | 52 | R$ 31.741,53 | 0,24% | 0,03% | 100,00% | 0,00% | 0,0% | 69,2% |
 
 Precisão real usa o rótulo do simulador; a observada é o que o banco enxergaria: desfechos chegados na semana (só dos Pix com 2FA que escaparam, 10%) sobre os Pix com 2FA; ambas com o peso de importância. Escapes e valores são contagens brutas (a fraude está superamostrada). Reprovação nunca gera desfecho, então a precisão observada é 0 por construção.
 
-Tempo e pico de memória por cenário (um processo por cenário, `ulimit -v 2500000`): a: 64 s, pico 373 MB; b: 63 s, pico 372 MB; c: 64 s, pico 373 MB; d: 80 s, pico 544 MB; d-b: 66 s, pico 441 MB.
+Tempo e pico de memória por cenário (um processo por cenário, `ulimit -v 2500000`): a: 62 s, pico 374 MB; b: 61 s, pico 374 MB; c: 62 s, pico 374 MB; d: 81 s, pico 543 MB; d-b: 64 s, pico 442 MB.
 
 <!-- pixsim:feedback:end -->
 
@@ -574,31 +571,31 @@ O PSI usa o nosso gerador (seed 42, 14 dias) como base. Boa parte do desvio é a
 
 Réplica do experimento S7 do PixSim (varredura de qualidade do scorer), sobre os modelos que já temos, sem retreinar. A degradação é a de `pixsim/scoring.py` (`_degrade`): `logit(p) + N(0, σ)` de volta para probabilidade, com o mesmo recorte de ±36 no logit e um gerador próprio de seed fixa (20261017 + 17). Rodamos σ ∈ {0, 1, 2, 3, 6, 8, 12} nos scores do LightGBM e da regressão logística no mundo B (visão vítima: 129121 Pix, 1438 de vítima). O ruído **só existe neste experimento**: não está no scorer padrão do PixSim nem nos nossos modelos. Código: [`scripts/models/scorer_noise.py`](../../scripts/models/scorer_noise.py), a partir dos scores de [`scripts/pixsim/pixsim_scores.py`](../../scripts/pixsim/pixsim_scores.py).
 
-Decisão como na avaliação P2: as regras decidem e um score do modelo acima do limiar do próprio modelo sobre um Pix aprovado vira 2FA. A última coluna refaz o limiar do score ruidoso para marcar a mesma fração de legítimos aprovados que o σ = 0, isolando a perda de ordenação da inflação de fricção. As regras sozinhas, no mesmo recorte: AUC 0,738, custo R$ 153,51, captura 51,8%, fricção 4,2%.
+Decisão como na avaliação P2: as regras decidem e um score do modelo acima do limiar do próprio modelo sobre um Pix aprovado vira 2FA. A última coluna refaz o limiar do score ruidoso para marcar a mesma fração de legítimos aprovados que o σ = 0, isolando a perda de ordenação da inflação de fricção. As regras sozinhas, no mesmo recorte: AUC 0,740, custo R$ 118,82, captura 51,1%, fricção 3,1%.
 
 **LightGBM**
 
 | σ | AUC ponderada | Custo ponderado por 1.000 Pix | Captura de vítimas | Fricção em legítimos | Custo com limiar de mesma fricção |
 |---|---|---|---|---|---|
-| 0 | 0,990 | R$ 131,41 | 75,1% | 4,3% | R$ 131,41 |
-| 1 | 0,989 | R$ 133,54 | 76,1% | 4,4% | R$ 133,80 |
-| 2 | 0,985 | R$ 139,19 | 76,4% | 4,6% | R$ 140,94 |
-| 3 | 0,979 | R$ 143,73 | 75,8% | 4,8% | R$ 144,67 |
-| 6 | 0,927 | R$ 183,06 | 75,9% | 6,7% | R$ 151,23 |
-| 8 | 0,876 | R$ 252,19 | 75,9% | 10,2% | R$ 154,09 |
-| 12 | 0,791 | R$ 411,07 | 76,2% | 18,0% | R$ 155,93 |
+| 0 | 0,990 | R$ 96,46 | 74,8% | 3,3% | R$ 96,46 |
+| 1 | 0,989 | R$ 98,62 | 75,7% | 3,4% | R$ 98,68 |
+| 2 | 0,985 | R$ 104,30 | 75,9% | 3,6% | R$ 106,05 |
+| 3 | 0,979 | R$ 108,84 | 75,4% | 3,7% | R$ 109,94 |
+| 6 | 0,928 | R$ 148,80 | 75,3% | 5,7% | R$ 116,57 |
+| 8 | 0,877 | R$ 218,56 | 75,4% | 9,1% | R$ 119,43 |
+| 12 | 0,791 | R$ 379,16 | 75,7% | 17,1% | R$ 121,27 |
 
 **Regressão logística**
 
 | σ | AUC ponderada | Custo ponderado por 1.000 Pix | Captura de vítimas | Fricção em legítimos | Custo com limiar de mesma fricção |
 |---|---|---|---|---|---|
-| 0 | 0,990 | R$ 139,26 | 69,4% | 4,4% | R$ 139,26 |
-| 1 | 0,986 | R$ 143,23 | 72,9% | 4,7% | R$ 143,69 |
-| 2 | 0,971 | R$ 161,43 | 75,7% | 5,6% | R$ 150,19 |
-| 3 | 0,946 | R$ 194,87 | 76,1% | 7,2% | R$ 153,39 |
-| 6 | 0,851 | R$ 349,37 | 76,7% | 15,0% | R$ 157,36 |
-| 8 | 0,799 | R$ 444,87 | 76,6% | 19,7% | R$ 158,09 |
-| 12 | 0,726 | R$ 589,51 | 76,4% | 26,9% | R$ 158,44 |
+| 0 | 0,990 | R$ 104,18 | 69,3% | 3,4% | R$ 104,18 |
+| 1 | 0,986 | R$ 108,29 | 72,6% | 3,7% | R$ 108,70 |
+| 2 | 0,972 | R$ 126,61 | 75,3% | 4,6% | R$ 115,04 |
+| 3 | 0,946 | R$ 160,19 | 75,7% | 6,2% | R$ 118,69 |
+| 6 | 0,852 | R$ 315,90 | 76,3% | 14,0% | R$ 122,72 |
+| 8 | 0,799 | R$ 412,44 | 76,1% | 18,8% | R$ 123,44 |
+| 12 | 0,726 | R$ 558,60 | 75,9% | 26,1% | R$ 123,80 |
 
 ```mermaid
 xychart-beta
@@ -612,7 +609,7 @@ xychart-beta
 
 Linhas, na ordem: regras + LightGBM com o limiar do modelo; o mesmo com o limiar reajustado para a fricção do σ = 0; regras sozinhas.
 
-O AUC de 0,82 cai em σ ≈ 10,5 para o LightGBM e σ ≈ 7,1 para a logística. Nesse ponto, com o limiar do modelo, o custo vai a R$ 353,54 (LightGBM) e R$ 405,37 (logística), contra R$ 153,51 das regras: o modelo ruidoso dispara fricção em 15,2% e 17,7% dos legítimos. Com o limiar reajustado o custo é R$ 155,56 e R$ 157,74, ou seja, **sem ganho sobre as regras** (a captura volta a 53,3% e 53,0%). O ganho de custo do modelo (−14% com o LightGBM sem ruído) existe só enquanto o AUC fica acima de cerca de 0,9; um scorer de 0,82 de AUC não paga a fricção que causa. Ressalva: o ruído é gaussiano e independente do Pix, o que degrada o score de forma mais uniforme do que um modelo treinado com features piores.
+O AUC de 0,82 cai em σ ≈ 10,5 para o LightGBM e σ ≈ 7,1 para a logística. Nesse ponto, com o limiar do modelo, o custo vai a R$ 321,23 (LightGBM) e R$ 373,74 (logística), contra R$ 118,82 das regras: o modelo ruidoso dispara fricção em 14,2% e 16,8% dos legítimos. Com o limiar reajustado o custo é R$ 120,90 e R$ 123,10, ou seja, **sem ganho sobre as regras** (a captura volta a 52,6% e 52,3%). O ganho de custo do modelo (−19% com o LightGBM sem ruído) existe só enquanto o AUC fica acima de cerca de 0,9; um scorer de 0,82 de AUC não paga a fricção que causa. Ressalva: o ruído é gaussiano e independente do Pix, o que degrada o score de forma mais uniforme do que um modelo treinado com features piores.
 
 ## Alinhamento com a metodologia do PixSim
 
@@ -639,12 +636,12 @@ Roda o relógio do MED do próprio PixSim (`pixsim.med`, métricas de `pixsim.me
 | Política | Barrado antes da liquidação | Retido num salto | Recuperado pelo MED | Recuperado por bloqueio cautelar | Perdido | Falsos bloqueios | Dano dos falsos bloqueios |
 |---|---|---|---|---|---|---|---|
 | `pass_all` (nosso mundo B) | 0,0% | 0,0% | 6,1% | 14,6% | 79,3% | 0 | R$ 0 |
-| Regras (nosso motor) | 66,4% | 7,0% | 1,9% | 4,5% | 20,3% | 36 | R$ 2.345 |
-| Regras + LightGBM decidindo | 83,6% | 2,6% | 0,6% | 2,4% | 10,8% | 36 | R$ 2.345 |
+| Regras (nosso motor) | 66,1% | 6,6% | 1,9% | 4,7% | 20,7% | 2 | R$ 513 |
+| Regras + LightGBM decidindo | 83,6% | 2,7% | 0,8% | 2,4% | 10,6% | 2 | R$ 513 |
 | `pass_all` do PixSim (mundo regerado, escala reduzida) | 0,0% | 0,0% | 5,2% | 15,2% | 79,6% | 0 | R$ 0 |
 | `threshold_block` do PixSim (scorer deles) | 63,5% | 26,1% | 0,4% | 7,0% | 3,0% | 485 | R$ 33.487 |
 
-As políticas de referência do PixSim vêm de `run_chunked` no mesmo recorte de escala (5 mil contas, seed do mundo B), mas é outro mundo gerado (o aquecimento de 10 dias do scorer deles tira esses dias da avaliação) e com o scorer deles em AUC de vítima 0.998, então servem de ordem de grandeza e não de comparação Pix a Pix. Leituras: sem barrar nada, 79% do valor se perde (o MED e o bloqueio cautelar devolvem 21%); as regras sozinhas deixam perder 20%, e com o LightGBM decidindo 11%. O `threshold_block` do PixSim perde só 3%, mas à custa de 485 falsos bloqueios contra 36 das regras. O custo em R$ do [ADR 0030](../02-arquitetura/decisoes/0030-custo-assimetrico-e-p-at-k.md) trata fraude aprovada como perda total do valor; a cascata mostra que parte desse valor volta, então o custo é um limite superior da perda.
+As políticas de referência do PixSim vêm de `run_chunked` no mesmo recorte de escala (5 mil contas, seed do mundo B), mas é outro mundo gerado (o aquecimento de 10 dias do scorer deles tira esses dias da avaliação) e com o scorer deles em AUC de vítima 0.998, então servem de ordem de grandeza e não de comparação Pix a Pix. Leituras: sem barrar nada, 79% do valor se perde (o MED e o bloqueio cautelar devolvem 21%); as regras sozinhas deixam perder 21%, e com o LightGBM decidindo 11%. O `threshold_block` do PixSim perde só 3%, mas à custa de 485 falsos bloqueios contra 2 das regras (36 antes do descarte das três regras da [ADR 0033](../02-arquitetura/decisoes/0033-regras-descartadas-pela-ablacao.md), quase todos do `TYPOLOGY_SPLITTING`). O custo em R$ do [ADR 0030](../02-arquitetura/decisoes/0030-custo-assimetrico-e-p-at-k.md) trata fraude aprovada como perda total do valor; a cascata mostra que parte desse valor volta, então o custo é um limite superior da perda.
 
 ### Custo do falso bloqueio
 
