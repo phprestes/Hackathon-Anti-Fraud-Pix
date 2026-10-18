@@ -134,6 +134,45 @@ database/   imagem do Postgres e schema (database.sql)
 docs/       documentação navegável, ADRs e o enunciado
 .agents/    skills para agentes de IA (ponto de entrada: AGENTS.md)
 ```
+## Referências
+
+\[1\] QI Tech. *Desafio Antifraude Pix* e slides de abertura do Hackathon QI Tech 2026 (Risk Solutions). Transcrição em `docs/01-contexto/enunciado.md`; PDFs em `docs/referencia/enunciado/`.
+
+\[2\] Pesquisa QITech (documento interno do time, literatura branca e cinzenta). `docs/pesquisa/Pesquisa QITech.pdf`.
+
+\[3\] Bolton, R. J.; Hand, D. J. (2002). *Statistical Fraud Detection: A Review*. Statistical Science, vol. 17.
+
+\[4\] Pizzolato et al. (2025). *A Taxonomy of Pix Fraud in Brazil*. arXiv:2511.20902. <https://arxiv.org/abs/2511.20902>
+
+\[5\] Zeimarani, B.; Khatib, A.; Mousavinasr, S.; Figueiredo, C. M. S. (2026). *PixSim: a calibrated open-source simulator of instant-payment fraud, recovery and interdiction under analyst capacity constraints*. Identificador arXiv ainda não publicado (TODO no `CITATION.cff` do repositório; não verificado). Código: <https://github.com/BashirZeimarani/pixsim_public> (Apache-2.0; commit `7fdfc90013960f46df60c3ea01838e768e7a420a`).
+
+\[6\] Dal Pozzolo, A.; Caelen, O.; Johnson, R. A.; Bontempi, G. (2015). *Calibrating Probability with Undersampling for Unbalanced Classification*. IEEE SSCI 2015.
+
+\[7\] Dal Pozzolo, A. et al. (2018). *Credit card fraud detection: a realistic modeling and a novel learning strategy*. IEEE Transactions on Neural Networks and Learning Systems, 29(8).
+
+\[8\] Dal Pozzolo, A. et al. (2014). *Learned lessons in credit card fraud detection from a practitioner perspective*. Expert Systems with Applications, 41(10).
+
+\[9\] Lucas, Y. et al. (2019). *Multiple perspectives HMM-based feature engineering for credit card fraud detection*. ACM SAC 2019.
+
+\[10\] Carcillo, F. et al. (2018). *Scarff: a scalable framework for streaming credit card fraud detection with Spark*. Information Fusion 41, 182-194. doi:10.1016/j.inffus.2017.09.005
+
+\[11\] Banco Central do Brasil. Resolução BCB nº 142/2021, art. 2º, I (limite noturno de R\$ 1.000, 20h às 6h, pessoa física), hoje consolidado na Instrução Normativa BCB nº 512/2024, art. 3º, §3º e §7º, II.
+
+\[12\] Banco Central do Brasil. Regulamento do Pix, arts. 37 e 39-B, §1º, I a V (fatores de avaliação de suspeita, como tempo desde a abertura da conta e recorrência; o 39-B trata do PSP do recebedor).
+
+\[13\] Iglewicz, B.; Hoaglin, D. C. (1993). *How to Detect and Handle Outliers*. ASQC Quality Press (escore z modificado com mediana e MAD; resumo no NIST/SEMATECH e-Handbook, seção 1.3.5.17).
+
+\[14\] Platt, J. C. (1999). *Probabilistic outputs for support vector machines and comparisons to regularized likelihood methods*. Em *Advances in Large Margin Classifiers*, 61-74.
+
+\[15\] Ke, G. et al. (2017). *LightGBM: a highly efficient gradient boosting decision tree*. NeurIPS 30, 3146-3154.
+
+\[16\] Liu, F. T.; Ting, K. M.; Zhou, Z.-H. (2008). *Isolation forest*. IEEE ICDM, 413-422. doi:10.1109/ICDM.2008.17
+
+\[17\] Hamilton, W. L.; Ying, R.; Leskovec, J. (2017). *Inductive representation learning on large graphs*. NeurIPS 30, 1024-1034.
+
+\[18\] Rabiner, L. R. (1989). *A tutorial on hidden Markov models and selected applications in speech recognition*. Proceedings of the IEEE 77(2), 257-286.
+
+\[19\] Gelman, A.; Carlin, J. B.; Stern, H. S.; Dunson, D. B.; Vehtari, A.; Rubin, D. B. (2013). *Bayesian Data Analysis*, 3ª ed. CRC Press.
 
 ## Licença
 
