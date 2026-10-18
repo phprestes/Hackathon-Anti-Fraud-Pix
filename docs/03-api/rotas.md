@@ -30,29 +30,29 @@ Entrada: o payload da [seção 3.1 do enunciado](../01-contexto/enunciado.md#31-
 
 As três decisões saem com o mesmo status HTTP; o que muda é o campo `status` ([ADR 0003](../02-arquitetura/decisoes/0003-decisao-antifraude-e-dado-nao-erro-http.md)).
 
-Resposta real para o payload de [`exemplo-pix.json`](exemplo-pix.json) (Pix noturno de R$ 1.500 para uma conta de 7 dias), lida pelo `GET`, com a API no conjunto `2026.10.18-pixsim`:
+Resposta real para o payload de [`exemplo-pix.json`](exemplo-pix.json) (Pix noturno de R$ 1.500 para uma conta de 7 dias), lida pelo `GET`, com a API no conjunto `2026.10.18-pixsim-2`:
 
 ```json
 {
-  "key": "4f26213a-9939-4b05-ab03-8edd2349a94f",
+  "key": "1a3e0c11-2dea-4312-959b-adfb2a86104a",
   "status": "two_factor_required",
   "metadata": {
     "shadow": [
       {
         "rule": "MODEL_LOGREG",
-        "reason": "Modelo logreg deu score 0.6379 (limiar 0.1899); só observação.",
+        "reason": "Modelo logreg deu score 0.6313 (limiar 0.1933); só observação.",
         "signals": {
-          "score": 0.637872,
-          "threshold": 0.18993193264537966
+          "score": 0.631324,
+          "threshold": 0.193327739912244
         },
         "would_decide": "two_factor_required"
       },
       {
         "rule": "MODEL_LIGHTGBM",
-        "reason": "Modelo gbdt deu score 0.0043 (limiar 0.9404); só observação.",
+        "reason": "Modelo gbdt deu score 0.0795 (limiar 0.8558); só observação.",
         "signals": {
-          "score": 0.004325,
-          "threshold": 0.9403942827735305
+          "score": 0.079516,
+          "threshold": 0.8557569781424246
         },
         "would_decide": "approved"
       },
@@ -123,7 +123,7 @@ Resposta real para o payload de [`exemplo-pix.json`](exemplo-pix.json) (Pix notu
       "destination_distinct_other_sources_last_1h": 0,
       "destination_rejected_by_others_last_window": 0
     },
-    "rule_set_version": "2026.10.18-pixsim"
+    "rule_set_version": "2026.10.18-pixsim-2"
   }
 }
 ```

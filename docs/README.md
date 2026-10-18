@@ -31,7 +31,7 @@ sources: [Desafio Antifraude Pix, bootcamp-base-api, Projeto fase 1]
 | [visao-geral.md](02-arquitetura/visao-geral.md) | Quais serviços sobem (api, db, worker), por onde passa um Pix, o que veio da base? |
 | [c4.md](02-arquitetura/c4.md) | Diagramas C4 (imagens e fontes PlantUML): contexto, containers, componentes da API, do motor e do worker, e backtest sem HTTP e sem banco |
 | [camadas.md](02-arquitetura/camadas.md) | Em qual pasta mora cada coisa, inclusive uma regra antifraude? |
-| [decisoes/](02-arquitetura/decisoes/README.md) | Por que cada escolha, e o que foi descartado? (32 ADRs) |
+| [decisoes/](02-arquitetura/decisoes/README.md) | Por que cada escolha, e o que foi descartado? (33 ADRs) |
 | **03 · API** | |
 | [rotas.md](03-api/rotas.md) | Quais rotas existem, com entrada, saídas e idempotência? Formato do `metadata` |
 | [erros.md](03-api/erros.md) | Qual código QIT sai em cada recusa? Próximo código livre |
