@@ -1,0 +1,19 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+title Contexto: motor antifraude Pix
+
+Person(risco, "Time de risco", "Calibra regras e lê as análises")
+System_Ext(pagamento, "Sistema de pagamento Pix", "Banco cliente ou a banca do hackathon: manda o Pix antes de liquidar")
+
+System(motor, "Motor antifraude Pix", "Recebe o Pix, decide approved / two_factor_required / rejected e grava a análise com o motivo")
+
+System_Ext(med, "MED e contestações (futuro)", "Desfecho real da fraude: viraria rótulo")
+System_Ext(twofa, "Fluxo de 2FA (futuro)", "Confirmação do cliente: rótulo fraco e imediato")
+
+Rel(pagamento, motor, "POST /pix/transaction\nGET /pix/transaction/{id}", "HTTPS + INTERNAL-TOKEN")
+Rel(risco, motor, "Simula tráfego e calibra parâmetros", "scripts/simulate.py")
+Rel(med, motor, "Rótulos atrasados", "fora do escopo")
+Rel(twofa, motor, "Resultado do 2FA", "fora do escopo")
+
+@enduml

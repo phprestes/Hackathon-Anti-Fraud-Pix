@@ -1,0 +1,30 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+title Componentes da api: camadas do Base Service + motor
+
+Container_Ext(cliente, "Cliente HTTP", "Sistema de pagamento, simulador ou pytest")
+ContainerDb_Ext(db, "db", "PostgreSQL 16")
+
+Container_Boundary(api_boundary, "api") {
+    Component(mw, "Middlewares", "src/middlewares/", "Request id, log, INTERNAL-TOKEN (403), sessão de banco")
+    Component(schema, "SchemaHandler", "src/utils/schema_handler.py + src/schemas/", "JSON Schema fechado do payload (400)")
+    Component(resource, "PixTransactionResource", "src/resources/", "HTTP de entrada e saída; 201 ou 200")
+    Component(controller, "PixTransactionController", "src/controllers/", "Idempotência, snapshot, contexto, roda as regras, decide, commit")
+    Component(repo, "PixTransactionRepository", "src/repositories/", "Busca por pix_id, agregados por janela, INSERT")
+    Component(engine, "Motor de regras", "src/rules/", "PixSnapshot, RuleContext, ACTIVE_RULES, severidade")
+    Component(dto, "PixAnalysisDTO", "src/dtos/", "{key, status, metadata}")
+    Component(errors, "Erros QIT", "src/errors/", "404 QIT002001, 409 QIT002002")
+}
+
+Rel(cliente, mw, "HTTP")
+Rel(mw, schema, "")
+Rel(schema, resource, "payload válido")
+Rel(resource, controller, "analyze / get_by_pix_id")
+Rel(controller, repo, "agregados e gravação")
+Rel(repo, db, "SQL")
+Rel(controller, engine, "evaluate(pix, context) em todas as regras")
+Rel(controller, dto, "monta a resposta")
+Rel(controller, errors, "levanta recusa")
+
+@enduml

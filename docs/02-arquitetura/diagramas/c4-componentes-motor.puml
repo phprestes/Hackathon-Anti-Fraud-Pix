@@ -1,0 +1,31 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+title Componentes do motor: regras, sinais e estatística
+
+Component_Ext(controller, "PixTransactionController", "src/controllers/", "Monta snapshot e contexto, agrega por severidade")
+
+Container_Boundary(rules_boundary, "src/rules/ + src/utils/statistics.py") {
+    Component(snapshot, "PixSnapshot", "pix_snapshot.py", "Pix parseado; self-transfer; CPF ou CNPJ")
+    Component(context, "RuleContext", "rule_context.py", "Agregados de histórico por janela, imutável")
+    Component(registry, "ACTIVE_RULES", "__init__.py", "17 regras com parâmetros RULE_* de constants.py")
+    Component(det, "Regras determinísticas", "limit_*, velocity_source_count, etc.", "Limites, contagens e idades com corte fixo")
+    Component(stat, "Regras estatísticas", "profile_amount_robust_z, etc.", "Perfil do próprio pagador (ADR 0016)")
+    Component(typo, "Tipologias", "typology_account_takeover, etc.", "Combinações que descrevem um golpe: rejected (ADR 0018)")
+    Component(signals, "Sinais compartilhados", "signals.py", "amount_z, geo_speed_kmh: mesmo cálculo para perfil e tipologia")
+    Component(statistics, "Estatística pura", "src/utils/statistics.py", "robust_z (mediana/MAD), cauda binomial negativa, haversine")
+    Component(decision, "Severidade", "decision.py", "approved 0 < two_factor_required 1 < rejected 2")
+}
+
+Rel(controller, registry, "itera todas")
+Rel(registry, det, "aciona")
+Rel(registry, stat, "aciona")
+Rel(registry, typo, "aciona")
+Rel(det, snapshot, "lê")
+Rel(det, context, "lê")
+Rel(stat, signals, "usa")
+Rel(typo, signals, "usa")
+Rel(signals, statistics, "usa")
+Rel(controller, decision, "maior severidade vence")
+
+@enduml
