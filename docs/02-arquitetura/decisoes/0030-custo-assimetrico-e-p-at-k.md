@@ -21,9 +21,13 @@ A função objetivo original ordenava critérios: menos legítimos reprovados, d
   - fraude aprovada custa o valor do Pix;
   - fraude com 2FA custa 10% do valor (a vítima coagida confirma);
   - 2FA em cliente bom custa R$ 2;
-  - bloqueio de cliente bom custa R$ 50.
+  - bloqueio de cliente bom custa R$ 50 mais 2% do valor (a premissa A3.5 do PixSim, ASSUMED; antes era R$ 50 fixos).
 - **`calibrate.py --objective cost`** escolhe a configuração pelo custo esperado, ponderado no PixSim pelo peso de importância do próprio simulador. A ordem lexicográfica continua disponível.
 - **P@k diário** (k = 5, 10, 25, 50): precisão nos k Pix mais suspeitos do dia. Fica no relatório para regras sozinhas e para regras + LightGBM.
+
+## Relação com a cascata de valor do PixSim
+
+O custo de fraude daqui trata toda fraude aprovada como perda total do valor, sem crédito de recuperação. O PixSim mede a cascata do valor da vítima (barrado antes da liquidação, retido num salto, recuperado pelo MED, recuperado por bloqueio cautelar, perdido; as linhas somam 1). A cascata roda o relógio do MED do PixSim sobre as decisões do motor em [Alinhamento com a metodologia do PixSim](../../05-motor/validacao-pixsim.md#alinhamento-com-a-metodologia-do-pixsim) e serve de leitura de perda realista; o custo em R$ continua sendo o critério de calibração porque é uma única conta, barata e que cabe na grade. O custo, portanto, é um limite superior da perda de fraude; o falso bloqueio já está na mesma definição do PixSim.
 
 ## Alternativas descartadas
 

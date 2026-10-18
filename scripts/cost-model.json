@@ -13,6 +13,10 @@
   },
   "friction_cost_reject_cents": {
     "value": 5000,
-    "why": "Legitimo reprovado: R$ 50 de cliente bom bloqueado, atendimento e churn."
+    "why": "Legitimo reprovado: parte fixa de R$ 50 (atendimento e churn de cliente bom bloqueado); a parte proporcional esta em friction_cost_reject_share_of_amount."
+  },
+  "friction_cost_reject_share_of_amount": {
+    "value": 0.02,
+    "why": "Legitimo reprovado: 2% do valor, custo do dinheiro parado; R$ 50 + 2% do valor e a premissa A3.5 do PixSim (ASSUMED, sem estimativa publica)."
   }
 }

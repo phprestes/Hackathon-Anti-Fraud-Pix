@@ -13,7 +13,7 @@ from sklearn.metrics import roc_auc_score
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "src"))
 
-from costs import COMPONENTS, load_cost_model  # noqa: E402
+from costs import COMPONENTS, load_cost_model, reject_cost  # noqa: E402
 from delayed_labels import known_labels  # noqa: E402
 from in_memory_history import InMemoryHistory  # noqa: E402
 from model_eval import View  # noqa: E402
@@ -82,7 +82,7 @@ def cost_parts(model, is_fraud, status, amount, weight):
         if status == TWO_FACTOR_REQUIRED:
             parts["legit_2fa"] = model["friction_cost_2fa_cents"]
         elif status == REJECTED:
-            parts["legit_rejected"] = model["friction_cost_reject_cents"]
+            parts["legit_rejected"] = reject_cost(model, amount)
     elif status == APPROVED:
         parts["fraud_approved"] = weight * amount * model["fraud_loss_factor"]
     elif status == TWO_FACTOR_REQUIRED:

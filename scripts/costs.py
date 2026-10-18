@@ -28,6 +28,11 @@ def weighted_per_1000(legit_parts, fraud_parts, legit_pix, fraud_pix, weight):
     return round(total * 1000 / effective) if effective else 0
 
 
+def reject_cost(model, amount):
+    """False block of a legitimate Pix: fixed part plus a share of the amount (PixSim A3.5)."""
+    return model["friction_cost_reject_cents"] + round(amount * model.get("friction_cost_reject_share_of_amount", 0))
+
+
 def load_cost_model(path=COST_MODEL_PATH):
     with open(path, encoding="utf-8") as handle:
         return {name: item["value"] for name, item in json.load(handle).items()}
@@ -50,7 +55,7 @@ class CostAccumulator:
             if status == "two_factor_required":
                 self.parts["legit_2fa"] += model["friction_cost_2fa_cents"]
             elif status == "rejected":
-                self.parts["legit_rejected"] += model["friction_cost_reject_cents"]
+                self.parts["legit_rejected"] += reject_cost(model, amount)
         elif status == "approved":
             self.parts["fraud_approved"] += round(amount * model["fraud_loss_factor"])
         elif status == "two_factor_required":
