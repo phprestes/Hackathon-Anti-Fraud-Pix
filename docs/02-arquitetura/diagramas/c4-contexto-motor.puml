@@ -3,17 +3,19 @@
 
 title Contexto: motor antifraude Pix
 
-Person(risco, "Time de risco", "Calibra regras e lê as análises")
+Person(risco, "Time de risco", "Calibra regras no PixSim, lê as análises e os relatórios")
 System_Ext(pagamento, "Sistema de pagamento Pix", "Banco cliente ou a banca do hackathon: manda o Pix antes de liquidar")
 
-System(motor, "Motor antifraude Pix", "Recebe o Pix, decide approved / two_factor_required / rejected e grava a análise com o motivo")
+System(motor, "Motor antifraude Pix", "15 regras decidem approved / two_factor_required / rejected; 5 modelos em shadow; grava a análise com o motivo")
 
-System_Ext(med, "MED e contestações (futuro)", "Desfecho real da fraude: viraria rótulo")
+System_Ext(pixsim, "PixSim (terceiro)", "Simulador de Pix calibrado com dados do BCB: referência das métricas, só offline")
+System_Ext(med, "MED e contestações (futuro)", "Desfecho real da fraude: viraria rótulo; hoje simulado só no backtest")
 System_Ext(twofa, "Fluxo de 2FA (futuro)", "Confirmação do cliente: rótulo fraco e imediato")
 
 Rel(pagamento, motor, "POST /pix/transaction\nGET /pix/transaction/{id}", "HTTPS + INTERNAL-TOKEN")
-Rel(risco, motor, "Simula tráfego e calibra parâmetros", "scripts/simulate.py")
-Rel(med, motor, "Rótulos atrasados", "fora do escopo")
+Rel(risco, motor, "Calibra parâmetros e mede no backtest", "make calibrate-pixsim, make rule-ablation")
+Rel(pixsim, motor, "Mundos A e B convertidos para o contrato", "offline, scripts/pixsim/")
+Rel(med, motor, "Rótulos atrasados", "fora do escopo da API")
 Rel(twofa, motor, "Resultado do 2FA", "fora do escopo")
 
 @enduml

@@ -859,6 +859,107 @@ make pdf                 # docs/relatorio/relatorio.md -> docs/relatorio/relator
 
 O alvo `pdf` roda `pandoc` com `--pdf-engine=xelatex --toc --number-sections -V lang=pt-BR`, lendo `metadata.yaml` (título, autores, geometria A4, fontes) e `relatorio.md`; as figuras são os PNG de `docs/02-arquitetura/diagramas/`.
 
+# Perguntas prováveis da banca
+
+Preparação para a apresentação. Cada resposta é curta, cita o número que a sustenta e aponta onde está o detalhe. Números do PixSim são do mundo B (confirmação) salvo indicação; custo é o ponderado por 1.000 Pix.
+
+## O problema e a decisão
+
+**Por que regras explícitas decidem, e não um modelo?**
+Não há rótulo real de fraude no hackathon. Regra é explicável (o `reason` diz o porquê ao cliente e ao analista), reproduzível e auditável, e resolve o *cold start*. Os modelos existem, mas em *shadow*: calculam e gravam, nunca mudam a decisão (ADR 0017, 0022). No PixSim, regras + LightGBM custariam R\$ 99,42 contra R\$ 118,82 só com regras; isso só seria levado a produção com rótulo real.
+
+**Por que `rejected` não é erro HTTP?**
+Reprovar é uma decisão de negócio sobre um Pix válido, não uma falha da requisição. A resposta é 201 com `status: rejected`; erro (4xx) fica para payload inválido, conflito de `id` (409, QIT002002) ou análise inexistente (404, QIT002001) (ADR 0003).
+
+**Como várias regras viram uma decisão? Dois 2FA não somam uma reprovação?**
+Todas as regras rodam; vence a mais severa (`rejected` > `two_factor_required` > `approved`) e todos os disparos vão para `metadata.reasons`. Dois sinais de dúvida não viram reprovação: só uma tipologia explícita (conta tomada, mula) ou um sinal extremo reprova (ADR 0006, 0018).
+
+**Por que a maioria das regras pede 2FA em vez de reprovar?**
+Pelo custo assimétrico: 2FA em legítimo custa R\$ 2 de atrito; reprovar legítimo custa R\$ 50 + 2% do valor; fraude com 2FA escapa em 10% dos casos (vítima coagida confirma). Com isso, reprovar só compensa quando o risco é claro (ADR 0030).
+
+## Regras e calibração
+
+**Como os parâmetros foram escolhidos?**
+Grid sobre o backtest no PixSim, minimizando o custo ponderado: o mundo A escolhe, o mundo B confirma. A calibração tirou o custo de R\$ 127,26 para R\$ 118,82 no mundo B com as regras atuais. Parâmetro só muda com evidência do PixSim; o nosso simulador é só *fixture* do CI (ADR 0029).
+
+**Por que o limite noturno fica em R\$ 1.000 se o PixSim preferia R\$ 2.000?**
+É a âncora regulatória (Res. BCB 142/2021; IN BCB 512/2024): R\$ 1.000 por conta das 20h às 6h para pessoa física. Manter custa cerca de R\$ 4,80 por 1.000 Pix no mundo B. Parte disso é artefato do gerador: o PixSim já limita a conta tomada à noite a R\$ 1.000, então a regra não consegue disparar nela.
+
+**Por que três regras foram descartadas? A família "Montante" ficou sem regra?**
+`TYPOLOGY_SPLITTING`, `COUNTERPARTY_FLAGGED` e `AMOUNT_SOURCE_DAILY_SUM` tinham ablação negativa nos dois mundos e nenhuma âncora regulatória. Desligadas juntas, o custo caiu de R\$ 132,13 para R\$ 109,61 (mundo A) e de R\$ 153,51 para R\$ 118,82 (B), com 1 ponto a menos de vítimas barradas. Sim: Montante ficou sem regra própria; o teto por Pix e o z robusto cobrem parte (ADR 0033).
+
+**Qual é a regra mais importante?**
+`COUNTERPARTY_FIRST_TIME_HIGH` (primeiro Pix do pagador para aquele destino acima de R\$ 1.000): +R\$ 34,63 por 1.000 Pix; sem ela, a captura de vítimas cai de 51,1% para 27,7%. Depois vêm `PROFILE_NEW_DEVICE` (+R\$ 5,60) e `VELOCITY_POISSON_GAMMA` (+R\$ 3,77).
+
+**`COUNTERPARTY_NEW_ACCOUNT` custa R\$ 25,38 a mais no PixSim. Por que fica?**
+Porque o art. 39-B, §1º, II do Regulamento do Pix manda considerar o tempo de abertura da conta do recebedor. No PixSim as mulas têm idade comum, então a regra só pega legítimos que pagam contas novas; em Pix real, conta laranja recém-aberta é padrão documentado. É a decisão registrada: âncora regulatória vence o gerador.
+
+**E as regras que nunca disparam no PixSim?**
+São cinco: rajada do pagador, fazenda de aparelhos, viagem impossível, funil de vítimas e reputação de grafo. O PixSim não gera esses sinais (não tem geolocalização, usa um aparelho por conta, espalha vítimas no tempo, e o worker não roda no backtest). Elas custam zero lá, têm testes pela API e são exercitadas na trava do CI. Não inventamos geolocalização no adaptador para não medir a nossa própria invenção.
+
+## Validação
+
+**Por que não validar com o próprio simulador?**
+Seria circular: nós desenhamos a fraude e as regras que a pegam. No nosso simulador as regras barravam 98,5% das vítimas; no PixSim, 51%. Por isso o nosso simulador ficou só como trava de regressão do CI, e todo número com valor estatístico vem do PixSim (ADR 0029).
+
+**O PixSim é confiável?**
+É um gerador de terceiros (Apache-2.0), calibrado com dados abertos do BCB, com tipologias que não desenhamos e o relógio do MED. Mas é sintético e várias formas são premissas declaradas (`ASSUMED`). Rodamos em escala reduzida (5.025 contas, 30 dias, uma seed por mundo), então diferenças abaixo de cerca de R\$ 1 por 1.000 Pix são ruído.
+
+**Houve vazamento de dados (*data leakage*)?**
+De rótulo, não. O adaptador só passa campos do contrato; as features usam só o histórico passado (paridade API × backtest com 0 divergências); os mundos A e B são independentes (só 3 de 5.025 contas com a mesma data de abertura; mulas com o mesmo id no nível do acaso). Os valores "colados" do PixSim (R\$ 999,99…) são 22% das fraudes, mas o modelo não depende deles (AUC 0,992 → 0,990 sem eles). O que existe é viés: o mundo B foi usado na ablação, por isso o descarte foi confirmado também no A.
+
+**O AUC de 0,99 não é bom demais?**
+É otimista, e dizemos isso: A e B vêm do mesmo gerador, só muda a seed. Só o valor do Pix já dá AUC 0,937, porque as medianas de fraude são premissas do PixSim. No sentido inverso (treino no PixSim, teste no nosso simulador) o LightGBM cai a 0,78 e as regras ganham.
+
+**Como vocês comparam com o artigo do PixSim?**
+Mesma perspectiva (banco pagador), mesmos positivos (Pix de vítima), mesmo peso de importância e mesmo custo de falso bloqueio (R\$ 50 + 2%). Rodando o relógio do MED do próprio PixSim sobre as nossas decisões: sem política se perde 79,3% do valor; com as regras, 20,7%; com regras + LightGBM, 9,0%. O `threshold_block` do PixSim perde 3,0%, mas com 485 falsos bloqueios contra 2 das nossas regras.
+
+**E se o modelo fosse pior, como um scorer real?**
+Replicamos o experimento de ruído do artigo (logit + ruído gaussiano). Com AUC 0,82, o LightGBM com limiar reajustado custa R\$ 127,08 contra R\$ 118,82 das regras: sem ganho. O modelo só paga a fricção que causa com AUC acima de cerca de 0,9.
+
+## Modelos e retroalimentação
+
+**Como os modelos rodam no *hot path* sem scikit-learn na imagem?**
+Os modelos são treinados offline e exportados para JSON (pesos e árvores); a inferência é Python puro. A diferença contra a biblioteca é de ~1e-16 (LightGBM) a ~1e-15 (regressão logística), verificada por `make model-parity` (ADR 0024).
+
+**Por que GraphSAGE e HMM ficam num worker separado?**
+Grafo e sequência pedem numpy e uma visão de muitos Pix; isso não cabe nos milissegundos do POST. O worker calcula a cada 30 s e grava o score; o *hot path* só lê o último score com até 120 min (ADR 0025, 0026). O GraphSAGE tem AUC de nó 0,92 no mundo B, otimista porque o rótulo `is_mule` é estático.
+
+**Como fica o atraso do rótulo (MED)?**
+Treinando só com as fraudes já reportadas (mediana de 2 dias, cauda de 17), o AUC cai pouco (0,989 → 0,968) e o custo sobe ~20%. Com um atraso fixo de 14 dias o modelo fica quase cego (AUC 0,66): os positivos recentes, os mais úteis, viram "legítimos" (Dal Pozzolo et al., 2018).
+
+**Como o banco aprenderia com os desfechos?**
+Simulamos no backtest, não na API (ADR 0032). O sinal "destino com fraude já confirmada no MED" é o ganho mais barato: R\$ 118,82 → R\$ 112,23 e captura de 51% → 65%. O retreino semanal com *champion/challenger* promoveu dois desafiantes que pioraram depois (R\$ 103,18 contra R\$ 100,84 do modelo fixo): uma semana de sombra não basta; em produção, exigiríamos margem ou mais tempo.
+
+**O que é o viés de seleção?**
+Pix reprovado não liquida e não gera desfecho. Com o modelo decidindo, 77% das fraudes nunca geram rótulo, e a precisão do 2FA vista pelos desfechos fica ~10 vezes abaixo da real. Monitorar só por rótulo subestima o motor.
+
+## Engenharia
+
+**Qual a latência e quanto aguenta?**
+O motor avalia um Pix em P50 0,33 ms e P95 0,60 ms (backtest em memória, ~2,7 mil Pix/s). Na API, o custo dominante são as consultas de janela no Postgres (índices por pagador, aparelho e destino). A API é sem estado e escala horizontalmente; não fizemos teste de carga, então não prometemos um número de Pix/s em produção.
+
+**Como garantem que o backtest decide igual à API?**
+O motor só conhece o `HistoryPort`: em produção, SQL; no backtest, índices em memória. `make parity` manda o mesmo roteiro pelos dois e compara status, regras e as 33 features: 0 divergências (ADR 0023).
+
+**Por que o "agora" é o `transaction_date` e não o relógio do servidor?**
+Para a decisão ser reproduzível: o mesmo Pix com o mesmo histórico sempre recebe a mesma resposta, no teste, no backtest e na reanálise (ADR 0007).
+
+**E idempotência?**
+O mesmo `id` com o mesmo payload devolve a análise gravada (200). O mesmo `id` com payload diferente é conflito (409, QIT002002). Todo Pix é gravado, inclusive os reprovados; as tabelas são *append-only* e dinheiro é inteiro em centavos.
+
+**Como testam?**
+113 testes *black box* pela API, sem importar `src/` nem ler o banco: cada regra tem um teste que não dispara e um que dispara, mais cenários, contrato e idempotência. O CI roda lint, testes, paridade e a trava de calibração.
+
+## Próximos passos e processo
+
+**O que fariam com dados reais?**
+(1) Rota de desfechos (`POST /pix/transaction/{id}/outcome`) para receber o MED; (2) consulta às notificações de infração do DICT no lugar da reputação derivada; (3) recalibrar no histórico real e só então tirar um modelo de *shadow*, com *champion/challenger* exigindo margem; (4) teste de carga.
+
+**Como usaram IA no desenvolvimento?**
+Como ferramenta de engenharia, com regras explícitas no repositório: `AGENTS.md` (limites, TDD, camadas), *skills* por tarefa e um CHANGELOG em que toda mudança de agente é marcada como tal. Decisões de produto (descartar regras, manter o limite noturno, o que é validação) foram do time e estão nas ADRs.
+
+
 # Referências {-}
 
 \[1\] QI Tech. *Desafio Antifraude Pix* e slides de abertura do Hackathon QI Tech 2026 (Risk Solutions). Transcrição em `docs/01-contexto/enunciado.md`; PDFs em `docs/referencia/enunciado/`.

@@ -6,18 +6,22 @@ title Containers: o que roda separado
 System_Ext(pagamento, "Sistema de pagamento Pix", "Cliente da API")
 Person(risco, "Time de risco")
 
-System_Boundary(motor_boundary, "Motor antifraude Pix") {
-    Container(api, "api", "Python 3.11, FastAPI, SQLAlchemy 2", "Valida o contrato, carrega o histórico, roda as 15 regras, decide e grava")
-    ContainerDb(db, "db", "PostgreSQL 16", "pix_transaction, pix_analysis, pix_analysis_reason, analysis_status (append-only)")
+System_Boundary(motor_boundary, "Motor antifraude Pix (docker compose)") {
+    Container(api, "api", "Python 3.11, FastAPI, SQLAlchemy 2", "Hot path: valida o contrato, carrega o histórico, roda as 15 regras e os 5 modelos em shadow, decide e grava")
+    Container(worker, "worker", "Python 3.11, numpy", "Cold path: a cada 30 s calcula reputação de grafo (SQL), GraphSAGE e HMM de sequência\n(src/worker/)")
+    ContainerDb(db, "db", "PostgreSQL 16", "pix_transaction, pix_analysis, pix_analysis_reason, analysis_status (append-only) + account_risk_score, payer_sequence_score")
 }
 
-Container(sim, "Simulador", "Python, requests", "Gera Pix legítimos e fraudes rotuladas, manda pela API em ordem cronológica e mede fricção, captura e latência\n(scripts/simulate.py)")
-Container(tests, "Suíte de testes", "pytest", "Black box por HTTP: cada regra, cada cenário, contrato e idempotência\n(tests/)")
+Container(offline, "Ferramentas offline", "Python, scripts/", "Backtest em memória, paridade, calibração, ablação, treino, validação no PixSim, retroalimentação pelo MED")
+Container(sim, "Simulador local (fixture do CI)", "Python", "Gera Pix rotulados para a paridade e a trava make calibrate-check; sem valor estatístico\n(scripts/fixture/simulate.py)")
+Container(tests, "Suíte de testes", "pytest", "113 testes black box por HTTP: cada regra, cada cenário, contrato e idempotência\n(tests/)")
 
 Rel(pagamento, api, "POST/GET /pix/transaction", "HTTP/JSON")
-Rel(api, db, "Consultas por janela e INSERT", "SQL")
-Rel(risco, sim, "executa", "make simulate")
-Rel(sim, api, "Milhares de POST com rótulo guardado no script", "HTTP/JSON")
+Rel(api, db, "Consultas por janela, leitura de scores e INSERT", "SQL")
+Rel(worker, db, "Lê o grafo pagador → destino e grava scores", "SQL")
+Rel(risco, offline, "executa", "make validate-pixsim, rule-ablation, calibrate-pixsim")
+Rel(sim, api, "Pix rotulados pela API (paridade e simulate)", "HTTP/JSON")
+Rel(offline, sim, "usa como fixture do CI")
 Rel(tests, api, "POST/GET", "HTTP/JSON")
 Rel(tests, db, "Só zera o banco entre execuções", "SQL")
 

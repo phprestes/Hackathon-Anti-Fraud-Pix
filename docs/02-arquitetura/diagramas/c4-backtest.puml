@@ -1,29 +1,29 @@
 @startuml
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
 
-title Proposta: backtest em lote reutilizando o mesmo motor
+title Backtest em lote reutilizando o mesmo motor
 
 Person(risco, "Time de risco")
-ContainerDb_Ext(arquivo, "events.jsonl", "Arquivo", "Pix em ordem cronológica + rótulo (sintético do simulador ou real: MED, contestação)")
+ContainerDb_Ext(arquivo, "events.jsonl", "Arquivo", "Pix em ordem cronológica + rótulo + atraso de reporte ao MED (PixSim ou fixture do CI)")
 
-System_Boundary(bt_boundary, "Backtest em lote (scripts/backtest.py)") {
-    Container(runner, "Runner", "Python", "Lê eventos, monta PixSnapshot, pede o contexto, avalia, grava a decisão no histórico em memória, compara com o rótulo")
-    Container(mem, "InMemoryHistory", "Python", "Implementa HistoryPort com índices em memória por pagador, aparelho e destino")
-    Container(report, "Relatório", "Markdown/JSON", "Fricção, captura por tipologia, fronteira por parâmetro")
+System_Boundary(bt_boundary, "Backtest em lote (scripts/backtest/backtest.py)") {
+    Container(runner, "Runner", "Python", "Lê eventos em streaming, monta PixSnapshot, pede o contexto, avalia, grava a decisão no histórico em memória, compara com o rótulo; ~2,5 mil Pix/s")
+    Container(mem, "InMemoryHistory", "scripts/backtest/in_memory_history.py", "Implementa HistoryPort com índices em memória por pagador, aparelho e destino")
+    Container(report, "Relatório", "Markdown/JSON", "Fricção, captura por tipologia, custo ponderado em R$, P@k")
 }
 
 System_Boundary(shared_boundary, "Código compartilhado com a api (sem alteração)") {
     Container(core, "Motor de regras", "src/rules/ + src/utils/statistics.py", "PixSnapshot, RuleContext, ACTIVE_RULES, severidade")
-    Container(port, "HistoryPort", "Interface Python", "Os agregados que o RuleContext precisa, com a mesma semântica de janela [t - N, t)")
+    Container(port, "HistoryPort", "src/rules/core/history_port.py", "Os agregados que o RuleContext precisa, com a mesma semântica de janela [t - N, t)")
 }
 
 System_Boundary(prod_boundary, "api (produção)") {
     Container(sqladapter, "PixTransactionRepository", "SQLAlchemy", "Implementa HistoryPort com SQL indexado")
 }
 
-Container(parity, "Teste de paridade", "pytest", "Mesmo roteiro de Pix nos dois adaptadores: todo agregado precisa sair igual")
+Container(parity, "Paridade", "scripts/backtest/parity.py", "Mesmo roteiro de Pix pela API e pelo backtest: status, regras e as 33 features iguais (0 divergências)")
 
-Rel(risco, runner, "roda com um conjunto de parâmetros")
+Rel(risco, runner, "roda com um conjunto de parâmetros", "--set, --disable")
 Rel(runner, arquivo, "lê")
 Rel(runner, core, "evaluate em todas as regras")
 Rel(runner, mem, "contexto e gravação")
