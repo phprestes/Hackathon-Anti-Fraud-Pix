@@ -28,7 +28,6 @@ QUANTILE_POINTS = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
 PSI_BINS = 10
 PSI_EPS = 1e-4
 SWEEPS = {
-    "RULE_AMOUNT_DAILY_SUM_CENTS": [1_500_000, 2_250_000, 3_000_000, 4_500_000, 6_000_000],
     "RULE_POISSON_TAIL_PPM": [10, 30, 100, 300, 1000],
     "RULE_PROFILE_Z_2FA_TENTHS": [25, 30, 35, 45, 55],
 }
@@ -261,13 +260,11 @@ def analyze_sensitivity(path, budget):
                 return None
             runs.append((value, outcome))
         result["params"][name] = runs
-    result["baseline"] = scenario(runner, path, "RULE_AMOUNT_DAILY_SUM_CENTS", PARAMETERS["RULE_AMOUNT_DAILY_SUM_CENTS"])
+    result["baseline"] = scenario(runner, path, "RULE_POISSON_TAIL_PPM", PARAMETERS["RULE_POISSON_TAIL_PPM"])
     return result
 
 
 def fmt_value(name, value):
-    if name == "RULE_AMOUNT_DAILY_SUM_CENTS":
-        return f"R$ {value // 100:,}".replace(",", ".")
     return str(value)
 
 
@@ -392,10 +389,9 @@ def render(amount, dispersion, drift, sensitivity, meta):
             rows.append([f"{fmt_value(name, value)}{mark}", pt(r["legit"]["approved"]), pt(r["legit"]["two_factor_required"]),
                          pt(r["legit"]["rejected"]), pt(r["barred"]), pt(r["cost"])])
         out += md_table(["Valor", "Legítimos aprovados %", "Legítimos 2FA %", "Legítimos reprovados %", "Fraude barrada %", "Custo R$/1.000 Pix"], rows)
-        labels = [f'"{v // 100 if name == "RULE_AMOUNT_DAILY_SUM_CENTS" else v}"' for v, _ in runs]
+        labels = [f'"{v}"' for v, _ in runs]
         friction = [100 - r["legit"]["approved"] for _, r in runs]
-        unit = " Eixo x em reais." if name == "RULE_AMOUNT_DAILY_SUM_CENTS" else ""
-        out += ["", f"Linhas: fricção em legítimos (100 − aprovados) e fraude barrada, em %.{unit}", ""]
+        out += ["", f"Linhas: fricção em legítimos (100 − aprovados) e fraude barrada, em %.", ""]
         out += xychart(name, labels, [("line", friction), ("line", [r["barred"] for _, r in runs])], "%", 100)
         span_fraud = max(r["barred"] for _, r in runs) - min(r["barred"] for _, r in runs)
         span_friction = max(friction) - min(friction)

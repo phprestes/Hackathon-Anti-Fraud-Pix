@@ -4,7 +4,7 @@ Instruções para agentes de código, no formato [agents.md](https://agents.md).
 
 ## Projeto
 
-Motor antifraude de Pix do Hackathon QI Tech 2026: `POST /pix/transaction` recebe um Pix e devolve `{key, status, metadata}` com `approved`, `two_factor_required` ou `rejected`; `GET /pix/transaction/{id}` devolve a análise gravada. Python 3.11, FastAPI, SQLAlchemy 2, PostgreSQL 16, jsonschema, Docker Compose (`api`, `db`, `worker`). O motor tem 18 regras que decidem e 5 modelos em shadow (a regressão logística, o LightGBM e o GraphSAGE foram treinados no mundo A do PixSim; o Isolation Forest e o HMM instalados vêm do nosso simulador). Nasceu do `bootcamp-base-api` da Aula 1; o exemplo `sample_entity` foi substituído pela rota do Pix.
+Motor antifraude de Pix do Hackathon QI Tech 2026: `POST /pix/transaction` recebe um Pix e devolve `{key, status, metadata}` com `approved`, `two_factor_required` ou `rejected`; `GET /pix/transaction/{id}` devolve a análise gravada. Python 3.11, FastAPI, SQLAlchemy 2, PostgreSQL 16, jsonschema, Docker Compose (`api`, `db`, `worker`). O motor tem 15 regras que decidem e 5 modelos em shadow (a regressão logística, o LightGBM e o GraphSAGE foram treinados no mundo A do PixSim; o Isolation Forest e o HMM instalados vêm do nosso simulador). Nasceu do `bootcamp-base-api` da Aula 1; o exemplo `sample_entity` foi substituído pela rota do Pix.
 
 Entrega: domingo 18/10, até 12:00, link do repositório no Slack. A banca começa pelo README.
 

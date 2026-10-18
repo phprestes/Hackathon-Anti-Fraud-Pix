@@ -56,6 +56,7 @@ Documentação em pt-BR; código, rotas, campos e códigos de regra em inglês. 
 - [ADR 0030](docs/02-arquitetura/decisoes/0030-custo-assimetrico-e-p-at-k.md): custo assimétrico em R$ e P@k
 - [ADR 0031](docs/02-arquitetura/decisoes/0031-modelos-treinados-no-pixsim-e-rotulos-atrasados.md): modelos treinados no PixSim, rótulos atrasados
 - [ADR 0032](docs/02-arquitetura/decisoes/0032-retroalimentacao-pelo-med-no-backtest.md): retroalimentação pelo MED no backtest
+- [ADR 0033](docs/02-arquitetura/decisoes/0033-regras-descartadas-pela-ablacao.md): três regras descartadas pela ablação no PixSim
 
 ## API
 
@@ -70,7 +71,7 @@ Documentação em pt-BR; código, rotas, campos e códigos de regra em inglês. 
 ## Motor
 
 - [Motor de regras](docs/05-motor/motor-de-regras.md): peças, contrato da regra, passo a passo, sinais disponíveis
-- [Catálogo de regras](docs/05-motor/regras.md): as 18 regras que decidem e os 5 modelos em shadow, com parâmetros, decisão, fonte verificada (BCB, literatura) e evidência no PixSim (disparo, precisão, ablação)
+- [Catálogo de regras](docs/05-motor/regras.md): as 15 regras que decidem, as 3 descartadas e os 5 modelos em shadow, com parâmetros, decisão, fonte verificada (BCB, literatura) e evidência no PixSim (disparo, precisão, ablação)
 - [Decisão](docs/05-motor/decisao.md): severidade, quando sai 2FA, exemplos
 - [Calibração](docs/05-motor/calibracao.md): calibração no PixSim pelo custo ponderado, configuração final, trava do CI e limites da evidência
 - [Análises estatísticas](docs/05-motor/analises.md): log-normalidade, dispersão Poisson, PSI, sensibilidade de limiar (dados sintéticos)

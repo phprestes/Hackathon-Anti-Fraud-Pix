@@ -8,6 +8,12 @@ Toda mudança relevante neste repositório, da mais recente para a mais antiga p
 
 ## [Não lançado]
 
+### 2026-10-18
+
+| Tipo | Mudança | Arquivos | Por quê | Autor |
+|---|---|---|---|---|
+| Removido | `TYPOLOGY_SPLITTING`, `COUNTERPARTY_FLAGGED` e `AMOUNT_SOURCE_DAILY_SUM` saem do motor (15 regras que decidem); parâmetros sem uso removidos (`RULE_AMOUNT_DAILY_SUM_CENTS` R$ 45.000 / R$ 50.000 PJ, `RULE_SPLITTING_MIN_COUNT` 6, `RULE_SPLITTING_MIN_DESTINATIONS` 4, `RULE_SPLITTING_MIN_SUM_CENTS` R$ 15.000); testes das três regras e o cenário de destino sinalizado removidos; os dois testes da ADR 0006 passam a combinar `COUNTERPARTY_NEW_ACCOUNT` com `LIMIT_SINGLE_AMOUNT`; `RULE_SET_VERSION` `2026.10.18-pixsim` → `2026.10.18-pixsim-2`; grids, `analyze.py` e `rule_ablation.py` sem os parâmetros removidos; catálogo, README, ADRs 0018/0019, C4, `llms.txt` e AGENTS atualizados | `src/rules/`, `src/constants.py`, `tests/integration/pix/`, `scripts/`, `docs/`, `README.md`, `AGENTS.md`, `llms.txt` | Ablação negativa nos mundos A e B do PixSim e nenhuma âncora regulatória: custo de R$ 132,13 → R$ 109,61 (A) e R$ 153,51 → R$ 118,82 (B) por 1.000 Pix ([ADR 0033](docs/02-arquitetura/decisoes/0033-regras-descartadas-pela-ablacao.md)) | agente (Claude Code) |
+
 ### 2026-10-17
 
 | Tipo | Mudança | Arquivos | Por quê | Autor |

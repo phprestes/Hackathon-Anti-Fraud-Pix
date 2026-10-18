@@ -9,7 +9,7 @@ sources: [Pizzolato, Lopes, Schepke & Kreutz (2025), A Taxonomy of Pix Fraud in 
 
 > [Índice](../../README.md) › [Decisões](README.md) › 0018
 
-**Status:** aceita
+**Status:** aceita; `TYPOLOGY_SPLITTING` descartada por [0033](0033-regras-descartadas-pela-ablacao.md)
 
 ## Contexto
 

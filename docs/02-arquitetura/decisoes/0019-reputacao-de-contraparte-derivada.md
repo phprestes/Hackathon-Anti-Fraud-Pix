@@ -9,7 +9,7 @@ sources: [Pesquisa QITech (listas, reputação de rede por GNN), Desafio Antifra
 
 > [Índice](../../README.md) › [Decisões](README.md) › 0019
 
-**Status:** aceita
+**Status:** substituída por [0033](0033-regras-descartadas-pela-ablacao.md): `COUNTERPARTY_FLAGGED` saiu do motor; o agregado segue como feature dos modelos em shadow
 
 ## Contexto
 

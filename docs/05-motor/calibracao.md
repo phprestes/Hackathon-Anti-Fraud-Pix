@@ -75,6 +75,10 @@ A melhora aparece nos dois mundos, com 2FA em legítimos ainda abaixo de 5% e se
 
 `RULE_SPLITTING_MIN_SUM_CENTS` (R$ 15.000): o único valor testado abaixo dele piorou o custo e a reprovação de legítimos. Os limites de PJ e os demais parâmetros não foram varridos; não há evidência para movê-los.
 
+### Depois da calibração: três regras descartadas
+
+Com os parâmetros acima, a ablação mostrou que `TYPOLOGY_SPLITTING`, `COUNTERPARTY_FLAGGED` e `AMOUNT_SOURCE_DAILY_SUM` custam mais do que evitam. Desligadas juntas (`RULE_SET_VERSION` `2026.10.18-pixsim-2`), o custo vai de R$ 132,13 para R$ 109,61 por 1.000 Pix no mundo A e de R$ 153,51 para R$ 118,82 no B, com o modelo de custo final ([ADR 0033](../02-arquitetura/decisoes/0033-regras-descartadas-pela-ablacao.md)). `RULE_AMOUNT_DAILY_SUM_CENTS` e `RULE_SPLITTING_MIN_SUM_CENTS` saíram do código e do grid; as tabelas acima ficam como registro do que foi medido.
+
 ## O que os números dizem e o que não dizem
 
 **Medem bem:** o efeito relativo de cada parâmetro sobre fricção, captura e custo ponderado em dois mundos de uma população que não desenhamos.

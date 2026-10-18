@@ -50,8 +50,22 @@ Vieram da fase 1 e do Base Service. Continuam valendo porque a banca avalia "ali
 
 ## Matriz regra → teste
 
-Preenchida conforme cada regra antifraude ganha código. Cada `if` tem pelo menos um teste que passa pela regra e um que é barrado por ela.
+Uma linha por regra que decide (15). Cada `if` tem pelo menos um teste que passa pela regra e um que é barrado por ela.
 
 | Regra | Teste que passa (approved) | Teste que dispara | Arquivo |
 |---|---|---|---|
-| *(nenhuma regra implementada ainda)* | | | |
+| `COUNTERPARTY_FAN_IN` | `test_post_tenth_distinct_payer_returns_approved` | `test_post_eleventh_distinct_payer_returns_rejected` | [`test_counterparty_fan_in_rule.py`](../../tests/integration/pix/rules/test_counterparty_fan_in_rule.py) |
+| `COUNTERPARTY_FIRST_TIME_HIGH` | `test_post_new_destination_at_limit_returns_approved` | `test_post_new_destination_above_limit_returns_two_factor_required` | [`test_counterparty_first_time_high_rule.py`](../../tests/integration/pix/rules/test_counterparty_first_time_high_rule.py) |
+| `COUNTERPARTY_GRAPH_RISK` | `test_post_ordinary_destination_returns_approved_without_graph_risk` | `test_post_funnel_then_dispersion_destination_returns_two_factor_required` | [`test_counterparty_graph_risk_rule.py`](../../tests/integration/pix/rules/test_counterparty_graph_risk_rule.py) |
+| `COUNTERPARTY_NEW_ACCOUNT` | `test_post_destination_30_days_old_returns_approved` | `test_post_destination_29_days_old_returns_two_factor_required` | [`test_counterparty_new_account_rule.py`](../../tests/integration/pix/rules/test_counterparty_new_account_rule.py) |
+| `LIMIT_NIGHT_AMOUNT` | `test_post_evening_before_night_returns_approved` | `test_post_night_start_returns_two_factor_required` | [`test_limit_night_amount_rule.py`](../../tests/integration/pix/rules/test_limit_night_amount_rule.py) |
+| `LIMIT_SINGLE_AMOUNT` | `test_post_individual_at_ceiling_returns_approved` | `test_post_individual_above_ceiling_returns_two_factor_required` | [`test_limit_single_amount_rule.py`](../../tests/integration/pix/rules/test_limit_single_amount_rule.py) |
+| `PROFILE_AMOUNT_ROBUST_Z` | `test_post_amount_near_profile_returns_approved` | `test_post_amount_far_above_profile_returns_two_factor_required` | [`test_profile_amount_robust_z_rule.py`](../../tests/integration/pix/rules/test_profile_amount_robust_z_rule.py) |
+| `PROFILE_GEO_VELOCITY` | `test_post_same_trip_after_six_hours_returns_approved` | `test_post_impossible_travel_returns_two_factor_required` | [`test_profile_geo_velocity_rule.py`](../../tests/integration/pix/rules/test_profile_geo_velocity_rule.py) |
+| `PROFILE_NEW_DEVICE` | `test_post_first_pix_of_payer_returns_approved` | `test_post_new_device_at_minimum_amount_returns_two_factor_required` | [`test_profile_new_device_rule.py`](../../tests/integration/pix/rules/test_profile_new_device_rule.py) |
+| `PROFILE_NEW_SOURCE_ACCOUNT` | `test_post_source_7_days_old_returns_approved` | `test_post_source_6_days_old_above_limit_returns_two_factor_required` | [`test_profile_new_source_account_rule.py`](../../tests/integration/pix/rules/test_profile_new_source_account_rule.py) |
+| `TYPOLOGY_ACCOUNT_TAKEOVER` | `test_post_new_device_without_travel_or_unusual_amount_returns_approved` | `test_post_new_device_and_impossible_travel_returns_rejected` | [`test_typology_account_takeover_rule.py`](../../tests/integration/pix/rules/test_typology_account_takeover_rule.py) |
+| `TYPOLOGY_MULE` | `test_post_fifth_payer_to_old_account_returns_approved` | `test_post_fifth_payer_to_new_account_returns_rejected` | [`test_typology_mule_rule.py`](../../tests/integration/pix/rules/test_typology_mule_rule.py) |
+| `VELOCITY_DEVICE_SOURCES` | `test_post_third_distinct_payer_on_device_returns_approved` | `test_post_fourth_distinct_payer_on_device_returns_rejected` | [`test_velocity_device_sources_rule.py`](../../tests/integration/pix/rules/test_velocity_device_sources_rule.py) |
+| `VELOCITY_POISSON_GAMMA` | `test_post_burst_from_intense_payer_returns_approved` | `test_post_burst_from_light_payer_returns_two_factor_required` | [`test_velocity_poisson_gamma_rule.py`](../../tests/integration/pix/rules/test_velocity_poisson_gamma_rule.py) |
+| `VELOCITY_SOURCE_COUNT` | `test_post_fourth_pix_in_window_returns_approved` | `test_post_fifth_pix_in_window_returns_two_factor_required` | [`test_velocity_source_count_rule.py`](../../tests/integration/pix/rules/test_velocity_source_count_rule.py) |

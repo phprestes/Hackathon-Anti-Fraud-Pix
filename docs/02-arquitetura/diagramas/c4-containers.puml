@@ -7,7 +7,7 @@ System_Ext(pagamento, "Sistema de pagamento Pix", "Cliente da API")
 Person(risco, "Time de risco")
 
 System_Boundary(motor_boundary, "Motor antifraude Pix") {
-    Container(api, "api", "Python 3.11, FastAPI, SQLAlchemy 2", "Valida o contrato, carrega o histórico, roda as 17 regras, decide e grava")
+    Container(api, "api", "Python 3.11, FastAPI, SQLAlchemy 2", "Valida o contrato, carrega o histórico, roda as 15 regras, decide e grava")
     ContainerDb(db, "db", "PostgreSQL 16", "pix_transaction, pix_analysis, pix_analysis_reason, analysis_status (append-only)")
 }
 

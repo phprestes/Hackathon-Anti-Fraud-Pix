@@ -14,6 +14,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(HERE, "..", "src"))
 
+from constants import RULE_SET_VERSION  # noqa: E402
 from backtest import select_rules  # noqa: E402
 from costs import group_of, load_cost_model, weighted_per_1000  # noqa: E402
 from in_memory_history import InMemoryHistory  # noqa: E402
@@ -34,7 +35,6 @@ SENSITIVITY = {
     "LIMIT_SINGLE_AMOUNT": ("RULE_LIMIT_SINGLE_AMOUNT_CENTS", [2500000, 5000000, 10000000]),
     "VELOCITY_SOURCE_COUNT": ("RULE_VELOCITY_2FA_COUNT", [3, 5, 8]),
     "VELOCITY_DEVICE_SOURCES": ("RULE_DEVICE_MAX_SOURCES_24H", [2, 3, 5]),
-    "AMOUNT_SOURCE_DAILY_SUM": ("RULE_AMOUNT_DAILY_SUM_CENTS", [3000000, 4500000, 6000000]),
     "PROFILE_NEW_DEVICE": ("RULE_NEW_DEVICE_MIN_AMOUNT_CENTS", [10000, 20000, 50000]),
     "PROFILE_NEW_SOURCE_ACCOUNT": ("RULE_SOURCE_MIN_AGE_DAYS", [3, 7, 14]),
     "PROFILE_AMOUNT_ROBUST_Z": ("RULE_PROFILE_Z_2FA_TENTHS", [35, 45, 55]),
@@ -42,12 +42,10 @@ SENSITIVITY = {
     "COUNTERPARTY_NEW_ACCOUNT": ("RULE_DESTINATION_MIN_AGE_DAYS", [15, 30, 60]),
     "COUNTERPARTY_FAN_IN": ("RULE_DESTINATION_MAX_SOURCES_1H", [5, 10, 20]),
     "COUNTERPARTY_FIRST_TIME_HIGH": ("RULE_FIRST_TIME_MIN_AMOUNT_CENTS", [50000, 100000, 300000]),
-    "COUNTERPARTY_FLAGGED": ("RULE_FLAGGED_WINDOW_DAYS", [3, 7, 14]),
     "TYPOLOGY_ACCOUNT_TAKEOVER": ("RULE_ATO_Z_TENTHS", [20, 30, 40]),
     "TYPOLOGY_MULE": ("RULE_MULE_MIN_SOURCES_1H", [3, 5, 8]),
-    "TYPOLOGY_SPLITTING": ("RULE_SPLITTING_MIN_SUM_CENTS", [500000, 1500000, 5000000]),
 }
-PRE_CALIBRATION = {"RULE_AMOUNT_DAILY_SUM_CENTS": 3000000, "RULE_POISSON_TAIL_PPM": 100, "RULE_SPLITTING_MIN_SUM_CENTS": 1500000,
+PRE_CALIBRATION = {"RULE_POISSON_TAIL_PPM": 100,
                    "RULE_PROFILE_Z_2FA_TENTHS": 35, "RULE_NEW_DEVICE_MIN_AMOUNT_CENTS": 50000,
                    "RULE_FIRST_TIME_MIN_AMOUNT_CENTS": 300000}
 PRE_LABEL = "set:" + ",".join(f"{k}={v}" for k, v in PRE_CALIBRATION.items())
@@ -205,14 +203,14 @@ def render(cache):
     full = cost_per_1000(base, model)
     lines = ["", f"Mundo B do PixSim (seed 20261017), visão pagador (legítimo + pagador→mula), custo ponderado pelo peso de importância "
              f"({str(round(base['victim']['weight'], 4)).replace('.', ',')}) e por [`scripts/cost-model.json`](../../scripts/cost-model.json). Parâmetros atuais "
-             f"(`RULE_SET_VERSION` 2026.10.18-pixsim). Linha de base com as 18 regras: **{brl(full)} por 1.000 Pix**; "
+             f"(`RULE_SET_VERSION` {RULE_SET_VERSION}). Linha de base com as {len(rule_codes())} regras: **{brl(full)} por 1.000 Pix**; "
              f"{pct(barred(base))} dos Pix de vítima barrados; {pct(base['legit']['two_factor_required'] / base['legit']['pix'], 2)} de 2FA e "
              f"{pct(base['legit']['rejected'] / base['legit']['pix'], 2)} de reprovação em legítimos "
              f"({base['legit']['pix']} legítimos, {base['victim']['pix']} Pix de vítima). "
              f"Taxa base de fraude ponderada: {pct(base_rate, 3)}.", "",
              "**Como ler.** *Disparo* é a fração de Pix do grupo em que a regra aparece nos motivos (qualquer decisão). *Precisão ponderada* é a "
              "fração dos disparos que é fraude de vítima, com a fraude multiplicada pelo peso; *lift* é essa precisão dividida pela taxa base. "
-             "*Sem a regra* é o mesmo mundo com a regra desligada (`scripts/backtest.py --disable`; as outras 17 seguem ativas e o histórico "
+             f"*Sem a regra* é o mesmo mundo com a regra desligada (`scripts/backtest.py --disable`; as outras {len(rule_codes()) - 1} seguem ativas e o histórico "
              "reflete as decisões sem ela). *Contribuição* é o custo sem a regra menos o custo com todas: positiva quer dizer que a regra "
              "economiza dinheiro; negativa, que atrapalha. A ablação é marginal: duas regras que cobrem o mesmo Pix aparecem as duas com contribuição baixa.", "",
              "| Regra | Disparo em legítimos | Disparo em Pix de vítima | Precisão ponderada | Lift | Custo sem a regra (por 1.000 Pix) | "
@@ -235,7 +233,7 @@ def render(cache):
                      f"{pct(r['precision']) if r['precision'] is not None else 'n/a'} | "
                      f"{('%.1f' % r['lift']).replace('.', ',') + 'x' if r['lift'] else 'n/a'} | {cost} | {contrib} | {cap} | {verdict} |")
     pre = cache[PRE_LABEL]
-    lines += ["", f"**Antes da calibração** (os seis parâmetros ajustados nos valores anteriores, mesmo modelo de custo): "
+    lines += ["", f"**Antes da calibração** (os {len(PRE_CALIBRATION)} parâmetros ajustados ainda ativos nos valores anteriores, mesmo modelo de custo): "
               f"{brl(cost_per_1000(pre, model))} por 1.000 Pix e {pct(barred(pre))} dos Pix de vítima barrados, contra "
               f"{brl(full)} e {pct(barred(base))} agora.", "",
               "### Sensibilidade dos parâmetros principais", "",

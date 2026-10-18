@@ -1,48 +1,33 @@
-from tests.utils import DEFAULT_AT, PayloadGenerator, RandomGenerator, RequestGenerator, shifted
+from tests.utils import DEFAULT_AT, PayloadGenerator, RequestGenerator, shifted
 
-
-def _history(document: str, amount: int = 4485001, destination: str = None):
-    RequestGenerator.POST_pix(PayloadGenerator.pix(
-        payer_document=document, destination_document=destination, amount=amount, device_id=f"dvc-{document}", at=shifted(DEFAULT_AT, hours=-1)
-    ))
+ABOVE_SINGLE_LIMIT = 5000001
 
 
 class TestDecision:
     def test_post_two_two_factor_rules_returns_two_factor_required(self):
         """ADR 0006: dois disparos 2FA resultam em 2FA com dois motivos."""
-        document = RandomGenerator.generate_cpf()
-        _history(document)
-
         _, body = RequestGenerator.POST_pix(PayloadGenerator.pix(
-            payer_document=document,
-            device_id=f"dvc-{document}",
+            amount=ABOVE_SINGLE_LIMIT,
             destination_opening_date=shifted(DEFAULT_AT, days=-7),
         ))
 
         assert body["status"] == "two_factor_required"
         assert {reason["rule"] for reason in body["metadata"]["reasons"]} == {
             "COUNTERPARTY_NEW_ACCOUNT",
-            "AMOUNT_SOURCE_DAILY_SUM",
+            "LIMIT_SINGLE_AMOUNT",
         }
 
     def test_post_two_factor_and_rejected_rules_returns_rejected_ordered(self):
         """ADR 0006: a pior decisão vence e os motivos saem do mais grave ao menos."""
-        document = RandomGenerator.generate_cpf()
-        destination = RandomGenerator.generate_cpf()
-        _history(document, destination=destination)
-
         _, body = RequestGenerator.POST_pix(PayloadGenerator.pix(
-            payer_document=document,
-            destination_document=destination,
-            device_id=f"dvc-{document}",
-            amount=100001,
+            amount=ABOVE_SINGLE_LIMIT,
             destination_opening_date=shifted(DEFAULT_AT, days=-1),
         ))
 
         assert body["status"] == "rejected"
         assert [(r["rule"], r["decision"]) for r in body["metadata"]["reasons"]] == [
             ("COUNTERPARTY_NEW_ACCOUNT", "rejected"),
-            ("AMOUNT_SOURCE_DAILY_SUM", "two_factor_required"),
+            ("LIMIT_SINGLE_AMOUNT", "two_factor_required"),
         ]
 
     def test_post_metadata_returns_version_and_signals_of_fired_rules(self):

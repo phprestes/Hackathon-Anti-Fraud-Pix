@@ -21,7 +21,7 @@ make backtest    # motor de src/ sobre o arquivo, com InMemoryHistory
 make parity      # reset + API x backtest, Pix a Pix (status, regras, features)
 .venv/bin/python scripts/simulate.py --generate-only --events e.jsonl   # só gera
 .venv/bin/python scripts/replay.py e.jsonl --responses r.jsonl          # manda pela API
-.venv/bin/python scripts/backtest.py e.jsonl --set RULE_SPLITTING_MIN_COUNT=4 --json m.json
+.venv/bin/python scripts/backtest.py e.jsonl --set RULE_POISSON_TAIL_PPM=100 --json m.json
 ```
 
 `--set` só sobrescreve parâmetros das regras; as janelas do contexto (`engine.build_context`) continuam vindo de `constants.py`.

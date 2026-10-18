@@ -36,7 +36,7 @@ BYPASS_ENDPOINTS = [
     "/health_check",
 ]
 
-RULE_SET_VERSION = "2026.10.18-pixsim"
+RULE_SET_VERSION = "2026.10.18-pixsim-2"
 
 RULE_MODEL_DIR = os.environ.get("RULE_MODEL_DIR", os.path.join(SERVICE_ROOT, "rules", "model"))
 # Models trained offline for the cold path (GraphSAGE, HMM); the hot path only reads their thresholds.
@@ -48,8 +48,6 @@ RULE_DESTINATION_NEW_MAX_AMOUNT_CENTS = int(os.environ.get("RULE_DESTINATION_NEW
 RULE_VELOCITY_WINDOW_MINUTES = int(os.environ.get("RULE_VELOCITY_WINDOW_MINUTES", "10"))
 RULE_VELOCITY_2FA_COUNT = int(os.environ.get("RULE_VELOCITY_2FA_COUNT", "5"))
 RULE_VELOCITY_REJECT_COUNT = int(os.environ.get("RULE_VELOCITY_REJECT_COUNT", "10"))
-RULE_AMOUNT_DAILY_SUM_CENTS = int(os.environ.get("RULE_AMOUNT_DAILY_SUM_CENTS", "4500000"))
-RULE_AMOUNT_DAILY_SUM_PJ_CENTS = int(os.environ.get("RULE_AMOUNT_DAILY_SUM_PJ_CENTS", "5000000"))
 RULE_NIGHT_START_HOUR = int(os.environ.get("RULE_NIGHT_START_HOUR", "20"))
 RULE_NIGHT_END_HOUR = int(os.environ.get("RULE_NIGHT_END_HOUR", "6"))
 RULE_LIMIT_NIGHT_AMOUNT_CENTS = int(os.environ.get("RULE_LIMIT_NIGHT_AMOUNT_CENTS", "100000"))
@@ -75,10 +73,8 @@ RULE_GEO_MIN_DISTANCE_KM = int(os.environ.get("RULE_GEO_MIN_DISTANCE_KM", "50"))
 RULE_GEO_MAX_SPEED_KMH = int(os.environ.get("RULE_GEO_MAX_SPEED_KMH", "900"))
 RULE_ATO_Z_TENTHS = int(os.environ.get("RULE_ATO_Z_TENTHS", "30"))
 RULE_MULE_MIN_SOURCES_1H = int(os.environ.get("RULE_MULE_MIN_SOURCES_1H", "5"))
+# Windows of model features whose rules were discarded (ADR 0033); the shadow models still read them.
 RULE_SPLITTING_MAX_AMOUNT_CENTS = int(os.environ.get("RULE_SPLITTING_MAX_AMOUNT_CENTS", "200000"))
-RULE_SPLITTING_MIN_COUNT = int(os.environ.get("RULE_SPLITTING_MIN_COUNT", "6"))
-RULE_SPLITTING_MIN_DESTINATIONS = int(os.environ.get("RULE_SPLITTING_MIN_DESTINATIONS", "4"))
-RULE_SPLITTING_MIN_SUM_CENTS = int(os.environ.get("RULE_SPLITTING_MIN_SUM_CENTS", "1500000"))
 RULE_FLAGGED_WINDOW_DAYS = int(os.environ.get("RULE_FLAGGED_WINDOW_DAYS", "7"))
 RULE_GRAPH_RISK_MAX_AGE_MINUTES = int(os.environ.get("RULE_GRAPH_RISK_MAX_AGE_MINUTES", "120"))
 RULE_GRAPH_RISK_2FA_PERMILLE = int(os.environ.get("RULE_GRAPH_RISK_2FA_PERMILLE", "600"))
