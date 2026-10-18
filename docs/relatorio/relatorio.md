@@ -784,6 +784,7 @@ Réplica do experimento S7 do PixSim sobre os modelos que já temos, sem retrein
 
 - **Dado sintético.** O PixSim reflete hipóteses dos autores, calibradas com dados agregados do BCB, não casos reais. Os números medem fricção e custo *relativo* entre configurações.
 - **Uma geração, duas sementes.** Os mundos A e B vêm do mesmo gerador; a generalização medida é entre amostras. Não há intervalo de confiança; só uma semente por mundo.
+- **Taxa de escape do 2FA.** Premissa de 10% sem fonte; 69,6% do valor das vítimas cai em 2FA, e acima de ~40% de escape o motor custa mais do que aprovar tudo (`validacao-pixsim.md`, "Sensibilidade à taxa de escape do 2FA").
 - **Escala reduzida.** 5.025 contas e 30 dias, contra 1,08 milhão de contas no artigo; fraude superamostrada (o P@$k$ é inflado).
 - **Sinais que o PixSim não gera.** Geolocalização, IP, fazenda de aparelhos, rajada na conta da vítima, funil de vítimas na mesma hora e fracionamento não existem no PixSim (seção 5.11); `PROFILE_GEO_VELOCITY`, `VELOCITY_SOURCE_COUNT`, `VELOCITY_DEVICE_SOURCES`, `COUNTERPARTY_FAN_IN`, `COUNTERPARTY_GRAPH_RISK` e a parte geográfica da tipologia de conta tomada só têm como evidência os testes pela API e o nosso simulador. Documento, IP, agência e conta são sintéticos.
 - **Vieses do gerador.** Sem vazamento de rótulo detectado (seção 5.10), mas o AUC de 0,99 vem de premissas do PixSim (medianas de valor da fraude assumidas; só o valor já dá 0,937); o limite noturno embutido na conta tomada e os 19% de Pix de vítima em exatamente R\$ 999,99 ou R\$ 1.000,00 deixam duas regras cegas por construção; e o mundo B, usado na ablação e na escolha dos modelos, não é mais teste puro.
@@ -915,7 +916,10 @@ De rótulo, não. O adaptador só passa campos do contrato; as features usam só
 Mesma perspectiva (banco pagador), mesmos positivos (Pix de vítima), mesmo peso de importância e mesmo custo de falso bloqueio (R\$ 50 + 2%). Rodando o relógio do MED do próprio PixSim sobre as nossas decisões: sem política se perde 79,3% do valor; com as regras, 20,7%; com regras + LightGBM, 9,0%. O `threshold_block` do PixSim perde 3,0%, mas com 485 falsos bloqueios contra 2 das nossas regras.
 
 **E se o modelo fosse pior, como um scorer real?**
-Replicamos o experimento de ruído do artigo (logit + ruído gaussiano). Com AUC 0,82, o LightGBM com limiar reajustado custa R\$ 127,08 contra R\$ 118,82 das regras: sem ganho. O modelo só paga a fricção que causa com AUC acima de cerca de 0,9.
+Replicamos o experimento de ruído do artigo (logit + ruído gaussiano). Com AUC 0,82, o LightGBM com limiar reajustado custa R\$ 127,08 contra R\$ 118,82 das regras: sem ganho. O modelo só paga a fricção que causa com AUC acima de cerca de 0,93.
+
+**Como o motor protege contra engenharia social, se a própria vítima faz o Pix e pode confirmar o 2FA?**
+Em boa parte, não protege: é o ponto mais fraco. Na engenharia social nenhum Pix de vítima é reprovado; 46,9% recebem 2FA e 53,1% passam. O custo assume que só 10% das vítimas coagidas confirmam o 2FA, premissa sem fonte. Com 30% o custo vai a R\$ 139,88; acima de ~40% o motor custa mais do que aprovar tudo (R\$ 151,29). O que ajuda hoje: primeiro Pix alto para destino novo, rajada fora do ritmo, limite noturno e, depois do fato, MED, bloqueio cautelar e o sinal de destino com fraude confirmada. O que ajudaria mais: 2FA como alerta específico, retenção do primeiro Pix alto para destino novo, teto para destinatário novo e o lado do recebedor (DICT, art. 39-B).
 
 ## Modelos e retroalimentação
 

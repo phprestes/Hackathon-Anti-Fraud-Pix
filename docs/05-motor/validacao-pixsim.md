@@ -597,7 +597,7 @@ xychart-beta
 
 Linhas, na ordem: regras + LightGBM com o limiar do modelo; o mesmo com o limiar reajustado para a fricção do σ = 0; regras sozinhas.
 
-O AUC de 0,82 cai em σ ≈ 10,3 para o LightGBM e σ ≈ 7,2 para a logística. Nesse ponto, com o limiar do modelo, o custo vai a R$ 347,61 (LightGBM) e R$ 373,54 (logística), contra R$ 118,82 das regras: o modelo ruidoso dispara fricção em 15,7% e 16,8% dos legítimos. Com o limiar reajustado o custo é R$ 127,08 e R$ 122,93, ou seja, **sem ganho sobre as regras** (a captura volta a 54,9% e 52,3%). O ganho de custo do modelo (−16% com o LightGBM sem ruído) existe só enquanto o AUC fica acima de cerca de 0,9; um scorer de 0,82 de AUC não paga a fricção que causa. Ressalva: o ruído é gaussiano e independente do Pix, o que degrada o score de forma mais uniforme do que um modelo treinado com features piores.
+O AUC de 0,82 cai em σ ≈ 10,3 para o LightGBM e σ ≈ 7,2 para a logística. Nesse ponto, com o limiar do modelo, o custo vai a R$ 347,61 (LightGBM) e R$ 373,54 (logística), contra R$ 118,82 das regras: o modelo ruidoso dispara fricção em 15,7% e 16,8% dos legítimos. Com o limiar reajustado o custo é R$ 127,08 e R$ 122,93, ou seja, **sem ganho sobre as regras** (a captura volta a 54,9% e 52,3%). O ganho de custo do modelo (−16% com o LightGBM sem ruído) existe só enquanto o AUC fica acima de cerca de 0,93 (empate entre σ = 3, AUC 0,978, R$ 108,85, e σ = 6, AUC 0,924, R$ 120,00, com o limiar reajustado); um scorer de 0,82 de AUC não paga a fricção que causa. Ressalva: o ruído é gaussiano e independente do Pix, o que degrada o score de forma mais uniforme do que um modelo treinado com features piores.
 
 ## Alinhamento com a metodologia do PixSim
 
@@ -635,6 +635,23 @@ As políticas de referência do PixSim vêm de `run_chunked` no mesmo recorte de
 
 O custo de reprovar um legítimo passou de R$ 50 fixos para R$ 50 + 2% do valor (`friction_cost_reject_share_of_amount` em [`scripts/backtest/cost-model.json`](../../scripts/backtest/cost-model.json)). Nas regras atuais, por 1.000 Pix ponderados: mundo B, visão vítima, R$ 149,24 → R$ 153,51; mundo A (pagador→mula), R$ 131,66 → R$ 132,13. A diferença é pequena porque só 0,01% a 0,03% dos legítimos são reprovados; a parte proporcional é maior onde a reprovação cai em valores altos (valor médio reprovado em B: R$ 757).
 
+### Sensibilidade à taxa de escape do 2FA
+
+O modelo de custo assume que 10% das fraudes com 2FA passam (`two_factor_escape_rate` em [`scripts/backtest/cost-model.json`](../../scripts/backtest/cost-model.json)): a vítima coagida confirma o 2FA. É **premissa do time, sem fonte medida**, e é a que mais pesa no resultado, porque 69,6% do valor das vítimas cai em 2FA (28,1% aprovado, 2,3% reprovado). Na engenharia social nenhum Pix de vítima é reprovado (mundo A: 53,1% aprovados, 46,9% com 2FA): o golpe é a própria vítima pagando, no aparelho dela e dentro do perfil.
+
+Mesma rodada das 15 regras no mundo B, só trocando a taxa (custo recalculado das somas brutas da ablação):
+
+| Fraudes com 2FA que passam | Custo ponderado por 1.000 Pix |
+|---|---|
+| 10% (premissa) | R$ 118,82 |
+| 30% | R$ 139,88 |
+| 50% | R$ 160,95 |
+| 70% | R$ 182,02 |
+| 100% (2FA inútil) | R$ 213,62 |
+| Aprovar tudo, para comparação | R$ 151,29 |
+
+Acima de cerca de 40% de escape, o motor custa mais do que não barrar nada: o atrito em legítimos deixa de se pagar. Contra engenharia social, o 2FA só protege se for um alerta específico (primeiro Pix para esta conta, conta recente, "ninguém do banco pede transferência"), e o conteúdo da tela é do app, fora deste motor. Defesas que não dependem da vítima ficam como próximo passo: retenção por algumas horas do primeiro Pix alto para destino novo, teto menor para destinatário novo e o lado do recebedor (marcação no DICT, bloqueio cautelar pelo PSP do recebedor, art. 39-B).
+
 ## Conclusão
 
 O motor sobrevive à troca de gerador no que mede pouco e é barato: fricção em legítimos baixa (2,97% de 2FA, nenhuma reprovação) e boa captura de conta tomada (98,6% dos eventos). Fora disso a captura de golpes em que a própria vítima paga (engenharia social, Pix errado, QR adulterado) é baixa, e 28,2% do valor das vítimas passa aprovado (70,2% cai em 2FA). As regras mais fortes no nosso gerador (conta destino nova, rajada de vítimas para a mesma mula) dependem de como nós desenhamos a mula; o PixSim a desenha diferente e essas regras caem a zero. Os modelos em shadow perdem a maior parte do poder fora da distribuição. Isso reforça que a calibração anterior era circular e que os números do nosso simulador não devem ser lidos como desempenho esperado. Calibrar no PixSim é outro tipo de circularidade (ajustar ao gerador de outra pessoa): por isso a [calibração](calibracao.md) escolhe no mundo A, confirma no B e mantém o limite noturno por âncora regulatória, e a [contribuição de cada regra](#contribuição-de-cada-regra) mostra, regra a regra, o que se sustenta fora do nosso gerador.
@@ -643,6 +660,7 @@ O motor sobrevive à troca de gerador no que mede pouco e é barato: fricção e
 
 - Escala reduzida (5.025 contas, 30 dias) e uma seed por mundo (A: 20260910; B: 20261017); não há intervalo de confiança. Diferenças de custo abaixo de cerca de R$ 1 por 1.000 Pix entre configurações (ver a sensibilidade) devem ser lidas como ruído, não como efeito.
 - Fraude superamostrada. Pesos de importância corrigem o custo, mas não o P@k, que é inflado.
+- A taxa de escape do 2FA (10%) é premissa sem fonte; acima de cerca de 40% o motor custa mais do que aprovar tudo ([sensibilidade](#sensibilidade-à-taxa-de-escape-do-2fa)).
 - Documento, IP, agência e conta são sintéticos; sem geolocalização, regras e features geográficas não são exercitadas.
 - O motor só recebe o lado do banco pagador; a dispersão foi tratada à parte porque exige a mula ser cliente.
 - O PixSim também é um simulador: as tipologias refletem as hipóteses dos autores, calibradas com dados agregados do Banco Central, e não casos reais.
