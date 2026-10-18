@@ -1,6 +1,6 @@
 ---
 title: Rotas
-summary: Contrato completo da API: entrada, saídas com status e código QIT, idempotência e formato do metadata.
+summary: Contrato completo da API. Entrada, saídas com status e código QIT, idempotência e formato do metadata.
 related: [erros.md, ../01-contexto/enunciado.md, ../02-arquitetura/decisoes/0003-decisao-antifraude-e-dado-nao-erro-http.md]
 sources: [Desafio Antifraude Pix (seção 3), bootcamp-base-api (rotas herdadas)]
 ---
