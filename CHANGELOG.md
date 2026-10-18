@@ -23,6 +23,7 @@ Versão entregue ao Hackathon QI Tech 2026: 15 regras que decidem, 5 modelos em 
 | Documentado | Capítulo "Perguntas prováveis da banca" no relatório técnico (30 perguntas com resposta curta e o número que a sustenta, para preparar a apresentação); PDF com 41 páginas | `docs/relatorio/`, `README.md` | Preparação da apresentação | agente (Claude Code) |
 | Documentado | Fontes dos diagramas C4 alinhadas ao repositório: worker e ferramentas offline nos containers, PixSim no contexto, `core/`, famílias e modelos em shadow no motor, caminhos novos de `scripts/` no backtest; blocos do `c4.md` sincronizados. Os PNG ainda são os antigos (renderização pela Laura) | `docs/02-arquitetura/diagramas/*.puml`, `docs/02-arquitetura/c4.md` | Diagramas coerentes com o código entregue | agente (Claude Code) |
 | Documentado | Resposta de exemplo em `rotas.md` recapturada da API atual (`2026.10.18-pixsim-2`, scores dos modelos retreinados); índice da documentação com 33 ADRs | `docs/03-api/rotas.md`, `docs/README.md` | Exemplo igual ao que a API devolve hoje | agente (Claude Code) |
+| Documentado | Os quatro planos de implementação marcados como registro histórico (nota no topo e no índice), apontando para README, catálogo e ADRs como estado atual | `docs/plano-de-implementacao*.md`, `docs/README.md` | Evitar que a banca leia plano antigo como estado do código | agente (Claude Code) |
 
 ### 2026-10-17
 

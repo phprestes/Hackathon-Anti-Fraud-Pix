@@ -7,6 +7,8 @@ sources: [Pesquisa QITech (M2, M3, GNN, HMM, análises 1–7), Plano de implemen
 
 # Plano de implementação 2
 
+> **Registro histórico.** Plano escrito antes da implementação; caminhos, contagens e números podem não bater com o código entregue. O estado atual está no [README](../README.md), no [catálogo de regras](05-motor/regras.md) e nas [decisões](02-arquitetura/decisoes/README.md).
+
 > [Índice](README.md) › Plano de implementação 2
 >
 > **Responde a:** o que entra depois do motor de regras? quais modelos, síncronos e assíncronos? em que ordem? o que muda na arquitetura?

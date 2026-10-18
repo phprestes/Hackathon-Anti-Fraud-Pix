@@ -7,6 +7,8 @@ sources: [Pesquisa QITech (PDF do time, 13 p.), Desafio Antifraude Pix, ADRs 000
 
 # Plano de implementação
 
+> **Registro histórico.** Plano escrito antes da implementação; caminhos, contagens e números podem não bater com o código entregue. O estado atual está no [README](../README.md), no [catálogo de regras](05-motor/regras.md) e nas [decisões](02-arquitetura/decisoes/README.md).
+
 > [Índice](README.md) › Plano de implementação
 >
 > **Responde a:** o que da pesquisa entra até o prazo? em que ordem? quem faz o quê? o que cortar se atrasar?

@@ -51,10 +51,10 @@ sources: [Desafio Antifraude Pix, bootcamp-base-api, Projeto fase 1]
 | **Processo** | |
 | [contribuindo.md](contribuindo.md) | Clean Code, nomes, commits, CHANGELOG, checklist de PR |
 | [trabalhando-com-ia.md](trabalhando-com-ia.md) | Como usar agentes aqui e saber o que eles mudaram? |
-| [plano-de-implementacao.md](plano-de-implementacao.md) | O que da pesquisa entra até o prazo, em que ordem, e o que cortar se atrasar? |
-| [plano-de-implementacao-2.md](plano-de-implementacao-2.md) | Segunda rodada: backtest em lote, modelos em shadow (LogReg, LightGBM, Isolation Forest), cold path com grafo, GraphSAGE e HMM, calibração automática e CI |
-| [plano-de-implementacao-3.md](plano-de-implementacao-3.md) | Validação externa no PixSim, custo assimétrico e P@k, peer group, rótulos atrasados e stacking |
-| [plano-de-implementacao-4.md](plano-de-implementacao-4.md) | PixSim como referência das métricas e retroalimentação pelo MED no backtest |
+| [plano-de-implementacao.md](plano-de-implementacao.md) | (Histórico) O que da pesquisa entra até o prazo, em que ordem, e o que cortar se atrasar? |
+| [plano-de-implementacao-2.md](plano-de-implementacao-2.md) | (Histórico) Segunda rodada: backtest em lote, modelos em shadow (LogReg, LightGBM, Isolation Forest), cold path com grafo, GraphSAGE e HMM, calibração automática e CI |
+| [plano-de-implementacao-3.md](plano-de-implementacao-3.md) | (Histórico) Validação externa no PixSim, custo assimétrico e P@k, peer group, rótulos atrasados e stacking |
+| [plano-de-implementacao-4.md](plano-de-implementacao-4.md) | (Histórico) PixSim como referência das métricas e retroalimentação pelo MED no backtest |
 | [relatorio/relatorio.md](relatorio/relatorio.md) | Relatório técnico: problema, fundamentos, arquitetura, metodologia, resultados no PixSim e limitações (PDF por `make pdf`) |
 | [../CHANGELOG.md](../CHANGELOG.md) | O que mudou, quando, por quê e quem (pessoa ou agente)? |
 | **Referência** | |

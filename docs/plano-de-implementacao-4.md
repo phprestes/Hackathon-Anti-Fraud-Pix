@@ -7,6 +7,8 @@ sources: [PixSim (draw_report_delay, reported), Dal Pozzolo et al. (2018), Pesqu
 
 # Plano de implementação 4
 
+> **Registro histórico.** Plano escrito antes da implementação; caminhos, contagens e números podem não bater com o código entregue. O estado atual está no [README](../README.md), no [catálogo de regras](05-motor/regras.md) e nas [decisões](02-arquitetura/decisoes/README.md).
+
 > [Índice](README.md) › Plano de implementação 4
 >
 > **Responde a:** de onde vêm os números do projeto daqui em diante? como o desfecho do MED volta para o motor?

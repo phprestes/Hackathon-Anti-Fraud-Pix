@@ -7,6 +7,8 @@ sources: [Pesquisa QITech (PixSim, cost-sensitive, P@k, Bolton & Hand nível 2, 
 
 # Plano de implementação 3 (v3)
 
+> **Registro histórico.** Plano escrito antes da implementação; caminhos, contagens e números podem não bater com o código entregue. O estado atual está no [README](../README.md), no [catálogo de regras](05-motor/regras.md) e nas [decisões](02-arquitetura/decisoes/README.md).
+
 > [Índice](README.md) › Plano de implementação 3
 >
 > **Responde a:** como validar o motor fora do nosso próprio simulador? o que entra nesta rodada, em que ordem e o que fica fora?
