@@ -26,7 +26,7 @@ Consequência para o motor: uma regra é provada mandando Pix pela API, nunca ch
 
 ## Cenários à mão e o simulador como fixture
 
-Os testes são **cenários escritos à mão**: cada um monta o histórico mínimo para uma regra e confere a decisão (113 testes, um arquivo por regra ou por rota em `tests/integration/`). Eles provam que o motor cumpre o catálogo; não medem fricção nem captura. O simulador de tráfego (`scripts/simulate.py`) é uma **fixture do CI, sem valor estatístico**: alimenta a paridade API × backtest (`make parity`) e a trava de regressão (`make calibrate-check`), e suas fraudes são nossas. Fricção, captura, custo e a contribuição de cada regra vêm do PixSim ([validação](../05-motor/validacao-pixsim.md), [ADR 0029](../02-arquitetura/decisoes/0029-pixsim-como-referencia.md)).
+Os testes são **cenários escritos à mão**: cada um monta o histórico mínimo para uma regra e confere a decisão (113 testes, um arquivo por regra ou por rota em `tests/integration/`). Eles provam que o motor cumpre o catálogo; não medem fricção nem captura. O simulador de tráfego (`scripts/fixture/simulate.py`) é uma **fixture do CI, sem valor estatístico**: alimenta a paridade API × backtest (`make parity`) e a trava de regressão (`make calibrate-check`), e suas fraudes são nossas. Fricção, captura, custo e a contribuição de cada regra vêm do PixSim ([validação](../05-motor/validacao-pixsim.md), [ADR 0029](../02-arquitetura/decisoes/0029-pixsim-como-referencia.md)).
 
 ## Montando histórico sem relógio
 

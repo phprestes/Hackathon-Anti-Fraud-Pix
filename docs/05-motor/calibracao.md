@@ -2,7 +2,7 @@
 title: Calibração
 summary: Como os parâmetros das regras foram escolhidos no PixSim (custo ponderado, mundo A para escolher e mundo B para confirmar), a configuração final, o que ficou de fora de propósito e a trava de regressão do CI.
 related: [regras.md, analises.md, validacao-pixsim.md, ../02-arquitetura/decisoes/0020-simulador-para-calibracao.md, regras.md]
-sources: [scripts/calibrate.py, scripts/calibration-grid-pixsim.json, scripts/costs.py, scripts/cost-model.json, scripts/out/calibration-pixsim.md, scripts/calibration-gate.json]
+sources: [scripts/calibration/calibrate.py, scripts/calibration/calibration-grid-pixsim.json, scripts/backtest/costs.py, scripts/backtest/cost-model.json, scripts/out/calibration-pixsim.md, scripts/calibration/calibration-gate.json]
 ---
 
 # Calibração
@@ -11,15 +11,15 @@ sources: [scripts/calibrate.py, scripts/calibration-grid-pixsim.json, scripts/co
 >
 > **Responde a:** por que cada parâmetro tem o valor que tem? quanto custa, em fricção e em fraude barrada, mudar um parâmetro? quanto isso vale como evidência?
 
-**Métricas no PixSim, simulador de terceiros.** O PixSim ([validação](validacao-pixsim.md)) não é Pix real, mas as tipologias e o tráfego não foram desenhados por nós. O nosso simulador (`scripts/simulate.py`) é só fixture de CI e não justifica nenhum parâmetro desta página.
+**Métricas no PixSim, simulador de terceiros.** O PixSim ([validação](validacao-pixsim.md)) não é Pix real, mas as tipologias e o tráfego não foram desenhados por nós. O nosso simulador (`scripts/fixture/simulate.py`) é só fixture de CI e não justifica nenhum parâmetro desta página.
 
 Regerar: `make calibrate-pixsim` (cerca de 20 passadas de 1 min; o cache em `scripts/out/pixsim/calibration-cache.json` retoma uma execução interrompida).
 
 ## Como foi medido
 
 - **Dados.** Mundo A (`scripts/out/pixsim/events.jsonl`, seed 20260910) para escolher; mundo B (`events-b.jsonl`, seed 20261017) para confirmar. Cada um tem 5.025 contas, 30 dias avaliados depois de 30 de burn-in, 125 mil Pix legítimos e 986 eventos de fraude.
-- **Objetivo.** Menor custo esperado por 1.000 Pix na visão do pagador (legítimo mais fraude `victim_to_mule`), com o [modelo de custo](../../scripts/cost-model.json) e a fraude multiplicada pelo peso de importância do PixSim (0,0071), que desfaz a superamostragem. Empates: menos legítimos reprovados, depois mais sequências barradas. A dispersão (lado da mula) é reportada à parte e não entra no objetivo.
-- **Grid.** Um parâmetro por vez a partir da linha de base (os padrões anteriores, fixados em `scripts/calibration-grid-pixsim.json`), mais a combinação dos melhores valores de cada parâmetro: 21 combinações no mundo A. O mundo B confirma a linha de base, a vencedora e as próximas colocadas.
+- **Objetivo.** Menor custo esperado por 1.000 Pix na visão do pagador (legítimo mais fraude `victim_to_mule`), com o [modelo de custo](../../scripts/backtest/cost-model.json) e a fraude multiplicada pelo peso de importância do PixSim (0,0071), que desfaz a superamostragem. Empates: menos legítimos reprovados, depois mais sequências barradas. A dispersão (lado da mula) é reportada à parte e não entra no objetivo.
+- **Grid.** Um parâmetro por vez a partir da linha de base (os padrões anteriores, fixados em `scripts/calibration/calibration-grid-pixsim.json`), mais a combinação dos melhores valores de cada parâmetro: 21 combinações no mundo A. O mundo B confirma a linha de base, a vencedora e as próximas colocadas.
 - **Parâmetros varridos:** teto diário, cauda da Poisson, corte do fracionamento, z do perfil, valor mínimo de aparelho novo, valor mínimo de primeiro Pix para um destino e limite noturno. São os do grid antigo mais as regras que mais disparam no PixSim.
 
 **Metas, nesta ordem:** (1) legítimos reprovados perto de zero; (2) custo mínimo; (3) 2FA em legítimos abaixo de 5% quando o custo empata.
@@ -85,13 +85,13 @@ Com os parâmetros acima, a ablação mostrou que `TYPOLOGY_SPLITTING`, `COUNTER
 
 **Não medem:**
 - **Eficácia em produção.** O PixSim é sintético; os níveis absolutos de captura (≈ 52% dos Pix de vítima) não valem como previsão.
-- **O custo absoluto.** Depende das premissas de [`cost-model.json`](../../scripts/cost-model.json) e do peso de importância; o que se compara é a diferença entre configurações.
+- **O custo absoluto.** Depende das premissas de [`cost-model.json`](../../scripts/backtest/cost-model.json) e do peso de importância; o que se compara é a diferença entre configurações.
 - **Independência total.** Escolhi em A e confirmei em B, mas os dois mundos vêm do mesmo gerador; B não é dado novo no sentido de outra população.
 - **Fraude de dispersão.** É reportada, não otimizada.
 
 ## Trava de regressão no CI
 
-`make calibrate-check` roda o backtest com os padrões sobre o nosso simulador (seed 42, 200 pagadores, 14 dias) e compara com [`scripts/calibration-gate.json`](../../scripts/calibration-gate.json): legítimos reprovados ≤ 0,1%, 2FA em legítimos ≤ 7,0% e 100% das sequências com algum Pix barrado. É uma **trava contra regressão**, não a meta: o fixture não tem valor estatístico e não justifica parâmetro.
+`make calibrate-check` roda o backtest com os padrões sobre o nosso simulador (seed 42, 200 pagadores, 14 dias) e compara com [`scripts/calibration/calibration-gate.json`](../../scripts/calibration/calibration-gate.json): legítimos reprovados ≤ 0,1%, 2FA em legítimos ≤ 7,0% e 100% das sequências com algum Pix barrado. É uma **trava contra regressão**, não a meta: o fixture não tem valor estatístico e não justifica parâmetro.
 
 Com os parâmetros novos a trava mediu 0,04% de reprovados, 6,59% de 2FA (o primeiro Pix mais baixo para destino novo pede mais 2FA no fixture) e 100% das sequências. O teto de 2FA subiu de 5,0% para 7,0%, o valor medido com folga; os outros dois ficaram. Os experimentos antigos no fixture foram descartados: eram circulares (as fraudes são nossas) e não justificam nenhum parâmetro.
 
@@ -99,5 +99,5 @@ Com os parâmetros novos a trava mediu 0,04% de reprovados, 6,59% de 2FA (o prim
 
 1. `make calibrate-pixsim` (precisa dos mundos A e B; `make pixsim-datasets` gera).
 2. Mudar os padrões escolhidos em `src/constants.py` (ou exportar `RULE_*` no ambiente da `api`), atualizar `RULE_SET_VERSION`.
-3. `make reset check`, `make calibrate-check` e `make analyze`; se a trava falhar, ajustar o teto em `scripts/calibration-gate.json` para o valor medido e registrar aqui.
+3. `make reset check`, `make calibrate-check` e `make analyze`; se a trava falhar, ajustar o teto em `scripts/calibration/calibration-gate.json` para o valor medido e registrar aqui.
 4. Atualizar esta página, o [catálogo](regras.md), o README e o CHANGELOG.

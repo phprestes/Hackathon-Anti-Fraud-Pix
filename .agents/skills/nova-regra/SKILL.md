@@ -13,9 +13,9 @@ Contrato e arquitetura: [motor de regras](../../../docs/05-motor/motor-de-regras
    - um teste logo depois do limite que dispara (`status` e `rule` em `metadata.reasons`);
    - se a regra tem dois degraus, um teste por degrau.
    Monte o histórico com `POST /pix/transaction` e `transaction_date` escolhido ([estratégia](../../../docs/07-testes/estrategia.md)). Documentos e aparelhos aleatórios por teste. Rode `make test` e confira que falha pelo motivo certo.
-3. **Sinal de histórico novo?** Consulta agregada em `src/repositories/pix_transaction_repository.py`, campo novo em `src/rules/rule_context.py`, preenchido no controller. A consulta usa `transaction_date` como "agora" e exclui o próprio Pix.
+3. **Sinal de histórico novo?** Consulta agregada em `src/repositories/pix_transaction_repository.py`, campo novo em `src/rules/core/rule_context.py`, preenchido no controller. A consulta usa `transaction_date` como "agora" e exclui o próprio Pix.
 4. **Parâmetro** em `src/constants.py`: `RULE_<…>_<UNIDADE> = int(os.environ.get("RULE_<…>", "<padrão>"))`.
-5. **Classe** `src/rules/<familia>_<sinal>_rule.py`, herdando `BaseRule`. Parâmetros pelo construtor. Sem banco, ambiente ou `datetime.now()`. `reason` em português, com o número que disparou.
+5. **Classe** `src/rules/<familia>/<familia>_<sinal>_rule.py`, herdando `BaseRule`. Parâmetros pelo construtor. Sem banco, ambiente ou `datetime.now()`. `reason` em português, com o número que disparou.
 6. **Registre** em `ACTIVE_RULES` (`src/rules/__init__.py`).
 7. **Documente:** estado da linha no catálogo vira `ativa`; atualize a tabela "Regras" do [README](../../../README.md); acrescente a linha na [matriz regra → teste](../../../docs/01-contexto/requisitos.md#matriz-regra--teste).
 8. **Registre a mudança** com a skill [registrar-mudanca](../registrar-mudanca/SKILL.md). Calibragem de parâmetro sempre entra, com valor antigo → novo.

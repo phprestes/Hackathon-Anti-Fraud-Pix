@@ -18,11 +18,7 @@ logger = get_logger(__name__)
 
 
 def qi_exception_to_response(exception: QIException) -> JSONResponse:
-    """Traduz um erro nosso para a resposta JSON que o cliente recebe.
-
-    Este é o único lugar do projeto que sabe como um erro vira HTTP.
-    Trocar de framework significa reescrever esta função — e mais nada.
-    """
+    """The only place that knows how an error becomes HTTP."""
     body = {
         "title": exception.title,
         "description": exception.description,
@@ -76,20 +72,8 @@ def register_error_handlers(application: FastAPI) -> None:
         description = describe_validation_error(first_error)
         origin = first_error.get("loc", [""])[0]
 
-        # Este ramo NAO e alcancado hoje, e vale saber por que — e a
-        # unica pista de que existem duas validacoes neste projeto, nao
-        # uma.
-        #
-        # Quem julga a query string aqui e o JSON Schema, antes do
-        # FastAPI (veja utils/schema_handler.py). Um ?page=-3 morre la,
-        # com 400 QIT000001 — nunca chega a virar RequestValidationError.
-        # E os parametros de endereco sao todos `str`, que nao tem como
-        # falhar validacao.
-        #
-        # O ramo fica de pe para o dia em que alguma rota declarar um
-        # parametro tipado (page: int) e passar a depender do FastAPI
-        # para isso. O QIT000010 que o cliente ve hoje vem de outro
-        # lugar: do controller, quando birthdate_from > birthdate_to.
+        # Unreachable today: JSON Schema rejects bad query strings first (QIT000001) and path params are str.
+        # Kept for the day a route declares a typed parameter.
         if origin in ("query", "path"):
             return qi_exception_to_response(InvalidParameter(description))
 

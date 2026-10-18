@@ -1,8 +1,8 @@
 ---
 title: Análises estatísticas
 summary: Quatro análises no PixSim, simulador de terceiros (log-normalidade do valor por pagador, dispersão das contagens, PSI entre os mundos A e B, sensibilidade de limiar com custo) que sustentam z robusto, Poisson-Gamma e os parâmetros.
-related: [regras.md, calibracao.md, validacao-pixsim.md, motor-de-regras.md, ../../scripts/analyze.py]
-sources: [scripts/analyze.py, scripts/calibrate.py, scripts/pixsim_adapter.py, src/rules/features.py, Pesquisa QITech (análises 1, 2, 6 e 7)]
+related: [regras.md, calibracao.md, validacao-pixsim.md, motor-de-regras.md, ../../scripts/analysis/analyze.py]
+sources: [scripts/analysis/analyze.py, scripts/calibration/calibrate.py, scripts/pixsim/pixsim_adapter.py, src/rules/core/features.py, Pesquisa QITech (análises 1, 2, 6 e 7)]
 ---
 
 # Análises estatísticas
@@ -11,9 +11,9 @@ sources: [scripts/analyze.py, scripts/calibrate.py, scripts/pixsim_adapter.py, s
 >
 > **Responde a:** o valor do Pix por pagador é log-normal (vale o z robusto)? as contagens são Poisson ou super-dispersas (vale a Poisson–Gamma)? as features derivam entre janelas? o quanto cada limiar mexe em fricção e em fraude barrada?
 
-**Métricas no PixSim, simulador de terceiros.** O PixSim ([validação](validacao-pixsim.md)) não é Pix real e foi gerado por quem não somos: as formas que ele sorteia (valores, chegadas) não foram escolhidas por nós para o motor passar. Os números provam o método e a sensibilidade dos parâmetros neste mundo; com dado real, a mesma rotina deve ser rerodada. O nosso simulador (`scripts/simulate.py`) é só fixture de CI e não entra nestas análises.
+**Métricas no PixSim, simulador de terceiros.** O PixSim ([validação](validacao-pixsim.md)) não é Pix real e foi gerado por quem não somos: as formas que ele sorteia (valores, chegadas) não foram escolhidas por nós para o motor passar. Os números provam o método e a sensibilidade dos parâmetros neste mundo; com dado real, a mesma rotina deve ser rerodada. O nosso simulador (`scripts/fixture/simulate.py`) é só fixture de CI e não entra nestas análises.
 
-Gerado por `make analyze` ([scripts/analyze.py](../../scripts/analyze.py)), sem API e sem banco, em leitura por streaming: mundo A (131828 Pix de features, escolha) e mundo B (134353, confirmação), ambos de `scripts/out/pixsim/`. Pagadores com menos de 10 Pix ficam fora das análises 1 e 2.
+Gerado por `make analyze` ([scripts/analysis/analyze.py](../../scripts/analysis/analyze.py)), sem API e sem banco, em leitura por streaming: mundo A (131828 Pix de features, escolha) e mundo B (134353, confirmação), ambos de `scripts/out/pixsim/`. Pagadores com menos de 10 Pix ficam fora das análises 1 e 2.
 
 ## 1. `log(amount)` por pagador
 
@@ -106,7 +106,7 @@ xychart-beta
 
 ## 4. Sensibilidade de limiar
 
-**Medido.** Passada em streaming pelo mundo A com um parâmetro por vez e os demais nos padrões atuais, a mesma avaliação da [calibração](calibracao.md). Em legítimos: % aprovado / 2FA / reprovado (fricção). Em fraude: % de Pix pagador→mula barrados (2FA ou reprovação). Custo: esperado por 1.000 Pix na visão do pagador, com a fraude ponderada pelo peso de importância do PixSim ([`scripts/cost-model.json`](../../scripts/cost-model.json)); a dispersão (lado da mula) não entra. Padrão de cada parâmetro marcado com `*`. Linha de base: legítimos 96,18% aprovados, fraude barrada 51,67% (1380 Pix pagador→mula), custo R$ 131,66 por 1.000 Pix.
+**Medido.** Passada em streaming pelo mundo A com um parâmetro por vez e os demais nos padrões atuais, a mesma avaliação da [calibração](calibracao.md). Em legítimos: % aprovado / 2FA / reprovado (fricção). Em fraude: % de Pix pagador→mula barrados (2FA ou reprovação). Custo: esperado por 1.000 Pix na visão do pagador, com a fraude ponderada pelo peso de importância do PixSim ([`scripts/backtest/cost-model.json`](../../scripts/backtest/cost-model.json)); a dispersão (lado da mula) não entra. Padrão de cada parâmetro marcado com `*`. Linha de base: legítimos 96,18% aprovados, fraude barrada 51,67% (1380 Pix pagador→mula), custo R$ 131,66 por 1.000 Pix.
 
 ### `RULE_AMOUNT_DAILY_SUM_CENTS`
 

@@ -17,7 +17,7 @@ O motor precisa de várias regras independentes (limite, velocity, montante, per
 
 ## Decisão
 
-- Pasta nova `src/rules/`, uma regra por arquivo: `<familia>_<sinal>_rule.py`, classe `<Sinal>Rule`.
+- Pasta nova `src/rules/`, uma regra por arquivo: `<familia>/<familia>_<sinal>_rule.py`, classe `<Sinal>Rule`.
 - Toda regra herda de `BaseRule` e tem `code` estável (`LIMIT_NIGHT_AMOUNT`, `VELOCITY_DEVICE_COUNT`…), `family` e `evaluate(pix, context) -> RuleResult | None`. `None` quer dizer "não disparou".
 - `RuleResult` carrega `code`, `decision` (`two_factor_required` ou `rejected`) e `reason` em português.
 - A lista de regras ativas fica registrada num único lugar (`src/rules/__init__.py`). Regra nova entra ali e no [catálogo](../../05-motor/regras.md).

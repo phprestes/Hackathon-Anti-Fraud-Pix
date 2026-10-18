@@ -51,7 +51,7 @@ sources: [Pesquisa QITech (PDF do time, 13 p.), Desafio Antifraude Pix, ADRs 000
 
   Substitui o M4 sem perder a explicação.
 - **N2. Reputação de contraparte derivada do próprio histórico.** Destino que recebeu Pix `rejected` nos últimos 7 dias → 2FA para outros pagadores. É uma "GNN do pobre", sem lista externa.
-- **N3. Simulador de calibração** `scripts/simulate.py` (fora de `src/`, usa `requests`). Gera uma população legítima e fraudes injetadas por tipologia, manda tudo pela API e imprime a tabela por faixa, a matriz por tipologia e o P95. É o "porquê" numérico dos parâmetros.
+- **N3. Simulador de calibração** `scripts/fixture/simulate.py` (fora de `src/`, usa `requests`). Gera uma população legítima e fraudes injetadas por tipologia, manda tudo pela API e imprime a tabela por faixa, a matriz por tipologia e o P95. É o "porquê" numérico dos parâmetros.
 - **N4. Redutores de fricção.** Pix para o mesmo documento (self-transfer) não dispara regras de contraparte; CPF e CNPJ têm limites diferentes.
 - **N5. O que conta em cada janela.** Velocity conta **todas** as tentativas; montante soma só as não reprovadas, porque Pix reprovado não saiu.
 - **N6. Versão do conjunto de regras** (`rule_set_version`) gravada na análise e no metadata, para auditoria e reprocessamento.
@@ -67,7 +67,7 @@ Time-box por fase. Se uma fase atrasar, corte o que a última coluna indica ante
 | **F2** Regras M0 restantes | sáb 20h – dom 01h | `LIMIT_*`, `VELOCITY_DEVICE_SOURCES`, `COUNTERPARTY_FAN_IN`, `PROFILE_NEW_DEVICE`, `PROFILE_NEW_SOURCE_ACCOUNT`, `COUNTERPARTY_FIRST_TIME_HIGH`; N4 e N5 | `src/rules/*_rule.py` | corta `LIMIT_SINGLE_AMOUNT` e `COUNTERPARTY_FIRST_TIME_HIGH` |
 | **F3** Sinais estatísticos (M1) | dom 01–04h | `PROFILE_AMOUNT_ROBUST_Z`, `VELOCITY_POISSON_GAMMA`, `PROFILE_GEO_VELOCITY`; z-scores no metadata; N6 | `src/rules/`, `src/utils/statistics.py` | corta Poisson–Gamma (fica a velocity fixa) |
 | **F4** Compostas + reputação | dom 04–06h | N1, N2; horário atípico se sobrar | `src/rules/typology_*_rule.py` | corta a fase inteira |
-| **F5** Simulador e calibração | dom 06–09h | N3: tabela de faixas, matriz por tipologia, P95; ajustar os padrões de `constants.py` com o resultado | `scripts/simulate.py`, `docs/05-motor/calibracao.md` | reduz a uma tabela + P95 |
+| **F5** Simulador e calibração | dom 06–09h | N3: tabela de faixas, matriz por tipologia, P95; ajustar os padrões de `constants.py` com o resultado | `scripts/fixture/simulate.py`, `docs/05-motor/calibracao.md` | reduz a uma tabela + P95 |
 | **F6** Entrega | dom 09–12h | README final (tabela "Regras" com o porquê numérico), ADRs de `proposta` para `aceita`, slide "roadmap ML/GNN/LLM", ensaio dos 7 minutos | `README.md`, `docs/` | não |
 
 ## Paralelismo

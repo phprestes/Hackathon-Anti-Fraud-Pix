@@ -5,9 +5,9 @@ import threading
 from constants import WORKER_ENABLED, WORKER_INTERVAL_SECONDS
 from database import clear_context, open_context
 from utils.logger import get_logger, setup_logging
-from worker.graph_risk_job import GraphRiskJob
-from worker.graphsage_job import GraphSageJob
-from worker.sequence_job import SequenceJob
+from worker.jobs.graph_risk_job import GraphRiskJob
+from worker.jobs.graphsage_job import GraphSageJob
+from worker.jobs.sequence_job import SequenceJob
 
 logger = get_logger("worker")
 stop = threading.Event()

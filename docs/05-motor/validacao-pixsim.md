@@ -1,8 +1,8 @@
 ---
 title: Validação externa no PixSim
 summary: O motor de regras e os modelos em shadow rodados sobre o PixSim, um simulador de Pix de terceiros, em escala reduzida; mostra o que se mantém e o que cai fora do nosso gerador.
-related: [calibracao.md, analises.md, regras.md, ../plano-de-implementacao-3.md, ../../scripts/pixsim_export.py, ../../scripts/pixsim_adapter.py, ../../scripts/pixsim_report.py]
-sources: [github.com/BashirZeimarani/pixsim_public (SHA 7fdfc90013960f46df60c3ea01838e768e7a420a), scripts/pixsim_export.py, scripts/pixsim_adapter.py, scripts/pixsim_report.py, scripts/backtest.py, scripts/costs.py, scripts/analyze.py]
+related: [calibracao.md, analises.md, regras.md, ../plano-de-implementacao-3.md, ../../scripts/pixsim/pixsim_export.py, ../../scripts/pixsim/pixsim_adapter.py, ../../scripts/pixsim/pixsim_report.py]
+sources: [github.com/BashirZeimarani/pixsim_public (SHA 7fdfc90013960f46df60c3ea01838e768e7a420a), scripts/pixsim/pixsim_export.py, scripts/pixsim/pixsim_adapter.py, scripts/pixsim/pixsim_report.py, scripts/backtest/backtest.py, scripts/backtest/costs.py, scripts/analysis/analyze.py]
 ---
 
 # Validação externa no PixSim
@@ -32,7 +32,7 @@ Zeimarani, B.; Khatib, A.; Mousavinasr, S.; Figueiredo, C. M. S. (2026). *PixSim
 | Eventos de fraude | 986: 618 engenharia social, 209 conta tomada, 91 Pix errado, 68 QR adulterado |
 | Pix de fraude | 6.310: 1.380 pagador→mula, 91 sementes de Pix errado, 1.771 `mule_forward`, 3.068 `cash_out` |
 
-O artigo roda 1,08 milhão de contas (19 GB por parte); a máquina de desenvolvimento tem cerca de 2 GB livres. O `scripts/backtest.py` agora lê o `events.jsonl` em streaming e agrega as métricas aos poucos: o pico neste mundo caiu de 2,07 GB para 0,52 GB (saída idêntica). Duas escolhas fora do `baseline.yaml` do PixSim: burn-in de 30 dias (o config traz 90; 30 dias cobre a maior janela do motor) e 1.000 eventos de fraude por mês no lugar dos 2.000, que foram calibrados para 100 mil contas. A fraude é superamostrada de propósito, e cada Pix de fraude carrega o peso de importância do PixSim (0,0071 aqui); os custos "ponderados" abaixo usam esse peso.
+O artigo roda 1,08 milhão de contas (19 GB por parte); a máquina de desenvolvimento tem cerca de 2 GB livres. O `scripts/backtest/backtest.py` agora lê o `events.jsonl` em streaming e agrega as métricas aos poucos: o pico neste mundo caiu de 2,07 GB para 0,52 GB (saída idêntica). Duas escolhas fora do `baseline.yaml` do PixSim: burn-in de 30 dias (o config traz 90; 30 dias cobre a maior janela do motor) e 1.000 eventos de fraude por mês no lugar dos 2.000, que foram calibrados para 100 mil contas. A fraude é superamostrada de propósito, e cada Pix de fraude carrega o peso de importância do PixSim (0,0071 aqui); os custos "ponderados" abaixo usam esse peso.
 
 ## O que foi mapeado, inventado e não existe
 
@@ -103,7 +103,7 @@ Pagador→mula é o Pix que a vítima faz (a fraude contra o nosso cliente). `fr
 
 ### Custo esperado (V1)
 
-Modelo de [`scripts/cost-model.json`](../../scripts/cost-model.json). "Bruto" usa a fração de fraude da amostra; "ponderado" multiplica a fraude pelo peso de importância do PixSim (a amostra tem fraude superamostrada), aproximando a taxa real.
+Modelo de [`scripts/backtest/cost-model.json`](../../scripts/backtest/cost-model.json). "Bruto" usa a fração de fraude da amostra; "ponderado" multiplica a fraude pelo peso de importância do PixSim (a amostra tem fraude superamostrada), aproximando a taxa real.
 
 | Visão | Bruto por 1.000 Pix | Ponderado por 1.000 Pix | Parte fraude (pond.) | Parte fricção (pond.) |
 |---|---|---|---|---|
@@ -185,7 +185,7 @@ Base: nosso simulador (seed 42); comparado: PixSim. PSI acima de 0,25 é deriva 
 
 ### Latência do backtest
 
-- `scripts/backtest.py`: 254795 Pix em 102,3 s (2490 Pix/s).
+- `scripts/backtest/backtest.py`: 254795 Pix em 102,3 s (2490 Pix/s).
 - Avaliação em streaming deste relatório (motor + histórico em memória, sem HTTP): 254795 Pix, 2689 Pix/s; por Pix P50 0,33 ms, P95 0,61 ms, P99 0,85 ms.
 
 <!-- pixsim:tables:end -->
@@ -216,7 +216,7 @@ Primeira rodada, antes de treinar no PixSim: os três modelos (regressão logís
 
 ## Modelos treinados no PixSim
 
-Regerar: `make pixsim` com `PIXSIM_SEED=20261017 PIXSIM_OUT=scripts/out/pixsim/data-b` (mundo B, 5.025 contas, 30 dias, mesma escala do A), `scripts/pixsim_adapter.py --data ... --out scripts/out/pixsim/events-b.jsonl`, `scripts/export_features.py` sobre os dois mundos, `scripts/train_models.py --source pixsim` e `scripts/train_graphsage.py --source pixsim --epochs 100 --batch 256`. Mundo A = seed 20260910 (o das seções acima); mundo B = seed 20261017, 259.646 Pix (125.293 de burn-in), 986 eventos de fraude, 6.670 Pix de fraude, 1.438 de vítima.
+Regerar: `make pixsim` com `PIXSIM_SEED=20261017 PIXSIM_OUT=scripts/out/pixsim/data-b` (mundo B, 5.025 contas, 30 dias, mesma escala do A), `scripts/pixsim/pixsim_adapter.py --data ... --out scripts/out/pixsim/events-b.jsonl`, `scripts/models/export_features.py` sobre os dois mundos, `scripts/models/train_models.py --source pixsim` e `scripts/models/train_graphsage.py --source pixsim --epochs 100 --batch 256`. Mundo A = seed 20260910 (o das seções acima); mundo B = seed 20261017, 259.646 Pix (125.293 de burn-in), 986 eventos de fraude, 6.670 Pix de fraude, 1.438 de vítima.
 
 **Linha de base destas tabelas.** As tabelas de modelos, de rótulos atrasados e de retroalimentação pelo MED foram geradas com as regras de antes da calibração e o custo antigo (R$ 50 fixos por legítimo reprovado): as regras sozinhas custam R$ 157,60 por 1.000 Pix e barram 38,4% dos Pix de vítima no mundo B. Com o conjunto `2026.10.18-pixsim` e o modelo de custo final, as regras sozinhas custam R$ 153,51 e barram 51,8% (ver [Contribuição de cada regra](#contribuição-de-cada-regra)). Compare decisores dentro de uma mesma tabela, não entre tabelas.
 
@@ -224,7 +224,7 @@ Regerar: `make pixsim` com `PIXSIM_SEED=20261017 PIXSIM_OUT=scripts/out/pixsim/d
 
 <!-- pixsim:models:start -->
 
-Treino no mundo A do PixSim (seed 20260910), teste no mundo B (seed 20261017) e no nosso simulador (seed 7). Mesmos hiperparâmetros fixos de `scripts/train_models.py`; fatia de ajuste = primeiros 75% do mundo A no tempo, validação = 25% finais (limiar por F1 máximo; Platt na validação). Linhas: 95173 de ajuste, 31725 de validação. Limiares: {"logreg": 0.1899, "lightgbm": 0.9404, "iforest": 0.5942}.
+Treino no mundo A do PixSim (seed 20260910), teste no mundo B (seed 20261017) e no nosso simulador (seed 7). Mesmos hiperparâmetros fixos de `scripts/models/train_models.py`; fatia de ajuste = primeiros 75% do mundo A no tempo, validação = 25% finais (limiar por F1 máximo; Platt na validação). Linhas: 95173 de ajuste, 31725 de validação. Limiares: {"logreg": 0.1899, "lightgbm": 0.9404, "iforest": 0.5942}.
 
 Positivo = Pix de vítima (`victim_to_mule`); legítimo = tráfego legítimo. A dispersão (`mule_forward`, `cash_out`) e a semente do Pix errado ficam fora do treino e da avaliação: o banco só a veria se a mula fosse cliente, e misturá-la como positivo ensinaria o modelo a pontuar o comportamento da mula, não o da vítima. Burn-in só alimenta o histórico. Custos e precisão usam o peso de importância do PixSim; AUC, recall e P@k são brutos.
 
@@ -385,7 +385,7 @@ Conclusão: com o atraso real do MED (mediana de 2 dias, cauda de 17 dias) o mod
 
 Regerar: `make feedback` (só no backtest: API, banco e `ACTIVE_RULES` não mudam). O mundo B é reproduzido em ordem de `transaction_date`; cada fraude de vítima reportada gera um desfecho em `transaction_date + report_delay_days`, aplicado ao histórico quando o relógio dos dados o alcança. Pix que o motor reprova não liquida e não gera desfecho (viés de seleção); com 2FA, a fração `two_factor_escape_rate` (10%) passa e gera desfecho, sorteada por hash do id do Pix, igual em todos os cenários. Só o Pix de vítima (`victim_to_mule`) vira desfecho: o MED é o reporte da vítima, e a dispersão da mula e o cash-out ficam sem rótulo, como nas seções anteriores. Fraude nunca reportada não gera desfecho.
 
-Peças (todas em `scripts/feedback_core.py`): heap de desfechos pendentes; regra `COUNTERPARTY_CONFIRMED_FRAUD` (destino que recebeu, de outro pagador, Pix com fraude confirmada antes do instante t), registrada só no backtest com `build_rules() + [regra]`; LightGBM instalado (treinado no mundo A) como regra extra (score ≥ limiar → `two_factor_required`); retreino a cada 7 dias com os hiperparâmetros fixos de `--source pixsim`, em pool formado pelas linhas do mundo A (com os rótulos conhecidos no fim do A, a história anterior) mais as linhas do mundo B já passadas: positivo = desfecho já chegado, negativo = Pix com mais de 7 dias sem desfecho (mais novos ficam fora). O desafiante treinado na virada da semana k roda em sombra na semana k+1 e é promovido se o custo ponderado dessa semana, com a decisão final (regras + modelo), for menor que o do campeão.
+Peças (todas em `scripts/feedback/feedback_core.py`): heap de desfechos pendentes; regra `COUNTERPARTY_CONFIRMED_FRAUD` (destino que recebeu, de outro pagador, Pix com fraude confirmada antes do instante t), registrada só no backtest com `build_rules() + [regra]`; LightGBM instalado (treinado no mundo A) como regra extra (score ≥ limiar → `two_factor_required`); retreino a cada 7 dias com os hiperparâmetros fixos de `--source pixsim`, em pool formado pelas linhas do mundo A (com os rótulos conhecidos no fim do A, a história anterior) mais as linhas do mundo B já passadas: positivo = desfecho já chegado, negativo = Pix com mais de 7 dias sem desfecho (mais novos ficam fora). O desafiante treinado na virada da semana k roda em sombra na semana k+1 e é promovido se o custo ponderado dessa semana, com a decisão final (regras + modelo), for menor que o do campeão.
 
 Decisão do sinal escolhida no mundo A (para não usar o B na escolha): 2FA custa R$ 130,14 por 1,000 Pix e reprovar custa R$ 268,06; usado: `two_factor_required`,
 
@@ -486,9 +486,9 @@ Regerar: `make rule-ablation` (retoma do cache em `scripts/out/pixsim/ablation.j
 
 <!-- pixsim:ablation:start -->
 
-Mundo B do PixSim (seed 20261017), visão pagador (legítimo + pagador→mula), custo ponderado pelo peso de importância (0,0072) e por [`scripts/cost-model.json`](../../scripts/cost-model.json). Parâmetros atuais (`RULE_SET_VERSION` 2026.10.18-pixsim). Linha de base com as 18 regras: **R$ 153,51 por 1.000 Pix**; 51,8% dos Pix de vítima barrados; 4,13% de 2FA e 0,03% de reprovação em legítimos (127683 legítimos, 1438 Pix de vítima). Taxa base de fraude ponderada: 0,008%.
+Mundo B do PixSim (seed 20261017), visão pagador (legítimo + pagador→mula), custo ponderado pelo peso de importância (0,0072) e por [`scripts/backtest/cost-model.json`](../../scripts/backtest/cost-model.json). Parâmetros atuais (`RULE_SET_VERSION` 2026.10.18-pixsim). Linha de base com as 18 regras: **R$ 153,51 por 1.000 Pix**; 51,8% dos Pix de vítima barrados; 4,13% de 2FA e 0,03% de reprovação em legítimos (127683 legítimos, 1438 Pix de vítima). Taxa base de fraude ponderada: 0,008%.
 
-**Como ler.** *Disparo* é a fração de Pix do grupo em que a regra aparece nos motivos (qualquer decisão). *Precisão ponderada* é a fração dos disparos que é fraude de vítima, com a fraude multiplicada pelo peso; *lift* é essa precisão dividida pela taxa base. *Sem a regra* é o mesmo mundo com a regra desligada (`scripts/backtest.py --disable`; as outras 17 seguem ativas e o histórico reflete as decisões sem ela). *Contribuição* é o custo sem a regra menos o custo com todas: positiva quer dizer que a regra economiza dinheiro; negativa, que atrapalha. A ablação é marginal: duas regras que cobrem o mesmo Pix aparecem as duas com contribuição baixa.
+**Como ler.** *Disparo* é a fração de Pix do grupo em que a regra aparece nos motivos (qualquer decisão). *Precisão ponderada* é a fração dos disparos que é fraude de vítima, com a fraude multiplicada pelo peso; *lift* é essa precisão dividida pela taxa base. *Sem a regra* é o mesmo mundo com a regra desligada (`scripts/backtest/backtest.py --disable`; as outras 17 seguem ativas e o histórico reflete as decisões sem ela). *Contribuição* é o custo sem a regra menos o custo com todas: positiva quer dizer que a regra economiza dinheiro; negativa, que atrapalha. A ablação é marginal: duas regras que cobrem o mesmo Pix aparecem as duas com contribuição baixa.
 
 | Regra | Disparo em legítimos | Disparo em Pix de vítima | Precisão ponderada | Lift | Custo sem a regra (por 1.000 Pix) | Contribuição (R$ por 1.000 Pix) | Vítima barrada sem a regra | Veredito |
 |---|---|---|---|---|---|---|---|---|
@@ -572,7 +572,7 @@ O PSI usa o nosso gerador (seed 42, 14 dias) como base. Boa parte do desvio é a
 
 ## Sensibilidade à qualidade do scorer
 
-Réplica do experimento S7 do PixSim (varredura de qualidade do scorer), sobre os modelos que já temos, sem retreinar. A degradação é a de `pixsim/scoring.py` (`_degrade`): `logit(p) + N(0, σ)` de volta para probabilidade, com o mesmo recorte de ±36 no logit e um gerador próprio de seed fixa (20261017 + 17). Rodamos σ ∈ {0, 1, 2, 3, 6, 8, 12} nos scores do LightGBM e da regressão logística no mundo B (visão vítima: 129121 Pix, 1438 de vítima). O ruído **só existe neste experimento**: não está no scorer padrão do PixSim nem nos nossos modelos. Código: [`scripts/scorer_noise.py`](../../scripts/scorer_noise.py), a partir dos scores de [`scripts/pixsim_scores.py`](../../scripts/pixsim_scores.py).
+Réplica do experimento S7 do PixSim (varredura de qualidade do scorer), sobre os modelos que já temos, sem retreinar. A degradação é a de `pixsim/scoring.py` (`_degrade`): `logit(p) + N(0, σ)` de volta para probabilidade, com o mesmo recorte de ±36 no logit e um gerador próprio de seed fixa (20261017 + 17). Rodamos σ ∈ {0, 1, 2, 3, 6, 8, 12} nos scores do LightGBM e da regressão logística no mundo B (visão vítima: 129121 Pix, 1438 de vítima). O ruído **só existe neste experimento**: não está no scorer padrão do PixSim nem nos nossos modelos. Código: [`scripts/models/scorer_noise.py`](../../scripts/models/scorer_noise.py), a partir dos scores de [`scripts/pixsim/pixsim_scores.py`](../../scripts/pixsim/pixsim_scores.py).
 
 Decisão como na avaliação P2: as regras decidem e um score do modelo acima do limiar do próprio modelo sobre um Pix aprovado vira 2FA. A última coluna refaz o limiar do score ruidoso para marcar a mesma fração de legítimos aprovados que o σ = 0, isolando a perda de ordenação da inflação de fricção. As regras sozinhas, no mesmo recorte: AUC 0,738, custo R$ 153,51, captura 51,8%, fricção 4,2%.
 
@@ -634,7 +634,7 @@ Definições do PixSim em `docs/metrics_definitions.md` (SHA 7fdfc90).
 
 ### Cascata de valor
 
-Roda o relógio do MED do próprio PixSim (`pixsim.med`, métricas de `pixsim.metrics`) sobre as decisões do nosso motor no mundo B, regerado com os mesmos parâmetros de `pixsim_export.py` ([`scripts/pixsim_waterfall.py`](../../scripts/pixsim_waterfall.py), no venv do PixSim). Mapeamento: `approved` liquida; `rejected` bloqueia; `two_factor_required` em fraude bloqueia com probabilidade 1 − `two_factor_escape_rate` (0,9) e liquida no restante, com sorteio determinístico por id do Pix (o mesmo da avaliação de retroalimentação); em legítimo o 2FA é confirmado e liquida. A decisão vale para todos os Pix, inclusive os de dispersão. As linhas somam 1. A linha "Perdido" é a perda de valor de vítima depois da recuperação pelo MED e pelo bloqueio cautelar.
+Roda o relógio do MED do próprio PixSim (`pixsim.med`, métricas de `pixsim.metrics`) sobre as decisões do nosso motor no mundo B, regerado com os mesmos parâmetros de `pixsim_export.py` ([`scripts/pixsim/pixsim_waterfall.py`](../../scripts/pixsim/pixsim_waterfall.py), no venv do PixSim). Mapeamento: `approved` liquida; `rejected` bloqueia; `two_factor_required` em fraude bloqueia com probabilidade 1 − `two_factor_escape_rate` (0,9) e liquida no restante, com sorteio determinístico por id do Pix (o mesmo da avaliação de retroalimentação); em legítimo o 2FA é confirmado e liquida. A decisão vale para todos os Pix, inclusive os de dispersão. As linhas somam 1. A linha "Perdido" é a perda de valor de vítima depois da recuperação pelo MED e pelo bloqueio cautelar.
 
 | Política | Barrado antes da liquidação | Retido num salto | Recuperado pelo MED | Recuperado por bloqueio cautelar | Perdido | Falsos bloqueios | Dano dos falsos bloqueios |
 |---|---|---|---|---|---|---|---|
@@ -648,7 +648,7 @@ As políticas de referência do PixSim vêm de `run_chunked` no mesmo recorte de
 
 ### Custo do falso bloqueio
 
-O custo de reprovar um legítimo passou de R$ 50 fixos para R$ 50 + 2% do valor (`friction_cost_reject_share_of_amount` em [`scripts/cost-model.json`](../../scripts/cost-model.json)). Nas regras atuais, por 1.000 Pix ponderados: mundo B, visão vítima, R$ 149,24 → R$ 153,51; mundo A (pagador→mula), R$ 131,66 → R$ 132,13. A diferença é pequena porque só 0,01% a 0,03% dos legítimos são reprovados; a parte proporcional é maior onde a reprovação cai em valores altos (valor médio reprovado em B: R$ 757).
+O custo de reprovar um legítimo passou de R$ 50 fixos para R$ 50 + 2% do valor (`friction_cost_reject_share_of_amount` em [`scripts/backtest/cost-model.json`](../../scripts/backtest/cost-model.json)). Nas regras atuais, por 1.000 Pix ponderados: mundo B, visão vítima, R$ 149,24 → R$ 153,51; mundo A (pagador→mula), R$ 131,66 → R$ 132,13. A diferença é pequena porque só 0,01% a 0,03% dos legítimos são reprovados; a parte proporcional é maior onde a reprovação cai em valores altos (valor médio reprovado em B: R$ 757).
 
 ## Conclusão
 

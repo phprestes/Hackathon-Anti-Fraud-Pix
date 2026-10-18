@@ -18,7 +18,7 @@ sources: [Desafio Antifraude Pix, slides do hackathon, Projeto fase 1 (glossári
 | **Agregado (de histórico)** | Número calculado no banco sobre Pix anteriores (contagem, soma, média) numa janela de tempo. Vai para o `RuleContext`. |
 | **Análise** | O resultado de rodar o motor num Pix: `key`, `status`, `metadata`. Tabela `pix_analysis`. |
 | **Append-only** | Mudança vira linha nova; nada é apagado nem editado (R4). |
-| **Backtest** | O mesmo motor rodado em lote sobre um arquivo de eventos rotulados, sem HTTP e sem banco (`scripts/backtest.py`, `InMemoryHistory`). Mede fricção, captura e custo. |
+| **Backtest** | O mesmo motor rodado em lote sobre um arquivo de eventos rotulados, sem HTTP e sem banco (`scripts/backtest/backtest.py`, `InMemoryHistory`). Mede fricção, captura e custo. |
 | **Champion/challenger** | O modelo em uso (campeão) e o candidato retreinado (desafiante). O desafiante só vira campeão se custar menos numa semana de sombra ([ADR 0032](02-arquitetura/decisoes/0032-retroalimentacao-pelo-med-no-backtest.md)). |
 | **Conta laranja (mula)** | Conta, muitas vezes recém-aberta, usada para receber e repassar dinheiro de golpe. Alvo das regras de contraparte. |
 | **Contraparte** | Quem recebe o Pix (`destination_account`). |

@@ -2,7 +2,7 @@
 title: "ADR 0033: Três regras descartadas pela ablação no PixSim"
 summary: TYPOLOGY_SPLITTING, COUNTERPARTY_FLAGGED e AMOUNT_SOURCE_DAILY_SUM saem do motor — custam mais do que evitam nos dois mundos do PixSim e não têm âncora regulatória verificada; o motor fica com 15 regras que decidem.
 related: [0018-regras-compostas-por-tipologia.md, 0019-reputacao-de-contraparte-derivada.md, 0028-peer-group-medido-e-descartado.md, 0029-pixsim-como-referencia.md, ../../05-motor/regras.md, ../../05-motor/validacao-pixsim.md]
-sources: [scripts/rule_ablation.py, scripts/backtest.py --disable, PixSim mundos A (seed 20260910) e B (seed 20261017), scripts/cost-model.json]
+sources: [scripts/calibration/rule_ablation.py, scripts/backtest/backtest.py --disable, PixSim mundos A (seed 20260910) e B (seed 20261017), scripts/backtest/cost-model.json]
 ---
 
 # ADR 0033: Três regras descartadas pela ablação no PixSim

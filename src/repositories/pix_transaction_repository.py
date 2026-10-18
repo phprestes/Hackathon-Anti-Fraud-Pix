@@ -6,8 +6,8 @@ from sqlalchemy.orm import aliased
 
 from database import Context
 from models import AccountRiskScore, AnalysisStatus, PayerSequenceScore, PixAnalysis, PixAnalysisReason, PixTransaction
-from rules.history_port import AccountRiskReading
-from rules.pix_snapshot import PixSnapshot
+from rules.core.history_port import AccountRiskReading
+from rules.core.pix_snapshot import PixSnapshot
 
 
 class PixTransactionRepository:

@@ -1,24 +1,24 @@
 from types import SimpleNamespace
 
 import constants
-from rules.base_rule import BaseRule
-from rules.counterparty_fan_in_rule import CounterpartyFanInRule
-from rules.counterparty_graph_risk_rule import CounterpartyGraphRiskRule
-from rules.counterparty_first_time_high_rule import CounterpartyFirstTimeHighRule
-from rules.counterparty_new_account_rule import CounterpartyNewAccountRule
-from rules.model_score_shadow_rule import load_score_model_rules
-from rules.model_shadow_rule import load_model_rules
-from rules.limit_night_amount_rule import LimitNightAmountRule
-from rules.limit_single_amount_rule import LimitSingleAmountRule
-from rules.profile_amount_robust_z_rule import ProfileAmountRobustZRule
-from rules.profile_geo_velocity_rule import ProfileGeoVelocityRule
-from rules.profile_new_device_rule import ProfileNewDeviceRule
-from rules.profile_new_source_account_rule import ProfileNewSourceAccountRule
-from rules.typology_account_takeover_rule import TypologyAccountTakeoverRule
-from rules.typology_mule_rule import TypologyMuleRule
-from rules.velocity_device_sources_rule import VelocityDeviceSourcesRule
-from rules.velocity_poisson_gamma_rule import VelocityPoissonGammaRule
-from rules.velocity_source_count_rule import VelocitySourceCountRule
+from rules.core.base_rule import BaseRule
+from rules.counterparty.counterparty_fan_in_rule import CounterpartyFanInRule
+from rules.counterparty.counterparty_first_time_high_rule import CounterpartyFirstTimeHighRule
+from rules.counterparty.counterparty_graph_risk_rule import CounterpartyGraphRiskRule
+from rules.counterparty.counterparty_new_account_rule import CounterpartyNewAccountRule
+from rules.limit.limit_night_amount_rule import LimitNightAmountRule
+from rules.limit.limit_single_amount_rule import LimitSingleAmountRule
+from rules.models.model_score_shadow_rule import load_score_model_rules
+from rules.models.model_shadow_rule import load_model_rules
+from rules.profile.profile_amount_robust_z_rule import ProfileAmountRobustZRule
+from rules.profile.profile_geo_velocity_rule import ProfileGeoVelocityRule
+from rules.profile.profile_new_device_rule import ProfileNewDeviceRule
+from rules.profile.profile_new_source_account_rule import ProfileNewSourceAccountRule
+from rules.typology.typology_account_takeover_rule import TypologyAccountTakeoverRule
+from rules.typology.typology_mule_rule import TypologyMuleRule
+from rules.velocity.velocity_device_sources_rule import VelocityDeviceSourcesRule
+from rules.velocity.velocity_poisson_gamma_rule import VelocityPoissonGammaRule
+from rules.velocity.velocity_source_count_rule import VelocitySourceCountRule
 
 NON_NUMERIC = {"RULE_SET_VERSION", "RULE_MODEL_DIR"}
 PARAMETERS = {

@@ -8,7 +8,7 @@ Motor antifraude de Pix do Hackathon QI Tech 2026: uma API que recebe um Pix e r
 
 ## Como o motor de decisão funciona
 
-Cada `POST /pix/transaction` atravessa as camadas do Base Service. O controller confere se esse `id` de Pix já foi analisado (idempotência) e passa o Pix ao motor (`src/rules/engine.py`). O motor carrega do banco o histórico relevante do pagador, do aparelho e do destino, roda **todas** as regras sobre esse contexto e decide pela mais severa. Pix, análise e motivos são gravados no mesmo commit, e o `GET /pix/transaction/{id}` devolve a análise gravada.
+Cada `POST /pix/transaction` atravessa as camadas do Base Service. O controller confere se esse `id` de Pix já foi analisado (idempotência) e passa o Pix ao motor (`src/rules/core/engine.py`). O motor carrega do banco o histórico relevante do pagador, do aparelho e do destino, roda **todas** as regras sobre esse contexto e decide pela mais severa. Pix, análise e motivos são gravados no mesmo commit, e o `GET /pix/transaction/{id}` devolve a análise gravada.
 
 Dois caminhos, como em produção:
 
@@ -41,7 +41,7 @@ Fonte da verdade, com o porquê completo de cada parâmetro: [catálogo de regra
 
 **Descartadas** ([ADR 0033](docs/02-arquitetura/decisoes/0033-regras-descartadas-pela-ablacao.md)): `TYPOLOGY_SPLITTING`, `COUNTERPARTY_FLAGGED` e `AMOUNT_SOURCE_DAILY_SUM` custavam mais do que evitavam nos dois mundos do PixSim e não têm âncora regulatória verificada. Sem as três, o custo cai de R$ 132,13 para R$ 109,61 por 1.000 Pix no mundo A e de R$ 153,51 para R$ 118,82 no B. Fica a regra que contribui no PixSim, tem âncora do BCB ou cobre um sinal que o PixSim não gera.
 
-**Calibração no PixSim** (mundos A e B, 30 dias avaliados, 125 mil Pix legítimos e 986 eventos de fraude cada): no mundo A, 96,2% dos legítimos aprovados, 3,8% com 2FA, 0,01% reprovados, 51,7% dos Pix pagador→mula barrados e ao menos um Pix barrado em 591 dos 986 eventos de fraude (conta tomada 98,6%, engenharia social 57,3%, QR adulterado 29,4%, Pix errado 12,1%). No B: 4,1% de 2FA, 0,03% reprovados, 51,8% barrados. É simulador de terceiros, não Pix real: mede fricção e custo relativo entre configurações, não eficácia em produção ([calibração](docs/05-motor/calibracao.md), [validação](docs/05-motor/validacao-pixsim.md)). Nosso simulador (`scripts/simulate.py`) é só fixture do CI e alimenta a trava de regressão `make calibrate-check`.
+**Calibração no PixSim** (mundos A e B, 30 dias avaliados, 125 mil Pix legítimos e 986 eventos de fraude cada): no mundo A, 96,2% dos legítimos aprovados, 3,8% com 2FA, 0,01% reprovados, 51,7% dos Pix pagador→mula barrados e ao menos um Pix barrado em 591 dos 986 eventos de fraude (conta tomada 98,6%, engenharia social 57,3%, QR adulterado 29,4%, Pix errado 12,1%). No B: 4,1% de 2FA, 0,03% reprovados, 51,8% barrados. É simulador de terceiros, não Pix real: mede fricção e custo relativo entre configurações, não eficácia em produção ([calibração](docs/05-motor/calibracao.md), [validação](docs/05-motor/validacao-pixsim.md)). Nosso simulador (`scripts/fixture/simulate.py`) é só fixture do CI e alimenta a trava de regressão `make calibrate-check`.
 
 ## Como as regras viram decisão
 

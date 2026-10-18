@@ -15,7 +15,4 @@ class HealthCheckResource:
         return JSONResponse(content=home, status_code=status.HTTP_200_OK)
 
     def on_get_health_check(self) -> Response:
-        # 204 quer dizer "deu tudo certo e não tenho nada a dizer".
-        # Por isso a resposta não tem corpo nenhum: é um `Response`
-        # pelado, e não um JSONResponse.
         return Response(status_code=status.HTTP_204_NO_CONTENT)

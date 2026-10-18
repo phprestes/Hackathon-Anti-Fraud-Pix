@@ -1,6 +1,6 @@
 ---
 title: "ADR 0023: Motor extraído do controller, com HistoryPort e vetor de features"
-summary: Montagem do contexto, avaliação e decisão moram em src/rules/engine.py e dependem só de um HistoryPort; o mesmo motor roda na API (SQL) e no backtest (memória), e um vetor único de features sai em metadata.features.
+summary: Montagem do contexto, avaliação e decisão moram em src/rules/core/engine.py e dependem só de um HistoryPort; o mesmo motor roda na API (SQL) e no backtest (memória), e um vetor único de features sai em metadata.features.
 related: [0005-regras-puras-com-contexto-carregado.md, ../c4.md, 0020-simulador-para-calibracao.md]
 sources: [Plano de implementação 2 (G1, G2), C4 seção 5]
 ---
@@ -17,9 +17,9 @@ O backtest pela API leva cerca de 3 minutos para 5 mil Pix, e cada Pix paga HTTP
 
 ## Decisão
 
-- `src/rules/engine.py`: `build_context(snapshot, history)`, `evaluate(snapshot, context, rules)` e `metadata_from(result)`. O controller faz só idempotência, gravação e commit.
-- `src/rules/history_port.py`: `HistoryPort` (Protocol) com os agregados de que o contexto precisa. O `PixTransactionRepository` (SQL) o implementa na API; o `InMemoryHistory` (scripts/) o implementa no backtest.
-- `src/rules/features.py`: um único vetor de features (33 campos, nada identificável), montado do mesmo contexto que as regras veem e devolvido em `metadata.features`. É a fonte das features de treino.
+- `src/rules/core/engine.py`: `build_context(snapshot, history)`, `evaluate(snapshot, context, rules)` e `metadata_from(result)`. O controller faz só idempotência, gravação e commit.
+- `src/rules/core/history_port.py`: `HistoryPort` (Protocol) com os agregados de que o contexto precisa. O `PixTransactionRepository` (SQL) o implementa na API; o `InMemoryHistory` (scripts/) o implementa no backtest.
+- `src/rules/core/features.py`: um único vetor de features (33 campos, nada identificável), montado do mesmo contexto que as regras veem e devolvido em `metadata.features`. É a fonte das features de treino.
 - **Paridade:** o mesmo arquivo de eventos passa pela API e pelo backtest; status, regras disparadas e o vetor inteiro de features precisam ser idênticos Pix a Pix (`make parity`). Como o vetor cobre todos os agregados, a comparação prova que as duas implementações do `HistoryPort` contam igual, sem que os testes importem `src/` (R1).
 
 ## Alternativas descartadas

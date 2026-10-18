@@ -3,9 +3,6 @@ import os
 
 SERVICE_ROOT = os.path.abspath(os.path.dirname(__file__))
 
-# Onde moram os arquivos de schema — os .json que descrevem o formato
-# que cada requisicao precisa ter. Quem le essa pasta e o
-# src/utils/schema_handler.py.
 SCHEMA_PATH = os.path.join(SERVICE_ROOT, "schemas")
 
 APP_ENV = os.environ.get("APP_ENV", "local")
@@ -14,23 +11,13 @@ SERVICE_NAME = os.environ.get("SERVICE_NAME", "bootcamp-api")
 DATABASE_URL = os.environ.get("DATABASE_URL")
 INTERNAL_TOKEN = os.environ.get("INTERNAL_TOKEN")
 
-# A API de boletos: o serviço de fora que este projeto chama pra emitir
-# uma cobrança (veja src/connectors/). O endereço vem do ambiente, como
-# tudo aqui — na sua máquina ele aponta pro mock server do sábado 4; em
-# produção, apontaria pro serviço de verdade. O código não sabe a
-# diferença, e esse é o ponto.
+# Inherited from the Base Service; unused here (ADR 0002).
 BANKSLIP_API_URL = os.environ.get("BANKSLIP_API_URL", "http://localhost:8080")
 BANKSLIP_API_INTERNAL_TOKEN = os.environ.get("BANKSLIP_API_INTERNAL_TOKEN", "default_token")
 
-# Quantos segundos esperar pelo serviço de boletos antes de desistir.
-# Todo connector TEM um timeout — o porquê está em
-# src/connectors/rest_connector.py.
 BANKSLIP_API_TIMEOUT = int(os.environ.get("BANKSLIP_API_TIMEOUT", "5"))
 
-# Rotas públicas: não exigem o header INTERNAL-TOKEN. São as duas que
-# precisam responder pra quem ainda não tem token nenhum: a raiz, que
-# diz quem é este serviço, e o health check, que o Docker consulta pra
-# saber se a API já está de pé.
+# Public routes: no INTERNAL-TOKEN; the Docker healthcheck calls /health_check.
 BYPASS_ENDPOINTS = [
     "/",
     "/health_check",
@@ -38,9 +25,9 @@ BYPASS_ENDPOINTS = [
 
 RULE_SET_VERSION = "2026.10.18-pixsim-2"
 
-RULE_MODEL_DIR = os.environ.get("RULE_MODEL_DIR", os.path.join(SERVICE_ROOT, "rules", "model"))
+RULE_MODEL_DIR = os.environ.get("RULE_MODEL_DIR", os.path.join(SERVICE_ROOT, "rules", "models", "artifacts"))
 # Models trained offline for the cold path (GraphSAGE, HMM); the hot path only reads their thresholds.
-WORKER_MODEL_DIR = os.environ.get("WORKER_MODEL_DIR", os.path.join(SERVICE_ROOT, "worker", "model"))
+WORKER_MODEL_DIR = os.environ.get("WORKER_MODEL_DIR", os.path.join(SERVICE_ROOT, "worker", "models", "artifacts"))
 
 RULE_DESTINATION_MIN_AGE_DAYS = int(os.environ.get("RULE_DESTINATION_MIN_AGE_DAYS", "30"))
 RULE_DESTINATION_CRITICAL_AGE_DAYS = int(os.environ.get("RULE_DESTINATION_CRITICAL_AGE_DAYS", "3"))
@@ -85,7 +72,7 @@ WORKER_INTERVAL_SECONDS = int(os.environ.get("WORKER_INTERVAL_SECONDS", "30"))
 WORKER_LOOKBACK_HOURS = int(os.environ.get("WORKER_LOOKBACK_HOURS", "72"))
 WORKER_SEQUENCE_HISTORY_DAYS = int(os.environ.get("WORKER_SEQUENCE_HISTORY_DAYS", "30"))
 
-# Fixed weights of the untrained graph score: logit = BIAS + sum(weight * term). Terms in worker/scoring.py.
+# Fixed weights of the untrained graph score: logit = BIAS + sum(weight * term). Terms in worker/models/scoring.py.
 GRAPH_RISK_MODEL = "graph_sql"
 GRAPHSAGE_MODEL = "graphsage"
 HMM_MODEL = "hmm"

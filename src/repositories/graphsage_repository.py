@@ -5,7 +5,7 @@ from sqlalchemy import text
 from constants import GRAPH_RISK_DISPERSION_WINDOW_HOURS
 from repositories.graph_risk_repository import GraphRiskRepository
 
-# Node features of the trailing window; scripts/train_graphsage.py mirrors these definitions in Python.
+# Node features of the trailing window; scripts/models/train_graphsage.py mirrors these definitions in Python.
 NODE_FEATURES_SQL = text("""
 WITH win AS (
     SELECT source_document_number AS src, destination_document_number AS dst, amount, transaction_date,

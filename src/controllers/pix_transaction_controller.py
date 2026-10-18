@@ -7,8 +7,9 @@ from controllers.base_controller import BaseController
 from dtos import PixAnalysisDTO
 from errors import InvalidSchema, NotFoundPixTransaction, PixIdConflict
 from repositories import PixTransactionRepository
-from rules import ACTIVE_RULES, engine
-from rules.pix_snapshot import PixSnapshot
+from rules import ACTIVE_RULES
+from rules.core import engine
+from rules.core.pix_snapshot import PixSnapshot
 
 
 def _canonical(payload: dict) -> str:

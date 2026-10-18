@@ -23,11 +23,11 @@ O controller carrega o histórico relevante uma vez, passa o Pix e esse contexto
 |---|---|---|
 | `PixTransactionController.analyze` | `src/controllers/pix_transaction_controller.py` | Idempotência → `_build_snapshot` → `_build_context` → roda as regras → `_decide` → grava e dá o `commit` |
 | `PixTransactionRepository` | `src/repositories/pix_transaction_repository.py` | Busca por `pix_id`; um método por agregado de janela; insere Pix, análise e motivos |
-| `PixSnapshot` | `src/rules/pix_snapshot.py` | O Pix já parseado (datas com fuso), com `is_self_transfer` e `is_legal_entity_source` |
-| `RuleContext` | `src/rules/rule_context.py` | Dataclass imutável com os agregados de histórico (tabela abaixo) |
-| `BaseRule`, `RuleResult` | `src/rules/base_rule.py` | Contrato de toda regra |
-| Severidade | `src/rules/decision.py` | `approved` 0, `two_factor_required` 1, `rejected` 2 |
-| Sinais compartilhados | `src/rules/signals.py` | `amount_z` e `geo_speed_kmh`, usados pelas regras de perfil e pela tipologia de conta tomada |
+| `PixSnapshot` | `src/rules/core/pix_snapshot.py` | O Pix já parseado (datas com fuso), com `is_self_transfer` e `is_legal_entity_source` |
+| `RuleContext` | `src/rules/core/rule_context.py` | Dataclass imutável com os agregados de histórico (tabela abaixo) |
+| `BaseRule`, `RuleResult` | `src/rules/core/base_rule.py` | Contrato de toda regra |
+| Severidade | `src/rules/core/decision.py` | `approved` 0, `two_factor_required` 1, `rejected` 2 |
+| Sinais compartilhados | `src/rules/core/signals.py` | `amount_z` e `geo_speed_kmh`, usados pelas regras de perfil e pela tipologia de conta tomada |
 | Estatística | `src/utils/statistics.py` | z robusto, cauda da binomial negativa, haversine; Python puro ([ADR 0016](../02-arquitetura/decisoes/0016-sinais-estatisticos-como-regras.md)) |
 | `ACTIVE_RULES` | `src/rules/__init__.py` | Lista única das regras ligadas, já com os parâmetros de `src/constants.py` |
 

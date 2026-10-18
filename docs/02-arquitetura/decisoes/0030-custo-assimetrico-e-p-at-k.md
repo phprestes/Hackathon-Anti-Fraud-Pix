@@ -2,7 +2,7 @@
 title: "ADR 0030: Custo assimétrico em R$ e P@k como métricas de decisão"
 summary: A calibração e os relatórios medem o prejuízo esperado (fraude aprovada custa o valor; 2FA e bloqueio de cliente bom custam atrito) e a precisão nos k alertas diários de uma mesa de analistas.
 related: [0027-pipeline-de-calibracao-e-ci.md, 0029-pixsim-como-referencia.md, ../../05-motor/calibracao.md]
-sources: [Pesquisa QITech (custo assimétrico, capacidade da mesa e P@k), PixSim (valor perdido sob capacidade de analistas), scripts/cost-model.json]
+sources: [Pesquisa QITech (custo assimétrico, capacidade da mesa e P@k), PixSim (valor perdido sob capacidade de analistas), scripts/backtest/cost-model.json]
 ---
 
 # ADR 0030: Custo assimétrico em R$ e P@k como métricas de decisão
@@ -17,7 +17,7 @@ A função objetivo original ordenava critérios: menos legítimos reprovados, d
 
 ## Decisão
 
-- **`scripts/cost-model.json`**, com o porquê de cada valor:
+- **`scripts/backtest/cost-model.json`**, com o porquê de cada valor:
   - fraude aprovada custa o valor do Pix;
   - fraude com 2FA custa 10% do valor (a vítima coagida confirma);
   - 2FA em cliente bom custa R$ 2;

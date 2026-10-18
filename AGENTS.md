@@ -42,12 +42,12 @@ Use Python 3.11: o SQLAlchemy 2.0.23 quebra no 3.12+. O `make install` resolve i
 
 ## Motor de regras
 
-- Uma regra = uma classe em `src/rules/<familia>_<sinal>_rule.py`, com `code`, `family` e `evaluate(pix, context) -> RuleResult | None`.
+- Uma regra = uma classe em `src/rules/<familia>/<familia>_<sinal>_rule.py`, com `code`, `family` e `evaluate(pix, context) -> RuleResult | None`.
 - Regra é pura: não importa `repositories`, `database`, `os.environ` nem chama `datetime.now()`. O "agora" é o `transaction_date` do Pix ([ADR 0007](docs/02-arquitetura/decisoes/0007-relogio-da-transacao.md)).
 - O controller monta o `RuleContext` com agregados do repository, roda **todas** as regras de `ACTIVE_RULES`, e a decisão mais severa vence (`rejected` > `two_factor_required` > `approved`). Todos os disparos vão para `metadata.reasons`.
 - Parâmetro de regra é constante `RULE_*` em `src/constants.py`, lida do ambiente. Nada de número mágico.
 - **Não mude parâmetro de regra sem pedido explícito.** Calibrar é decisão do time e precisa de porquê no [catálogo](docs/05-motor/regras.md) e no README.
-- **Parâmetro de regra só muda com evidência do PixSim** (`make validate-pixsim`, `make rule-ablation`, `make calibrate-pixsim`); o simulador local (`scripts/simulate.py`) é só a trava do CI e não tem valor estatístico. Toda regra e todo parâmetro precisam de justificativa verificável (BCB, literatura ou medida no PixSim) em [regras.md](docs/05-motor/regras.md); o que não foi verificado fica marcado.
+- **Parâmetro de regra só muda com evidência do PixSim** (`make validate-pixsim`, `make rule-ablation`, `make calibrate-pixsim`); o simulador local (`scripts/fixture/simulate.py`) é só a trava do CI e não tem valor estatístico. Toda regra e todo parâmetro precisam de justificativa verificável (BCB, literatura ou medida no PixSim) em [regras.md](docs/05-motor/regras.md); o que não foi verificado fica marcado.
 
 ## Camadas
 
