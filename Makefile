@@ -166,3 +166,7 @@ pixsim-parity: install ## Zera o banco e compara API x backtest nas 500 linhas d
 .PHONY: pdf
 pdf: ## Compila docs/relatorio/relatorio.md em relatorio.pdf (pandoc + xelatex)
 	cd docs/relatorio && pandoc metadata.yaml relatorio.md -o relatorio.pdf --pdf-engine=xelatex --toc --number-sections -V lang=pt-BR -V toc-depth=3 --resource-path=.:../02-arquitetura/diagramas
+
+.PHONY: readme-pdf
+readme-pdf: ## Compila README.md em README.pdf (pandoc + xelatex), a versão enviada ao time
+	pandoc README.md -o README.pdf --pdf-engine=xelatex -V lang=pt-BR -V geometry:margin=2cm -V mainfont=FreeSerif -V monofont="DejaVu Sans Mono" -V monofontoptions=Scale=0.82 -H docs/relatorio/readme-header.tex
