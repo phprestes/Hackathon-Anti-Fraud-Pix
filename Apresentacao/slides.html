@@ -1,0 +1,498 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Motor antifraude de Pix</title>
+<style>
+  @page { size: 1280px 720px; margin: 0; }
+  :root {
+    --navy: #0f1a4a;
+    --ink: #1c2654;
+    --text: #3b4467;
+    --muted: #6c7493;
+    --blue: #3a6be0;
+    --pink: #e23c80;
+    --cyan: #5cc8d6;
+    --card: rgba(255, 255, 255, 0.82);
+    --line: rgba(150, 165, 215, 0.38);
+    --ok: #2f9e6e;
+    --warn: #d98a1c;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #e9edf8; }
+  body { font-family: "Inter", "Inter Display", sans-serif; color: var(--text); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .slide {
+    width: 1280px; height: 720px; position: relative; overflow: hidden; page-break-after: always; break-after: page;
+    padding: 56px 72px 60px;
+    background:
+      linear-gradient(rgba(120, 140, 200, 0.07) 1px, transparent 1px) 0 0 / 48px 48px,
+      linear-gradient(90deg, rgba(120, 140, 200, 0.07) 1px, transparent 1px) 0 0 / 48px 48px,
+      radial-gradient(900px 500px at 105% -10%, rgba(226, 60, 128, 0.16), transparent 60%),
+      linear-gradient(135deg, #f1f4fc 0%, #e6ebf8 55%, #e9e2f4 100%);
+  }
+  .slide:last-child { page-break-after: auto; break-after: auto; }
+  .logo { position: absolute; top: 34px; right: 56px; height: 62px; }
+  .eyebrow { font-size: 15px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--blue); font-weight: 500; }
+  .eyebrow.pink { color: var(--pink); }
+  h1.title { font-family: "Inter Display", "Inter", sans-serif; font-size: 42px; line-height: 1.12; font-weight: 400; color: var(--navy); margin-top: 8px; max-width: 980px; letter-spacing: -0.01em; }
+  h1.title b { font-weight: 800; }
+  .rule { height: 1px; background: linear-gradient(90deg, rgba(58, 107, 224, 0.45), rgba(226, 60, 128, 0.25), transparent); margin: 20px 0 34px; max-width: 980px; }
+  .lead { font-size: 22px; line-height: 1.5; color: var(--text); max-width: 1000px; }
+  .tag { position: absolute; right: 56px; bottom: 26px; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); border: 1px solid rgba(108, 116, 147, 0.45); border-radius: 999px; padding: 4px 12px; }
+  .num { position: absolute; left: 72px; bottom: 26px; font-size: 12px; color: var(--muted); letter-spacing: 0.1em; }
+  code, .mono { font-family: "DejaVu Sans Mono", monospace; font-size: 0.86em; color: var(--blue); }
+  b { color: var(--navy); }
+  .pink { color: var(--pink); }
+  .blue { color: var(--blue); }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 28px 30px; box-shadow: 0 6px 22px rgba(40, 60, 130, 0.07); }
+  .card h3 { font-size: 24px; color: var(--navy); font-weight: 700; margin-bottom: 8px; }
+  .card p, .card li { font-size: 19px; line-height: 1.5; }
+  .card .k { font-size: 14px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--blue); font-weight: 600; margin-bottom: 6px; }
+  .card.pinky { background: rgba(226, 60, 128, 0.07); border-color: rgba(226, 60, 128, 0.35); }
+  .card.bluey { background: rgba(92, 200, 214, 0.12); border-color: rgba(92, 200, 214, 0.55); }
+  .card.dark { background: #1b2660; border-color: #1b2660; color: #dfe5fb; }
+  .card.dark h3, .card.dark b { color: #ffffff; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; }
+  .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
+  .stepno { font-size: 15px; font-weight: 700; color: var(--blue); margin-bottom: 10px; letter-spacing: 0.08em; }
+  .foot { position: absolute; left: 72px; right: 72px; bottom: 70px; font-size: 18px; line-height: 1.5; }
+
+  /* flow diagrams */
+  .flow { display: flex; align-items: center; gap: 14px; }
+  .node { background: #ffffff; border: 1px solid var(--line); border-radius: 14px; padding: 20px 20px; text-align: center; font-size: 18.5px; line-height: 1.35; color: var(--ink); box-shadow: 0 4px 16px rgba(40, 60, 130, 0.07); }
+  .node b { display: block; font-size: 20px; margin-bottom: 4px; }
+  .node small { display: block; font-size: 15px; color: var(--muted); margin-top: 4px; }
+  .node.navy { background: #1b2660; color: #dfe5fb; border-color: #1b2660; }
+  .node.navy b { color: #fff; }
+  .node.pinkfill { background: var(--pink); color: #fff; border-color: var(--pink); }
+  .node.pinkfill b { color: #fff; }
+  .node.soft { background: rgba(58, 107, 224, 0.1); border-color: rgba(58, 107, 224, 0.35); }
+  .arrow { font-size: 30px; color: var(--blue); flex: 0 0 auto; }
+  .arrow.pink { color: var(--pink); }
+  .lane { font-size: 13px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--blue); display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+  .lane::after { content: ""; flex: 1; height: 1px; background: rgba(92, 200, 214, 0.8); }
+  .lane.pink { color: var(--pink); }
+  .lane.pink::after { background: rgba(226, 60, 128, 0.6); }
+  .pill { display: inline-block; border-radius: 999px; padding: 7px 16px; font-size: 16.5px; font-weight: 600; }
+  .pill.ok { background: rgba(47, 158, 110, 0.14); color: var(--ok); }
+  .pill.two { background: rgba(217, 138, 28, 0.15); color: #b06b0c; }
+  .pill.no { background: rgba(226, 60, 128, 0.14); color: var(--pink); }
+  .pill.gray { background: rgba(108, 116, 147, 0.14); color: var(--muted); }
+
+  table.t { width: 100%; border-collapse: collapse; font-size: 19px; }
+  table.t th { text-align: left; font-size: 13px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); font-weight: 600; padding: 0 12px 10px; }
+  table.t td { padding: 18px 12px; border-top: 1px solid var(--line); vertical-align: top; line-height: 1.4; }
+  table.t tr:nth-child(even) td { background: rgba(255, 255, 255, 0.45); }
+  .stat { font-family: "Inter Display", "Inter", sans-serif; font-size: 96px; font-weight: 800; color: var(--navy); line-height: 1; letter-spacing: -0.02em; }
+  .stat.pink { color: var(--pink); }
+
+  /* cover */
+  .cover {
+    background:
+      radial-gradient(700px 520px at 100% 100%, rgba(226, 60, 128, 0.45), transparent 65%),
+      radial-gradient(900px 600px at 0% 0%, rgba(58, 107, 224, 0.25), transparent 60%),
+      linear-gradient(160deg, #0d1640 0%, #141f57 55%, #1a1d52 100%);
+    color: #e3e8fb; text-align: center; padding-top: 170px;
+  }
+  .cover .ring { position: absolute; border: 1px solid rgba(160, 175, 255, 0.18); border-radius: 50%; }
+  .cover .chip { display: inline-flex; align-items: center; gap: 10px; border: 1px solid rgba(226, 60, 128, 0.55); background: rgba(255, 255, 255, 0.06); border-radius: 999px; padding: 9px 22px; font-size: 16px; letter-spacing: 0.2em; color: #fff; }
+  .cover .chip::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--cyan); }
+  .cover h1 { font-family: "Inter Display", "Inter", sans-serif; font-size: 78px; font-weight: 800; color: #fff; margin-top: 26px; letter-spacing: -0.02em; }
+  .cover .sub { font-size: 23px; line-height: 1.5; color: #c9d1f2; max-width: 820px; margin: 26px auto 0; }
+  .cover .bar { width: 340px; height: 1px; margin: 30px auto 0; background: linear-gradient(90deg, transparent, rgba(226, 60, 128, 0.8), transparent); }
+  .cover .who { position: absolute; left: 72px; bottom: 40px; font-size: 16px; color: #aeb7de; }
+  .cover .repo { position: absolute; right: 72px; bottom: 40px; font-size: 16px; color: #aeb7de; }
+  .refs { columns: 2; column-gap: 36px; font-size: 12.5px; line-height: 1.45; }
+  .refs p { break-inside: avoid; margin-bottom: 7px; }
+</style>
+</head>
+<body>
+
+<!-- 1 · capa -->
+<section class="slide cover">
+  <div class="ring" style="width:760px;height:760px;left:-260px;top:300px"></div>
+  <div class="ring" style="width:900px;height:900px;right:-420px;top:-520px"></div>
+  <img class="logo" src="assets/bootcamp-claro.png" alt="QI Tech Bootcamp">
+  <span class="chip">HACKATHON QI TECH 2026 · RISK SOLUTIONS</span>
+  <h1>Motor antifraude de Pix</h1>
+  <div class="bar"></div>
+  <p class="sub">Regras que um atendente consegue explicar, calibradas num simulador independente, com machine learning pronto em modo sombra.</p>
+  <div class="who">Pedro H. S. Prestes · Laura Pazini Medeiros</div>
+  <div class="repo">Hackathon-Anti-Fraud-Pix</div>
+</section>
+
+<!-- 2 · ponto de partida -->
+<section class="slide">
+  <img class="logo" src="assets/bootcamp-escuro.png" alt="">
+  <div class="eyebrow pink">Ponto de partida</div>
+  <h1 class="title">Não <b>reinventamos a roda</b></h1>
+  <div class="rule"></div>
+  <p class="lead" style="font-size:20px">Somos iniciantes em antifraude. Em vez de inventar limites da nossa cabeça, fomos atrás de quem já estudou e mediu.</p>
+  <div class="grid3" style="margin-top:18px">
+    <div class="card"><div class="stepno">01</div><h3>Literatura</h3><p>Branca e cinzenta: detecção estatística de fraude, aprendizado com rótulo que chega atrasado e a taxonomia dos golpes de Pix no Brasil.</p></div>
+    <div class="card"><div class="stepno">02</div><h3>Normas do Banco Central</h3><p>O limite noturno de R$ 1.000 e os fatores de suspeita do Regulamento do Pix: idade da conta que recebe, recorrência entre quem paga e quem recebe.</p></div>
+    <div class="card"><div class="stepno">03</div><h3>Simulador aberto</h3><p>O PixSim: tráfego e golpes de Pix gerados por outros autores e calibrados com dados públicos do BCB.</p></div>
+  </div>
+  <div class="card bluey" style="margin-top:18px;padding:20px 30px"><p style="font-size:18px">Daí saiu uma arquitetura em que <b>cada regra ou modelo entra e sai sem mexer no resto</b>, e cada parâmetro pode ser recalibrado para o perfil de clientes de cada banco.</p></div>
+  <div class="num">01 · PROBLEMA</div><div class="tag">Abordagem</div>
+</section>
+
+<!-- 3 · o desafio -->
+<section class="slide">
+  <img class="logo" src="assets/bootcamp-escuro.png" alt="">
+  <div class="eyebrow">O desafio</div>
+  <h1 class="title">A literatura é de <b>cartão</b>. O problema é <b>Pix</b>.</h1>
+  <div class="rule"></div>
+  <div class="grid2">
+    <div class="card">
+      <div class="k">Cartão de crédito</div>
+      <ul style="margin-left:22px;display:flex;flex-direction:column;gap:12px;margin-top:10px">
+        <li>Contestação e estorno fazem parte da rotina</li>
+        <li>Décadas de dados rotulados, com bases públicas</li>
+        <li>Golpe típico: cartão clonado, a compra é do fraudador</li>
+      </ul>
+    </div>
+    <div class="card pinky">
+      <div class="k" style="color:var(--pink)">Pix</div>
+      <ul style="margin-left:22px;display:flex;flex-direction:column;gap:12px;margin-top:10px">
+        <li>Instantâneo, 24 horas: o dinheiro some em segundos</li>
+        <li>Nenhuma base real aberta, só relatórios agregados do BCB</li>
+        <li>Golpe típico: a própria vítima, enganada, faz o Pix</li>
+      </ul>
+    </div>
+  </div>
+  <div class="card dark" style="margin-top:44px;text-align:center;padding:36px"><p style="font-size:26px">A pergunta do projeto: <b>as técnicas clássicas ainda funcionam no Pix?</b> Medimos, em vez de supor.</p></div>
+  <div class="num">01 · PROBLEMA</div><div class="tag">Desafio</div>
+</section>
+
+<!-- 4 · fluxo da decisão -->
+<section class="slide">
+  <img class="logo" src="assets/bootcamp-escuro.png" alt="">
+  <div class="eyebrow">Como o motor decide</div>
+  <h1 class="title">Todas as regras rodam, <b>a mais severa vence</b></h1>
+  <div class="rule"></div>
+  <div class="flow" style="margin-top:50px">
+    <div class="node" style="width:180px"><b>Pix chega</b><small>POST /pix/transaction</small></div>
+    <div class="arrow">→</div>
+    <div class="node soft" style="width:230px"><b>Histórico</b>do pagador, do aparelho e de quem recebe</div>
+    <div class="arrow">→</div>
+    <div class="node navy" style="width:260px"><b>15 regras</b>cada uma diz: nada, pedir confirmação ou barrar</div>
+    <div class="arrow">→</div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <span class="pill ok">approved · segue</span>
+      <span class="pill two">two_factor_required · o cliente confirma</span>
+      <span class="pill no">rejected · barrado</span>
+    </div>
+  </div>
+  <div class="grid2" style="margin-top:64px">
+    <div class="card"><h3>Duas dúvidas não viram bloqueio</h3><p>Barrar exige um sinal extremo ou uma combinação que descreve um golpe conhecido: conta tomada, conta laranja.</p></div>
+    <div class="card"><h3>Toda decisão tem motivo</h3><p>A resposta lista os motivos em português, do mais grave ao mais leve, com os números usados e a versão das regras.</p></div>
+  </div>
+  <div class="num">02 · REGRAS</div><div class="tag">Decisão</div>
+</section>
+
+<!-- 5 · critério de seleção -->
+<section class="slide">
+  <img class="logo" src="assets/bootcamp-escuro.png" alt="">
+  <div class="eyebrow">Seleção das regras</div>
+  <h1 class="title">Uma regra só entra se <b>tiver um motivo</b></h1>
+  <div class="rule"></div>
+  <div class="grid3">
+    <div class="card"><div class="stepno">01</div><h3>Pega fraude</h3><p>No simulador independente, barra golpes e paga o incômodo que causa nos clientes bons.</p></div>
+    <div class="card"><div class="stepno">02</div><h3>Segue o BCB</h3><p>Limite noturno, idade da conta que recebe: fica mesmo quando o simulador preferiria outra coisa.</p></div>
+    <div class="card"><div class="stepno">03</div><h3>Cobre o que o simulador não gera</h3><p>Viagem impossível, fazenda de aparelhos, funil de vítimas: lá não dispara e não custa nada.</p></div>
+  </div>
+  <div class="card pinky" style="margin-top:26px;display:flex;gap:26px;align-items:center">
+    <div style="flex:0 0 auto" class="stat pink">3</div>
+    <p style="font-size:18px">regras <b>saíram do motor</b> depois de medidas: fracionamento em Pix pequenos, destino que já teve Pix recusado e soma diária. Desligamos uma regra de cada vez e vimos que elas incomodavam mais clientes bons do que golpes evitavam, nos dois cenários do simulador.</p>
+  </div>
+  <div class="num">02 · REGRAS</div><div class="tag">Critério</div>
+</section>
+
+<!-- 6 · três regras -->
+<section class="slide">
+  <img class="logo" src="assets/bootcamp-escuro.png" alt="">
+  <div class="eyebrow pink">Três regras, três porquês</div>
+  <h1 class="title">Regras que um atendente <b>consegue explicar</b></h1>
+  <div class="rule"></div>
+  <div class="grid3">
+    <div class="card"><div class="k">Destinatário novo</div><p class="mono" style="font-size:13px;margin-bottom:10px">COUNTERPARTY_FIRST_TIME_HIGH</p><h3>Primeiro Pix para alguém, acima de R$ 1.000</h3><p>Golpe manda o dinheiro para quem a vítima nunca pagou. O aluguel vai sempre para o mesmo lugar. É a regra que mais protege.</p></div>
+    <div class="card"><div class="k">Aparelho novo</div><p class="mono" style="font-size:13px;margin-bottom:10px">PROFILE_NEW_DEVICE</p><h3>Celular nunca usado, a partir de R$ 200</h3><p>Trocar de aparelho é o primeiro passo de quem tomou a conta de alguém. O piso poupa o cafezinho do celular novo.</p></div>
+    <div class="card"><div class="k">Rápido demais</div><p class="mono" style="font-size:13px;margin-bottom:10px">VELOCITY_POISSON_GAMMA</p><h3>Rajada improvável para o ritmo da pessoa</h3><p>"Rápido demais" é diferente para cada um: comparamos a pressa de agora com o histórico do próprio cliente.</p></div>
+  </div>
+  <p class="lead" style="margin-top:26px;font-size:17px;color:var(--muted)">As 15 regras, com parâmetro e fonte de cada uma, estão no README e no catálogo de regras.</p>
+  <div class="num">02 · REGRAS</div><div class="tag">Exemplos</div>
+</section>
+
+<!-- 7 · Bolton & Hand -->
+<section class="slide">
+  <img class="logo" src="assets/bootcamp-escuro.png" alt="">
+  <div class="eyebrow">Da literatura ao motor</div>
+  <h1 class="title">Os níveis de comparação de <b>Bolton &amp; Hand</b></h1>
+  <div class="rule"></div>
+  <table class="t">
+    <tr><th style="width:20%">Nível</th><th style="width:27%">Pergunta</th><th style="width:33%">No motor</th><th>Situação</th></tr>
+    <tr><td><b>1 · Individual</b></td><td>Está no padrão dele?</td><td>Valor fora do perfil, rajada, aparelho novo</td><td><span class="pill ok">usado</span></td></tr>
+    <tr><td><b>2 · Grupo de pares</b></td><td>Está no padrão de quem é parecido?</td><td>Comparação com clientes do mesmo tipo e idade de conta</td><td><span class="pill gray">medido e descartado</span></td></tr>
+    <tr><td><b>3 · Ponto de ruptura</b></td><td>O comportamento mudou de repente?</td><td>Por aproximação: rajada, aparelho novo, modelo de sequência em sombra</td><td><span class="pill two">parcial</span></td></tr>
+    <tr><td><b>4 · Rótulos externos</b></td><td>Alguém já marcou esse destino?</td><td>Fraude confirmada pelo MED marca a conta que recebe</td><td><span class="pill two">só no backtest</span></td></tr>
+  </table>
+  <p style="margin-top:22px;font-size:16px;color:var(--muted)">Os quatro níveis são a organização da nossa pesquisa a partir de Bolton &amp; Hand (2002).</p>
+  <div class="num">02 · REGRAS</div><div class="tag">Literatura</div>
+</section>
+
+<!-- 8 · validação -->
+<section class="slide">
+  <img class="logo" src="assets/bootcamp-escuro.png" alt="">
+  <div class="eyebrow">Como validamos</div>
+  <h1 class="title">Medir no próprio simulador seria <b>corrigir a própria prova</b></h1>
+  <div class="rule"></div>
+  <div class="grid2" style="grid-template-columns: 0.85fr 1.15fr">
+    <div class="card pinky">
+      <div class="k" style="color:var(--pink)">Nosso simulador</div>
+      <p>Gera os golpes que <b>nós</b> desenhamos, e as regras foram escritas para pegá-los: barram 98,5%. É circular.</p>
+      <p style="margin-top:12px">Ficou só como <b>teste automático do CI</b>, para nenhuma mudança quebrar o que funcionava.</p>
+    </div>
+    <div class="card">
+      <div class="k">PixSim · simulador de terceiros</div>
+      <p style="margin-bottom:18px">Golpes que não desenhamos: engenharia social, conta tomada, Pix errado, QR adulterado.</p>
+      <div class="flow">
+        <div class="node soft" style="flex:1"><b>Cenário A</b>escolhe os parâmetros</div>
+        <div class="arrow">→</div>
+        <div class="node navy" style="flex:1"><b>Cenário B</b>confirma, sem ter sido usado na escolha</div>
+      </div>
+      <p style="margin-top:18px;font-size:15.5px;color:var(--muted)">Critério: custo em reais, somando a fraude que passa e o incômodo causado aos clientes bons.</p>
+    </div>
+  </div>
+  <div class="num">03 · VALIDAÇÃO</div><div class="tag">Método</div>
+</section>
+
+<!-- 9 · resultados -->
+<section class="slide">
+  <img class="logo" src="assets/bootcamp-escuro.png" alt="">
+  <div class="eyebrow">Resultados no PixSim</div>
+  <h1 class="title">O que o motor <b>entrega</b></h1>
+  <div class="rule"></div>
+  <div class="grid3" style="margin-top:30px">
+    <div class="card" style="padding:40px 32px"><div class="stat">≈3%</div><p style="margin-top:16px;font-size:18px">dos Pix <b>legítimos</b> pedem confirmação; praticamente nenhum é barrado</p></div>
+    <div class="card" style="padding:40px 32px"><div class="stat">99%</div><p style="margin-top:16px;font-size:18px">dos golpes de <b>conta tomada</b> têm algum Pix barrado</p></div>
+    <div class="card" style="padding:40px 32px"><div class="stat pink">−21%</div><p style="margin-top:16px;font-size:18px">de <b>prejuízo esperado</b> em relação a não ter motor, já contando o incômodo</p></div>
+  </div>
+  <p style="margin-top:44px;font-size:18px;color:var(--muted)">Simulador de terceiros, não Pix real: os números indicam direção e ordem de grandeza.</p>
+  <div class="num">03 · VALIDAÇÃO</div><div class="tag">Resultados</div>
+</section>
+
+<!-- 10 · engenharia social -->
+<section class="slide">
+  <img class="logo" src="assets/bootcamp-escuro.png" alt="">
+  <div class="eyebrow pink">Limite honesto</div>
+  <h1 class="title">Engenharia social: quando <b>a vítima</b> faz o Pix</h1>
+  <div class="rule"></div>
+  <div class="grid2" style="grid-template-columns: 1fr 1.05fr">
+    <div>
+      <p class="lead" style="font-size:18.5px">O golpista convence a vítima, e ela paga do próprio celular, dentro do próprio padrão. Quase nada parece fraude, exceto o destinatário novo.</p>
+      <p class="lead" style="font-size:18.5px;margin-top:14px">O motor só consegue <b>pedir confirmação</b>, e uma vítima pressionada pode confirmar.</p>
+      <div class="card pinky" style="margin-top:22px"><p>Se mais de <b>~40%</b> das vítimas confirmarem, o motor passa a custar mais do que não ter motor.</p></div>
+    </div>
+    <div class="card">
+      <div class="k">Custo por 1.000 Pix × vítimas que confirmam</div>
+      <div style="margin-top:14px;display:flex;flex-direction:column;gap:12px;font-size:15px">
+        <div style="display:flex;align-items:center;gap:10px"><span style="width:58px">10%</span><div style="height:24px;width:222px;background:var(--blue);border-radius:6px"></div><span>R$ 119</span></div>
+        <div style="display:flex;align-items:center;gap:10px"><span style="width:58px">30%</span><div style="height:24px;width:262px;background:var(--blue);border-radius:6px;opacity:.8"></div><span>R$ 140</span></div>
+        <div style="display:flex;align-items:center;gap:10px"><span style="width:58px">50%</span><div style="height:24px;width:301px;background:var(--pink);border-radius:6px"></div><span>R$ 161</span></div>
+        <div style="display:flex;align-items:center;gap:10px;border-top:1px dashed var(--muted);padding-top:12px"><span style="width:58px;color:var(--muted)">sem motor</span><div style="height:24px;width:283px;background:rgba(108,116,147,.35);border-radius:6px"></div><span style="color:var(--muted)">R$ 151</span></div>
+      </div>
+      <p style="margin-top:18px;font-size:15px;color:var(--muted)">Próximo passo: 2FA que alerta sobre o golpe, segurar por algumas horas o primeiro Pix alto e olhar a conta que recebe.</p>
+    </div>
+  </div>
+  <div class="num">03 · VALIDAÇÃO</div><div class="tag">Limite</div>
+</section>
+
+<!-- 11 · hot × cold -->
+<section class="slide">
+  <img class="logo" src="assets/bootcamp-escuro.png" alt="">
+  <div class="eyebrow">Arquitetura</div>
+  <h1 class="title">Um caminho <b>rápido</b> e um caminho <b>de fundo</b></h1>
+  <div class="rule"></div>
+  <div class="lane">Dentro da requisição · milissegundos</div>
+  <div class="flow">
+    <div class="node" style="width:170px"><b>Pix</b>chega pela API</div>
+    <div class="arrow">→</div>
+    <div class="node navy" style="flex:1"><b>API</b>15 regras decidem · 5 modelos em sombra opinam</div>
+    <div class="arrow">→</div>
+    <div class="node" style="width:230px"><b>Resposta</b>decisão + motivos</div>
+  </div>
+  <div style="display:flex;gap:14px;margin:14px 0 0 184px;align-items:center">
+    <div class="arrow" style="transform:rotate(90deg)">→</div>
+    <div class="node pinkfill" style="width:560px"><b>Postgres</b>Pix, análise e motivos · scores calculados pelo worker</div>
+    <span style="font-size:17px;color:var(--pink);margin-left:16px">o worker grava o score;<br>a API só lê o pronto</span>
+  </div>
+  <div class="lane pink" style="margin-top:22px">A cada 30 segundos · em paralelo</div>
+  <div class="flow">
+    <div class="node soft" style="flex:1"><b>Worker</b>olha a rede de quem paga quem: conta que recebe de muitos e repassa logo</div>
+    <div class="arrow pink">→</div>
+    <div class="node" style="width:380px"><b>Score por conta</b>reputação na rede, GraphSAGE e sequência (HMM), gravado no Postgres</div>
+  </div>
+  <div class="num">04 · ARQUITETURA</div><div class="tag">Fluxo</div>
+</section>
+
+<!-- 12 · um motor, dois lugares -->
+<section class="slide">
+  <img class="logo" src="assets/bootcamp-escuro.png" alt="">
+  <div class="eyebrow">Um motor, dois lugares</div>
+  <h1 class="title">O mesmo código decide na <b>API</b> e no <b>backtest</b></h1>
+  <div class="rule"></div>
+  <div style="display:flex;flex-direction:column;align-items:center;gap:10px">
+    <div class="node navy" style="width:520px"><b>Motor: regras + modelos</b>pergunta o histórico sempre do mesmo jeito (uma "tomada" padrão)</div>
+    <div style="display:flex;gap:260px"><div class="arrow" style="transform:rotate(135deg)">→</div><div class="arrow" style="transform:rotate(45deg)">→</div></div>
+    <div class="grid2" style="width:1000px">
+      <div class="node"><b>Produção</b>responde pelo Postgres, com SQL<small>cada Pix pela API</small></div>
+      <div class="node soft"><b>Backtest</b>responde pela memória, sem HTTP e sem banco<small>255 mil Pix em ~100 s</small></div>
+    </div>
+  </div>
+  <div class="card bluey" style="margin-top:30px;text-align:center"><p style="font-size:19px"><b>Paridade:</b> o mesmo roteiro de Pix nos dois lados dá <b>0 divergências</b> em decisão, motivos e nas 33 características calculadas.</p></div>
+  <div class="num">04 · ARQUITETURA</div><div class="tag">Backtest</div>
+</section>
+
+<!-- 13 · Base Service -->
+<section class="slide">
+  <img class="logo" src="assets/bootcamp-escuro.png" alt="">
+  <div class="eyebrow pink">O que veio das aulas</div>
+  <h1 class="title">O Base Service, <b>camada por camada</b></h1>
+  <div class="rule"></div>
+  <div class="lane">Ida · o pedido</div>
+  <div class="flow" style="gap:8px">
+    <div class="node" style="flex:1;font-size:17px"><code>middlewares</code></div>
+    <div class="node" style="flex:1;font-size:17px"><code>schemas</code></div>
+    <div class="node" style="flex:1;font-size:17px"><code>resources</code></div>
+    <div class="node" style="flex:1;font-size:17px"><code>controllers</code></div>
+    <div class="node pinkfill" style="flex:1;font-size:14px"><span class="mono" style="color:#fff">rules</span><small style="color:#fde">nova: o motor</small></div>
+    <div class="node" style="flex:1;font-size:17px"><code>repositories</code></div>
+    <div class="node navy" style="flex:1;font-size:14px"><span class="mono" style="color:#fff">database</span></div>
+  </div>
+  <div class="lane pink" style="margin-top:14px">Volta · a resposta</div>
+  <div class="grid4" style="margin-top:22px">
+    <div class="card"><h3 style="font-size:18px">Idempotência</h3><p style="font-size:17px">Mesmo id e mesmo Pix: a mesma resposta (200). Id repetido com outro conteúdo: 409.</p></div>
+    <div class="card"><h3 style="font-size:18px">Banco só cresce</h3><p style="font-size:17px">Só INSERT. Todo Pix fica gravado, inclusive os barrados. Dinheiro em centavos.</p></div>
+    <div class="card"><h3 style="font-size:18px">Logger</h3><p style="font-size:17px">Toda linha com o id da requisição: dá para seguir um Pix de ponta a ponta.</p></div>
+    <div class="card"><h3 style="font-size:18px">113 testes</h3><p style="font-size:17px">Todos pela própria API: cada regra tem um caso que passa e um que dispara.</p></div>
+  </div>
+  <div class="num">04 · ARQUITETURA</div><div class="tag">Base Service</div>
+</section>
+
+<!-- 14 · modelos em sombra -->
+<section class="slide">
+  <img class="logo" src="assets/bootcamp-escuro.png" alt="">
+  <div class="eyebrow">Machine learning</div>
+  <h1 class="title">Cinco modelos em <b>modo sombra</b></h1>
+  <div class="rule"></div>
+  <div class="grid2" style="grid-template-columns: 1fr 1fr">
+    <div class="card">
+      <h3>O que é</h3>
+      <p>Em todo Pix, o modelo calcula um score e registra o que <b>decidiria</b>, mas quem decide são as regras. O banco compara os dois no mesmo tráfego, sem arriscar o cliente.</p>
+      <p style="margin-top:12px;font-size:15.5px;color:var(--muted)">Regressão logística, LightGBM e Isolation Forest no caminho rápido; GraphSAGE e HMM no de fundo.</p>
+    </div>
+    <div class="card">
+      <h3>Por que ainda não decidem</h3>
+      <p style="font-size:15.5px;margin-bottom:12px">Custo com o modelo, conforme a qualidade dele (AUC):</p>
+      <div style="display:flex;flex-direction:column;gap:16px;font-size:18px">
+        <div style="display:flex;justify-content:space-between"><span>0,99 · no simulador</span><span class="pill ok">16% mais barato</span></div>
+        <div style="display:flex;justify-content:space-between"><span>≈0,93</span><span class="pill gray">empata com as regras</span></div>
+        <div style="display:flex;justify-content:space-between"><span>0,82 · típico de dado real</span><span class="pill no">7% mais caro</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="card dark" style="margin-top:36px;text-align:center"><p style="font-size:23px">Ligar um modelo é <b>uma linha de código</b>. O que falta é rótulo real de fraude.</p></div>
+  <div class="num">05 · ML</div><div class="tag">Sombra</div>
+</section>
+
+<!-- 15 · retroalimentação -->
+<section class="slide">
+  <img class="logo" src="assets/bootcamp-escuro.png" alt="">
+  <div class="eyebrow">Retroalimentação</div>
+  <h1 class="title">Como o banco <b>aprende com o MED</b></h1>
+  <div class="rule"></div>
+  <div class="flow" style="gap:10px">
+    <div class="node navy" style="flex:1"><b>1 · Decide</b>regras + modelo</div>
+    <div class="arrow">→</div>
+    <div class="node" style="flex:1"><b>2 · Liquida</b>só o que passou</div>
+    <div class="arrow">→</div>
+    <div class="node" style="flex:1"><b>3 · Reclama</b>a vítima, no MED, dias depois</div>
+    <div class="arrow">→</div>
+    <div class="node soft" style="flex:1"><b>4 · Aprende</b>marca a conta que recebeu e vira rótulo</div>
+    <div class="arrow">→</div>
+    <div class="node soft" style="flex:1"><b>5 · Retreina</b>toda semana, desafiante × campeão</div>
+  </div>
+  <div style="text-align:center;margin-top:6px;color:var(--blue);font-size:15px">↺ volta para o passo 1</div>
+  <div class="grid2" style="margin-top:34px">
+    <div class="card pinky"><h3>Viés de seleção</h3><p>Pix barrado nunca gera reclamação. Com o modelo decidindo, <b>77%</b> das fraudes nunca viram rótulo, e o retreino aprende a esquecer o que já é barrado.</p></div>
+    <div class="card"><h3>Onde roda</h3><p>Só no backtest, com os atrasos reais de reporte do simulador. A API não recebe desfechos: o contrato do desafio tem só POST e GET.</p></div>
+  </div>
+  <div class="num">05 · ML</div><div class="tag">Feedback</div>
+</section>
+
+<!-- 16 · software -->
+<section class="slide">
+  <img class="logo" src="assets/bootcamp-escuro.png" alt="">
+  <div class="eyebrow pink">Engenharia de software</div>
+  <h1 class="title">Decisões <b>documentadas e navegáveis</b></h1>
+  <div class="rule"></div>
+  <div class="grid2">
+    <div class="card"><div class="stat" style="font-size:54px">33</div><h3 style="margin-top:8px">ADRs</h3><p>Cada decisão com o contexto, as alternativas descartadas e o preço de cada uma.</p></div>
+    <div class="card"><div class="stat" style="font-size:54px">C4</div><h3 style="margin-top:8px">Diagramas</h3><p>Do contexto aos componentes, mais o backtest e o ciclo de retroalimentação.</p></div>
+    <div class="card"><div class="stat" style="font-size:54px">AI</div><h3 style="margin-top:8px">Pronto para agentes</h3><p><code>AGENTS.md</code> e <code>llms.txt</code> dão o contexto direto: menos tokens para uma IA entender o projeto.</p></div>
+    <div class="card"><div class="stat" style="font-size:54px">Log</div><h3 style="margin-top:8px">CHANGELOG</h3><p>Toda mudança registrada com o porquê, de pessoa ou de agente.</p></div>
+  </div>
+  <div class="num">06 · SOFTWARE</div><div class="tag">Documentação</div>
+</section>
+
+<!-- 17 · próximos passos -->
+<section class="slide">
+  <img class="logo" src="assets/bootcamp-escuro.png" alt="">
+  <div class="eyebrow">Próximos passos</div>
+  <h1 class="title">Do simulador para <b>dados reais</b></h1>
+  <div class="rule"></div>
+  <table class="t" style="font-size:22px">
+    <tr><td style="width:60px" class="blue"><b class="blue">01</b></td><td><b>Rota de desfechos</b>: o MED e o DICT voltando para o motor como rótulo</td></tr>
+    <tr><td class="blue"><b class="blue">02</b></td><td><b>Inferência de rejeitados</b>: corrigir o treino pelas fraudes que o motor barrou</td></tr>
+    <tr><td class="blue"><b class="blue">03</b></td><td><b>Janelas em streaming</b> (Kafka + Flink + Redis) para escalar o histórico</td></tr>
+    <tr><td class="blue"><b class="blue">04</b></td><td><b>Scores externos</b> no caminho de fundo: bureaus e listas de contas suspeitas</td></tr>
+    <tr><td class="blue"><b class="blue">05</b></td><td><b>Dados de sessão</b> (digitação, chamada em andamento) para o modelo de sequência</td></tr>
+  </table>
+  <div class="num">06 · PRÓXIMOS PASSOS</div><div class="tag">Futuro</div>
+</section>
+
+<!-- 18 · referências -->
+<section class="slide">
+  <img class="logo" src="assets/bootcamp-escuro.png" alt="">
+  <div class="eyebrow">Referências</div>
+  <h1 class="title" style="font-size:34px">Bibliografia</h1>
+  <div class="rule" style="margin-bottom:18px"></div>
+  <div class="refs">
+    <p>[1] QI Tech. <i>Desafio Antifraude Pix</i> e slides do Hackathon QI Tech 2026.</p>
+    <p>[2] Pesquisa QITech (documento interno do time).</p>
+    <p>[3] Bolton, R. J.; Hand, D. J. (2002). Statistical fraud detection: a review. <i>Statistical Science</i> 17(3).</p>
+    <p>[4] Pizzolato et al. (2025). A taxonomy of Pix fraud in Brazil. arXiv:2511.20902.</p>
+    <p>[5] Zeimarani, B. et al. (2026). PixSim: a calibrated open-source simulator of instant-payment fraud. github.com/BashirZeimarani/pixsim_public.</p>
+    <p>[6] Dal Pozzolo, A. et al. (2015). Calibrating probability with undersampling for unbalanced classification. IEEE SSCI.</p>
+    <p>[7] Dal Pozzolo, A. et al. (2018). Credit card fraud detection: a realistic modeling and a novel learning strategy. IEEE TNNLS 29(8).</p>
+    <p>[8] Dal Pozzolo, A. et al. (2014). Learned lessons in credit card fraud detection from a practitioner perspective. ESWA 41(10).</p>
+    <p>[9] Lucas, Y. et al. (2019). Multiple perspectives HMM-based feature engineering for credit card fraud detection. ACM SAC.</p>
+    <p>[10] Carcillo, F. et al. (2018). SCARFF: a scalable framework for streaming credit card fraud detection with Spark. <i>Information Fusion</i> 41.</p>
+    <p>[11] Banco Central do Brasil. Resolução BCB nº 142/2021; Instrução Normativa BCB nº 512/2024.</p>
+    <p>[12] Banco Central do Brasil. Regulamento do Pix, arts. 37 e 39-B.</p>
+    <p>[13] Iglewicz, B.; Hoaglin, D. C. (1993). <i>How to Detect and Handle Outliers</i>. ASQC.</p>
+    <p>[14] Platt, J. C. (1999). Probabilistic outputs for support vector machines. <i>Advances in Large Margin Classifiers</i>.</p>
+    <p>[15] Ke, G. et al. (2017). LightGBM: a highly efficient gradient boosting decision tree. NeurIPS 30.</p>
+    <p>[16] Liu, F. T.; Ting, K. M.; Zhou, Z.-H. (2008). Isolation forest. IEEE ICDM.</p>
+    <p>[17] Hamilton, W. L.; Ying, R.; Leskovec, J. (2017). Inductive representation learning on large graphs. NeurIPS 30.</p>
+    <p>[18] Rabiner, L. R. (1989). A tutorial on hidden Markov models. <i>Proceedings of the IEEE</i> 77(2).</p>
+    <p>[19] Gelman, A. et al. (2013). <i>Bayesian Data Analysis</i>, 3ª ed. CRC Press.</p>
+  </div>
+  <div class="num">REFERÊNCIAS</div><div class="tag">Bibliografia</div>
+</section>
+
+</body>
+</html>
